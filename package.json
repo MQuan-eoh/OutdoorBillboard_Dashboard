@@ -2,6 +2,7 @@
   "name": "its-outdoor-billboard-app",
   "version": "1.0.0",
   "description": "Mini Desktop App for 384x384 LED Outdoor Billboard Display",
+  "author": "EoH Company",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -11,8 +12,8 @@
     "kill": "taskkill /f /im electron.exe 2>nul",
     "clean-start": "taskkill /f /im electron.exe 2>nul & taskkill /f /im node.exe 2>nul & timeout /t 2 & npm run dev",
     "build": "electron-builder",
-    "build:win": "electron-builder --win",
-    "build:portable": "electron-builder --win portable",
+    "build:win": "electron-packager . ITS-Billboard --out=dist --overwrite --icon=assets/icon --win --arch=x64",
+    "build:nsis": "electron-builder --win nsis",
     "pack": "electron-packager . --platform=win32 --arch=x64 --out=dist/ --overwrite",
     "dist": "npm run pack"
   },
@@ -21,7 +22,7 @@
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "electron": "^25.0.0",
-    "electron-builder": "^24.0.0",
+    "electron-builder": "^24.6.4",
     "electron-packager": "^17.1.2",
     "typescript": "^5.0.0",
     "vite": "^4.0.0"
@@ -41,6 +42,7 @@
     "directories": {
       "output": "dist"
     },
+    "asar": false,
     "files": [
       "main.js",
       "preload.js",

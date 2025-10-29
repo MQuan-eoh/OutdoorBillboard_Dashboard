@@ -1180,6 +1180,10 @@ class MainProcessMqttService {
   async handleCheckUpdateCommand() {
     try {
       console.log("MainProcessMqttService: Checking for updates...");
+
+      // ✅ Ensure app-update.yml exists before check
+      ensureAppUpdateFile();
+
       const result = await autoUpdater.checkForUpdates();
 
       if (result && result.updateInfo) {
@@ -1216,6 +1220,9 @@ class MainProcessMqttService {
   async handleForceUpdateCommand() {
     try {
       console.log("MainProcessMqttService: Force update initiated...");
+
+      // ✅ Ensure app-update.yml exists before force update
+      ensureAppUpdateFile();
 
       // Send status - update in progress
       this.sendUpdateStatus({
@@ -1392,6 +1399,9 @@ app.whenReady().then(async () => {
 
   // Setup config file watcher for hot-reload
   setupConfigWatcher();
+
+  // ✅ Ensure app-update.yml exists early
+  ensureAppUpdateFile();
 
   // Initialize MQTT service
   await initializeMqttService();
@@ -1773,10 +1783,73 @@ ipcMain.handle("get-gateway-token", async () => {
  * MQTT Service for E-Ra IoT Integration (Main Process)
  * Handles MQTT connection and data processing in Node.js environment
  */
+/**
+ * Ensure app-update.yml exists for electron-updater
+ * This file is required by electron-updater to track update status
+ */
+function ensureAppUpdateFile() {
+  const fs = require("fs");
+  const path = require("path");
+
+  // Get proper app resources path
+  const resourcePath = path.join(
+    process.env.APPDATA || app.getPath("appData"),
+    "ITS-Outdoor-Billboard",
+    "resources"
+  );
+
+  const appUpdatePath = path.join(resourcePath, "app-update.yml");
+
+  try {
+    // Create resources directory if doesn't exist
+    if (!fs.existsSync(resourcePath)) {
+      fs.mkdirSync(resourcePath, { recursive: true });
+      console.log(
+        "EnsureAppUpdateFile: Created resources directory:",
+        resourcePath
+      );
+    }
+
+    // Create app-update.yml if doesn't exist
+    if (!fs.existsSync(appUpdatePath)) {
+      const updateYaml = `version: ${app.getVersion()}
+files:
+  - url: https://github.com/MinhQuan7/ITS_OurdoorBillboard-/releases/download/v${app.getVersion()}/ITS-Billboard-${app.getVersion()}-setup.exe
+    sha512: ''
+    size: 0
+path: ITS-Billboard-${app.getVersion()}-setup.exe
+sha512: ''
+releaseDate: ${new Date().toISOString()}
+`;
+      fs.writeFileSync(appUpdatePath, updateYaml);
+      console.log(
+        "EnsureAppUpdateFile: Created app-update.yml at:",
+        appUpdatePath
+      );
+    } else {
+      console.log(
+        "EnsureAppUpdateFile: app-update.yml already exists at:",
+        appUpdatePath
+      );
+    }
+
+    return appUpdatePath;
+  } catch (error) {
+    console.error(
+      "EnsureAppUpdateFile: Failed to ensure app-update.yml:",
+      error
+    );
+    return null;
+  }
+}
+
 // Initialize Auto-Updater
 async function initializeAutoUpdater() {
   try {
     console.log("AutoUpdater: Initializing OTA updates...");
+
+    // ✅ Ensure app-update.yml exists FIRST
+    ensureAppUpdateFile();
 
     // Configure electron-updater for GitHub releases
     autoUpdater.allowDowngrade = false;
@@ -1815,7 +1888,14 @@ async function initializeAutoUpdater() {
 
     autoUpdater.on("error", (err) => {
       console.error("AutoUpdater: Error in auto-updater:", err);
-      // Log error but don't crash app
+      // Send error status via MQTT
+      if (mqttService && mqttService.isCommandConnected) {
+        mqttService.sendUpdateStatus({
+          status: "error",
+          error: err.message || err.toString(),
+          timestamp: Date.now(),
+        });
+      }
     });
 
     autoUpdater.on("download-progress", (progressObj) => {

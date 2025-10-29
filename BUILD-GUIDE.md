@@ -2,34 +2,36 @@
 
 ## 📦 BUILD APP THÀNH EXECUTABLE
 
-### Cách 1: Build Installer (.exe với setup)
+### Cách 1: Build Executable (Khuyến nghị - Dùng Electron Packager)
 
 ```bash
 npm run build:win
 ```
 
-- Tạo file installer trong thư mục `dist/`
-- User cần install app vào máy
-- Tạo shortcut trên Desktop và Start Menu
-
-### Cách 2: Build Portable (.exe chạy trực tiếp)
-
-```bash
-npm run build:portable
-```
-
-- Tạo file `ITS-Billboard-Portable.exe` trong `dist/`
+- Tạo folder `ITS-Billboard-win32-x64` trong `dist/`
+- Chứa executable `ITS-Billboard.exe` (~160MB)
 - Không cần install, click đúp để chạy
-- Tất cả files được đóng gói trong 1 file .exe
+- Giải pháp đơn giản, ổn định, không có vấn đề file lock
 
-### Cách 3: Build Both (Khuyến nghị)
+### Cách 2: Build NSIS Installer (Yêu cầu setup riêng)
 
 ```bash
-npm run dist
+npm run build:nsis
 ```
 
-- Tạo cả 2 loại: installer + portable
-- Linh hoạt trong việc triển khai
+- Tạo file NSIS installer setup
+- Cho phép user install vào máy
+- Tạo shortcut trên Desktop và Start Menu
+- ⚠️ Có thể gặp lỗi file lock do Windows Defender
+
+### Cách 3: Legacy Build (Không khuyến nghị)
+
+```bash
+npm run pack
+```
+
+- Build sử dụng electron-packager trực tiếp
+- Tương tự Cách 1 nhưng command khác
 
 ---
 
@@ -47,20 +49,20 @@ npm install electron-builder --save-dev
 ### Bước 2: Build
 
 ```bash
-# Build phiên bản portable (khuyến nghị cho test)
-npm run build:portable
+# Build executable (Khuyến nghị)
+npm run build:win
 ```
 
 ### Bước 3: Tìm file .exe
 
-- Mở thư mục `dist/`
-- File sẽ có tên: `ITS-Billboard-Portable.exe`
-- Kích thước khoảng 150-200MB (bao gồm Electron runtime)
+- Mở thư mục `dist/ITS-Billboard-win32-x64/`
+- File executable: `ITS-Billboard.exe`
+- Kích thước khoảng 160MB (bao gồm Electron runtime)
 
 ### Bước 4: Test
 
-- Copy file .exe ra Desktop hoặc USB
-- Double-click để chạy
+- Copy file .exe hoặc toàn bộ folder `ITS-Billboard-win32-x64` ra Desktop hoặc USB
+- Double-click `ITS-Billboard.exe` để chạy
 - App sẽ mở với layout 384x384 như demo
 
 ---
@@ -116,6 +118,21 @@ npm run build:portable
 
 ## 🛠️ TROUBLESHOOTING
 
+### Lỗi "File is being used by another process" (Windows Defender):
+
+**Root Cause:** Windows Defender real-time scanning locks files during build
+
+**Solution:**
+
+```bash
+# Sử dụng electron-packager (không có vấn đề file lock)
+npm run build:win
+
+# Hoặc thêm folder dist vào Windows Defender exclusions:
+# Settings → Virus & threat protection → Virus & threat protection settings
+# → Add exclusions → Folder: F:\EoH Company\ITS_OurdoorScreen\dist
+```
+
 ### Lỗi "electron-builder not found":
 
 ```bash
@@ -126,16 +143,16 @@ npm install electron-builder --save-dev --force
 
 ```bash
 # Clear cache và rebuild
-npm run clean
+Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
 npm install
-npm run build:portable
+npm run build:win
 ```
 
 ### File .exe không chạy:
 
 - Kiểm tra Windows Defender/Antivirus
 - Chạy as Administrator
-- Kiểm tra Windows version compatibility
+- Kiểm trace Windows version compatibility (Windows 10/11 x64 needed)
 
 ### App window không hiển thị:
 
@@ -147,18 +164,12 @@ npm run build:portable
 
 ## 📝 DEPLOYMENT OPTIONS
 
-### For Development/Testing:
-
-```bash
-npm run build:portable
-# Copy file .exe và test trên máy khác
-```
-
-### For Production Distribution:
+### For Development/Testing (Recommended):
 
 ```bash
 npm run build:win
-# Tạo installer professional với NSIS
+# Output: dist/ITS-Billboard-win32-x64/ITS-Billboard.exe
+# Copy folder và test trên máy khác
 ```
 
 ### For Enterprise Deployment:
@@ -166,6 +177,7 @@ npm run build:win
 - Code signing với certificate
 - Group Policy deployment
 - Silent installation options
+- NSIS installer (yêu cầu riêng)
 
 ---
 
@@ -173,12 +185,14 @@ npm run build:win
 
 Sau khi build thành công:
 
-- ✅ File `ITS-Billboard-Portable.exe` (~150MB)
+- ✅ Folder `dist/ITS-Billboard-win32-x64/`
+- ✅ File `ITS-Billboard.exe` (~160MB)
 - ✅ Double-click để chạy ngay
 - ✅ Window 384x384 pixels
 - ✅ Đầy đủ tính năng như npm start
 - ✅ Chạy offline, không cần internet
+- ✅ Có thể copy folder sang máy khác chạy
 
 ---
 
-_Build xong là có thể copy file .exe chạy trên bất kỳ máy Windows nào!_
+_Build xong là có thể copy folder chạy trên bất kỳ máy Windows 10/11 x64 nào!_
