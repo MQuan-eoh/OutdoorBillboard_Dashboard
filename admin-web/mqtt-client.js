@@ -50,6 +50,9 @@ class MqttClient {
           // Send online status
           this.publishStatus("online");
 
+          // Subscribe to status topics for updates and reset
+          this.subscribeToStatusTopics();
+
           console.log("MQTT connected successfully");
           resolve(true);
         });
@@ -78,6 +81,8 @@ class MqttClient {
       this.reconnectAttempts = 0;
       this.updateStatus("connected");
       this.publishStatus("online");
+      // Subscribe to status topics
+      this.subscribeToStatusTopics();
     });
 
     this.client.on("disconnect", () => {
@@ -192,6 +197,29 @@ class MqttClient {
     }
   }
 
+  // Publish app reset command
+  async publishAppReset() {
+    if (!this.connected || !this.client) {
+      throw new Error("MQTT not connected");
+    }
+
+    try {
+      const message = {
+        action: "reset_app",
+        timestamp: Date.now(),
+        source: "admin_web",
+        reason: "Manual reset from admin interface",
+      };
+
+      await this.publish("its/billboard/commands", message);
+      console.log("App reset command published via MQTT:", message);
+      return true;
+    } catch (error) {
+      console.error("Error publishing app reset:", error);
+      throw error;
+    }
+  }
+
   // Publish manifest refresh signal with auto-reconnect
   async publishManifestRefresh(manifestData) {
     // Try to ensure connection before publishing
@@ -272,6 +300,30 @@ class MqttClient {
           resolve(true);
         }
       });
+    });
+  }
+
+  subscribeToStatusTopics() {
+    if (!this.client || !this.client.connected) {
+      return;
+    }
+
+    // Subscribe to update status
+    this.client.subscribe("its/billboard/update/status", { qos: 1 }, (err) => {
+      if (err) {
+        console.error("Failed to subscribe to update status:", err.message);
+      } else {
+        console.log("Subscribed to update status topic");
+      }
+    });
+
+    // Subscribe to reset status
+    this.client.subscribe("its/billboard/reset/status", { qos: 1 }, (err) => {
+      if (err) {
+        console.error("Failed to subscribe to reset status:", err.message);
+      } else {
+        console.log("Subscribed to reset status topic");
+      }
     });
   }
 

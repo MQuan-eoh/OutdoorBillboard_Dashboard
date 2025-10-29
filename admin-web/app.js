@@ -147,6 +147,190 @@ async function syncSettings() {
   }
 }
 
+// Check for updates on billboard
+async function checkForUpdates() {
+  const checkBtn = document.getElementById("checkUpdateBtn");
+  const btnText = checkBtn.querySelector(".btn-text");
+  const btnLoading = checkBtn.querySelector(".btn-loading");
+  const updateStatus = document.getElementById("updateStatus");
+  const statusText = document.getElementById("updateStatusText");
+
+  try {
+    checkBtn.disabled = true;
+    btnText.style.display = "none";
+    btnLoading.style.display = "inline";
+
+    showToast("🔍 Checking for updates...", "info");
+
+    if (!window.MqttClient || !window.MqttClient.connected) {
+      throw new Error("MQTT not connected");
+    }
+
+    // Publish check update command
+    await window.MqttClient.publish("its/billboard/commands", {
+      action: "check_update",
+      timestamp: Date.now(),
+      source: "admin_web",
+    });
+
+    showToast("📤 Update check command sent", "info");
+
+    updateStatus.style.display = "block";
+    statusText.textContent = "Waiting for response...";
+
+    // Wait for response (timeout after 10 seconds)
+    setTimeout(() => {
+      if (statusText.textContent === "Waiting for response...") {
+        statusText.textContent = "Timeout - No response from billboard";
+        updateStatus.style.display = "block";
+      }
+    }, 10000);
+  } catch (error) {
+    console.error("Check update failed:", error);
+    showToast("❌ Check update failed: " + error.message, "error");
+    updateStatus.style.display = "block";
+    statusText.textContent = "Error: " + error.message;
+  } finally {
+    checkBtn.disabled = false;
+    btnText.style.display = "inline";
+    btnLoading.style.display = "none";
+  }
+}
+
+// Force update on billboard
+async function forceUpdate() {
+  const forceBtn = document.getElementById("forceUpdateBtn");
+  const btnText = forceBtn.querySelector(".btn-text");
+  const btnLoading = forceBtn.querySelector(".btn-loading");
+  const updateStatus = document.getElementById("updateStatus");
+  const statusText = document.getElementById("updateStatusText");
+  const updateProgress = document.getElementById("updateProgress");
+
+  const confirmed = confirm(
+    "⚠️ XÁC NHẬN CẬP NHẬT\n\n" +
+      "Hành động này sẽ:\n" +
+      "- Tải phiên bản mới nhất\n" +
+      "- Cài đặt bản cập nhật\n" +
+      "- Khởi động lại ứng dụng\n\n" +
+      "Bạn có chắc chắn muốn tiếp tục?"
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    forceBtn.disabled = true;
+    btnText.style.display = "none";
+    btnLoading.style.display = "inline";
+
+    showToast("⬇️ Initiating update...", "info");
+
+    if (!window.MqttClient || !window.MqttClient.connected) {
+      throw new Error("MQTT not connected");
+    }
+
+    // Publish force update command
+    await window.MqttClient.publish("its/billboard/commands", {
+      action: "force_update",
+      timestamp: Date.now(),
+      source: "admin_web",
+    });
+
+    showToast("📤 Update command sent to billboard", "info");
+
+    updateStatus.style.display = "block";
+    updateProgress.style.display = "block";
+    statusText.textContent = "Update in progress...";
+
+    // Simulate progress (will be updated via MQTT)
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+      if (progress < 90) {
+        progress += Math.random() * 20;
+        if (progress > 90) progress = 90;
+
+        const progressFill = document.getElementById("updateProgressFill");
+        const progressText = document.getElementById("updateProgressText");
+        progressFill.style.width = progress + "%";
+        progressText.textContent = Math.round(progress) + "%";
+      }
+    }, 1000);
+
+    // Wait for completion (timeout after 60 seconds)
+    setTimeout(() => {
+      clearInterval(progressInterval);
+      if (statusText.textContent === "Update in progress...") {
+        statusText.textContent =
+          "Update may be in progress - check billboard status";
+      }
+    }, 60000);
+  } catch (error) {
+    console.error("Force update failed:", error);
+    showToast("❌ Force update failed: " + error.message, "error");
+    updateStatus.style.display = "block";
+    statusText.textContent = "Error: " + error.message;
+  } finally {
+    forceBtn.disabled = false;
+    btnText.style.display = "inline";
+    btnLoading.style.display = "none";
+  }
+}
+
+// Reset App function
+async function resetApp() {
+  const resetBtn = document.querySelector('button[onclick="resetApp()"]');
+  const btnText = resetBtn.querySelector(".btn-text");
+  const btnLoading = resetBtn.querySelector(".btn-loading");
+
+  // Show confirmation dialog
+  const confirmed = confirm(
+    "⚠️ XÁC NHẬN RESET APP\n\n" +
+      "Hành động này sẽ:\n" +
+      "- Khởi động lại billboard display\n" +
+      "- Tải lại tất cả settings và manifest\n" +
+      "- Ngắt kết nối MQTT tạm thời\n\n" +
+      "Bạn có chắc chắn muốn tiếp tục?"
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    console.log("Resetting app...");
+
+    // Update button state
+    resetBtn.disabled = true;
+    btnText.style.display = "none";
+    btnLoading.style.display = "inline";
+
+    showToast("🔄 Sending reset command to billboard...", "info");
+
+    // Send MQTT reset command
+    if (window.MqttClient && window.MqttClient.connected) {
+      await window.MqttClient.publishAppReset();
+
+      showToast("✅ Reset command sent successfully", "success");
+
+      // Simulate waiting for reset
+      setTimeout(() => {
+        showToast("🔄 Billboard is restarting...", "info");
+      }, 2000);
+    } else {
+      throw new Error("MQTT not connected");
+    }
+  } catch (error) {
+    console.error("Reset app failed:", error);
+    showToast("❌ Reset failed: " + error.message, "error");
+  } finally {
+    // Reset button state
+    resetBtn.disabled = false;
+    btnText.style.display = "inline";
+    btnLoading.style.display = "none";
+  }
+}
+
 // ====================================
 // MQTT INITIALIZATION
 // ====================================
@@ -165,6 +349,11 @@ async function initializeMQTT() {
           updateConnectionStatus(status);
         });
 
+        // Setup MQTT message handlers for update status
+        window.MqttClient.onMessage((topic, message) => {
+          handleMqttStatusMessage(topic, message);
+        });
+
         showToast("MQTT connected successfully", "success");
       } catch (error) {
         console.warn("MQTT connection failed:", error);
@@ -180,6 +369,99 @@ async function initializeMQTT() {
   } catch (error) {
     console.error("MQTT initialization error:", error);
     showToast("MQTT initialization failed: " + error.message, "error");
+  }
+}
+
+// Handle MQTT status messages from billboard
+function handleMqttStatusMessage(topic, message) {
+  if (!topic) return;
+
+  // Parse message if it's JSON
+  let data = message;
+  if (typeof message === "string") {
+    try {
+      data = JSON.parse(message);
+    } catch {
+      return;
+    }
+  }
+
+  // Handle update status messages
+  if (topic === "its/billboard/update/status") {
+    handleUpdateStatus(data);
+  }
+
+  // Handle reset status messages
+  if (topic === "its/billboard/reset/status") {
+    handleResetStatus(data);
+  }
+}
+
+// Handle update status from billboard
+function handleUpdateStatus(status) {
+  const updateStatus = document.getElementById("updateStatus");
+  const statusText = document.getElementById("updateStatusText");
+  const updateProgress = document.getElementById("updateProgress");
+  const progressFill = document.getElementById("updateProgressFill");
+  const progressText = document.getElementById("updateProgressText");
+
+  if (!updateStatus) return;
+
+  updateStatus.style.display = "block";
+
+  switch (status.status) {
+    case "update_available":
+      statusText.textContent = `✅ Update available: v${status.version}`;
+
+      // Enable force update button
+      const forceUpdateBtn = document.getElementById("forceUpdateBtn");
+      if (forceUpdateBtn) {
+        forceUpdateBtn.disabled = false;
+      }
+      showToast(`Update available: v${status.version}`, "success");
+      break;
+
+    case "no_updates":
+      statusText.textContent = "✅ No updates available - already up to date";
+      showToast("Already up to date", "info");
+      break;
+
+    case "downloading":
+      statusText.textContent = `⬇️ Downloading v${status.version}...`;
+      updateProgress.style.display = "block";
+      progressFill.style.width = "10%";
+      progressText.textContent = "10%";
+      break;
+
+    case "update_in_progress":
+      statusText.textContent = "🔄 Update in progress...";
+      updateProgress.style.display = "block";
+      break;
+
+    case "error":
+      statusText.textContent = `❌ Error: ${status.error}`;
+      showToast(`Update error: ${status.error}`, "error");
+      break;
+
+    default:
+      statusText.textContent = `Status: ${status.status}`;
+  }
+}
+
+// Handle reset status from billboard
+function handleResetStatus(status) {
+  switch (status.status) {
+    case "reset_started":
+      showToast("🔄 Billboard starting reset...", "info");
+      break;
+
+    case "restarting":
+      showToast("🔄 Billboard restarting...", "success");
+      break;
+
+    case "error":
+      showToast(`❌ Reset error: ${status.error}`, "error");
+      break;
   }
 }
 

@@ -183,36 +183,172 @@
           </div>
         </section>
 
-        <!-- Settings -->
+        <!-- Settings Section - NEW DESIGN -->
         <section class="glass-panel settings-section">
-          <h2 class="section-title">Cài Đặt</h2>
+          <div class="settings-header">
+            <h2 class="section-title">⚙️ Cài Đặt Hệ Thống</h2>
+            <p class="settings-subtitle">Quản lý thiết lập hiển thị và điều khiển ứng dụng</p>
+          </div>
 
-          <div class="settings-grid">
-            <div class="setting-item">
-              <label class="setting-label">Chế độ hiển thị:</label>
-              <select class="setting-input" id="displayMode">
-                <option value="loop">Xoay vòng (Loop)</option>
-                <option value="fixed">Cố định (Fixed)</option>
-                <option value="scheduled">Theo lịch (Scheduled)</option>
-              </select>
+          <!-- Display Settings Card -->
+          <div class="settings-card">
+            <div class="card-header">
+              <h3 class="card-title">📺 Cài Đặt Hiển Thị</h3>
+              <p class="card-subtitle">Cấu hình cách banner được hiển thị trên billboard</p>
             </div>
+            <div class="card-body">
+              <div class="settings-form">
+                <div class="form-group">
+                  <label class="form-label">
+                    <span class="label-icon">🔄</span>
+                    <span class="label-text">Chế độ hiển thị</span>
+                  </label>
+                  <select class="form-input select-input" id="displayMode">
+                    <option value="loop">🔁 Xoay vòng (Loop) - Tự động chuyển banner theo thời gian</option>
+                    <option value="fixed">📌 Cố định (Fixed) - Hiển thị một banner duy nhất</option>
+                    <option value="scheduled">📅 Theo lịch (Scheduled) - Hiển thị theo lịch trình</option>
+                  </select>
+                  <div class="input-hint">Lựa chọn chế độ hiển thị banner trên billboard</div>
+                </div>
 
-            <div class="setting-item">
-              <label class="setting-label">Thời gian xoay (giây):</label>
-              <input
-                type="number"
-                class="setting-input"
-                id="loopDuration"
-                value="10"
-                min="1"
-                max="60"
-              />
+                <div class="form-group">
+                  <label class="form-label">
+                    <span class="label-icon">⏱️</span>
+                    <span class="label-text">Thời gian xoay (giây)</span>
+                  </label>
+                  <div class="input-wrapper">
+                    <input
+                      type="number"
+                      class="form-input"
+                      id="loopDuration"
+                      value="10"
+                      min="1"
+                      max="60"
+                    />
+                    <span class="input-unit">giây</span>
+                  </div>
+                  <div class="input-hint">Khoảng thời gian giữa các lần chuyển banner (từ 1 đến 60 giây)</div>
+                </div>
+
+                <button class="btn btn-primary btn-lg" onclick="syncSettings()">
+                  <span class="btn-icon">💾</span>
+                  <span class="btn-text">Lưu & Đồng Bộ Cài Đặt</span>
+                </button>
+              </div>
             </div>
+          </div>
 
-            <div class="setting-item setting-item-full">
-              <button class="btn btn-warning" onclick="syncSettings()">
-                <span class="btn-text">Đồng bộ cài đặt</span>
-              </button>
+          <!-- App Control Card -->
+          <div class="settings-card">
+            <div class="card-header">
+              <h3 class="card-title">🎮 Điều Khiển Ứng Dụng</h3>
+              <p class="card-subtitle">Quản lý cập nhật và khởi động lại billboard</p>
+            </div>
+            <div class="card-body">
+              <div class="control-sections">
+                <!-- Update Control Section -->
+                <div class="control-section">
+                  <div class="section-header-small">
+                    <h4 class="section-title-small">🔄 Cập Nhật Ứng Dụng</h4>
+                    <p class="section-desc-small">Kiểm tra và cài đặt bản cập nhật mới nhất</p>
+                  </div>
+                  <div class="section-content">
+                    <div class="button-group">
+                      <button
+                        class="btn btn-info btn-block"
+                        onclick="checkForUpdates()"
+                        id="checkUpdateBtn"
+                      >
+                        <span class="btn-icon">🔍</span>
+                        <span class="btn-text">Kiểm Tra Cập Nhật</span>
+                        <span class="btn-loading" style="display: none">⏳ Đang kiểm tra...</span>
+                      </button>
+                      <button
+                        class="btn btn-success btn-block"
+                        onclick="forceUpdate()"
+                        id="forceUpdateBtn"
+                        disabled
+                      >
+                        <span class="btn-icon">⬇️</span>
+                        <span class="btn-text">Cập Nhật Ngay</span>
+                        <span class="btn-loading" style="display: none">⏳ Đang cập nhật...</span>
+                      </button>
+                    </div>
+                    <div
+                      id="updateStatus"
+                      class="status-box"
+                      style="display: none"
+                    >
+                      <p id="updateStatusText" class="status-text"></p>
+                      <div id="updateProgress" style="display: none" class="progress-wrapper">
+                        <div class="progress-bar">
+                          <div
+                            class="progress-fill"
+                            id="updateProgressFill"
+                          ></div>
+                        </div>
+                        <p id="updateProgressText" class="progress-text"></p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Reset Control Section -->
+                <div class="control-section">
+                  <div class="section-header-small">
+                    <h4 class="section-title-small">⚡ Khởi Động Lại Billboard</h4>
+                    <p class="section-desc-small">Khởi động lại ứng dụng billboard để áp dụng thay đổi</p>
+                  </div>
+                  <div class="section-content">
+                    <button class="btn btn-danger btn-block" onclick="resetApp()">
+                      <span class="btn-icon">🔄</span>
+                      <span class="btn-text">Khởi Động Lại Ứng Dụng</span>
+                      <span class="btn-loading" style="display: none">⏳ Đang khởi động lại...</span>
+                    </button>
+                    <div class="warning-box">
+                      <span class="warning-icon">⚠️</span>
+                      <div class="warning-content">
+                        <strong>Lưu ý:</strong> Hành động này sẽ khởi động lại billboard display. Quá trình này có thể mất 10-15 giây. Hãy chỉ sử dụng khi cần thiết.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Info Card -->
+          <div class="settings-card info-card">
+            <div class="card-header">
+              <h3 class="card-title">💡 Mẹo & Hướng Dẫn</h3>
+            </div>
+            <div class="card-body">
+              <div class="tips-list">
+                <div class="tip-item">
+                  <span class="tip-icon">1</span>
+                  <div class="tip-content">
+                    <strong>Chế độ Xoay Vòng:</strong> Tự động chuyển đổi giữa các banner theo thời gian bạn thiết lập. Tốt nhất cho hiển thị quảng cáo.
+                  </div>
+                </div>
+                <div class="tip-item">
+                  <span class="tip-icon">2</span>
+                  <div class="tip-content">
+                    <strong>Chế độ Cố Định:</strong> Hiển thị một banner duy nhất cho đến khi bạn thay đổi. Phù hợp cho thông báo quan trọng.
+                  </div>
+                </div>
+                <div class="tip-item">
+                  <span class="tip-icon">3</span>
+                  <div class="tip-content">
+                    <strong>Chế độ Theo Lịch:</strong> Hiển thị banner dựa trên lịch trình cụ thể. Tốt cho sự kiện có thời gian nhất định.
+                  </div>
+                </div>
+                <div class="tip-item">
+                  <span class="tip-icon">4</span>
+                  <div class="tip-content">
+                    <strong>Luôn Lưu Cài Đặt:</strong> Nhấn "Lưu & Đồng Bộ Cài Đặt" sau khi thay đổi để đảm bảo billboard nhận được các thay đổi mới.
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
