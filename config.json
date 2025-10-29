@@ -1,14 +1,14 @@
 {
-  "logoMode": "loop",
+  "logoMode": "fixed",
   "logoImages": [
     {
-      "name": "565640542_1362303825896826_6400460134318525991_n",
-      "path": "downloads\\logos\\565640542-1362303825896826-6400460134318525991-n-1761708053310.jpg",
-      "size": 98085,
+      "name": "z7085121756040_358cffc35564647bef9a6fef40de1c01",
+      "path": "downloads\\logos\\z7085121756040-358cffc35564647bef9a6fef40de1c01-1761711169119.jpg",
+      "size": 430656,
       "type": "image/jpeg",
-      "id": "565640542-1362303825896826-6400460134318525991-n-1761708053310",
+      "id": "z7085121756040-358cffc35564647bef9a6fef40de1c01-1761711169119",
       "source": "github_cdn",
-      "checksum": "56564054213623038258968266400460134318525991njpg980851761708055939"
+      "checksum": "z7085121756040358cffc35564647bef9a6fef40de1c01jpg4306561761711172092"
     }
   ],
   "logoLoopDuration": 4,
@@ -100,6 +100,6 @@
     "retryAttempts": 3,
     "retryDelay": 2000
   },
-  "_manifestVersion": "1.0.1761708056631",
-  "_manifestLastUpdated": "2025-10-29T03:20:56.631Z"
+  "_manifestVersion": "1.0.1761711172486",
+  "_manifestLastUpdated": "2025-10-29T04:12:52.486Z"
 }

@@ -1,15 +1,242 @@
 # ITS Billboard - Auto-Update Implementation Guide
 
-## Overview
+## 🚨 **VẤN ĐỀ HIỆN TẠI: CHƯA CÓ GITHUB RELEASE**
 
-Hệ thống auto-update cho ITS Billboard sử dụng:
+**Tại sao "Kiểm tra cập nhật" trả về "no_updates"?**
 
-- **Dual MQTT Broker**: mqtt1.eoh.io (E-Ra IoT), HiveMQ (Commands)
-- **GitHub Releases**: Lưu trữ phiên bản .exe
-- **electron-updater**: Tự động kiểm tra & cài đặt updates
-- **Remote Trigger**: Control updates qua admin-web interface
+Vì **chưa có GitHub Release nào** được tạo cho repository `MinhQuan7/ITS_OurdoorBillboard-`!
+
+**Giải pháp:** Tạo GitHub Release đầu tiên với file .exe đã build.
 
 ---
+
+## 📋 **HƯỚNG DẪN TẠO GITHUB RELEASE NGAY BÂY GIỜ**
+
+### **Bước 1: Build Ứng Dụng**
+
+```bash
+# 1. Kill tất cả process Electron
+npm run kill
+
+# 2. Clean dist folder
+Remove-Item -Recurse -Force dist -ErrorAction SilentlyContinue
+
+# 3. Build renderer
+npm run build:renderer
+
+# 4. Build Windows app
+npm run build:win
+```
+
+**Kết quả mong đợi:**
+
+```
+dist/
+├── win-unpacked/          # App unpacked
+├── ITS-Billboard-1.0.0-setup.exe    # NSIS Installer
+├── ITS-Billboard-1.0.0-portable.exe # Portable version
+└── latest.yml             # Update manifest (quan trọng!)
+```
+
+### **Bước 2: Tạo Git Tag**
+
+```bash
+# Tạo tag cho version hiện tại (1.0.0)
+git tag -a v1.0.0 -m "Release version 1.0.0 - Initial release"
+
+# Push tag lên GitHub
+git push origin v1.0.0
+```
+
+### **Bước 3: Tạo GitHub Release**
+
+1. **Truy cập GitHub:**
+
+   - Đi đến: https://github.com/MinhQuan7/ITS_OurdoorBillboard-/releases
+
+2. **Tạo Release mới:**
+
+   - Click **"Create a new release"**
+   - **Tag version:** `v1.0.0` (sẽ tự động select nếu đã push tag)
+   - **Release title:** `Release v1.0.0`
+   - **Description:**
+
+     ```
+     Initial release of ITS Outdoor Billboard App
+
+     Features:
+     - LED Billboard display
+     - MQTT IoT integration
+     - Logo management via GitHub CDN
+     - Auto-update capability
+     ```
+
+3. **Upload Files:**
+
+   - **Bắt buộc upload:** `latest.yml` (nằm trong folder `dist/`)
+   - **Upload thêm:** `ITS-Billboard-1.0.0-setup.exe` và `ITS-Billboard-1.0.0-portable.exe`
+
+4. **Publish Release:**
+   - Click **"Publish release"**
+
+---
+
+## 🔍 **KIỂM TRA RELEASE ĐÃ TẠO THÀNH CÔNG**
+
+Sau khi tạo release, truy cập:
+
+```
+https://api.github.com/repos/MinhQuan7/ITS_OurdoorBillboard-/releases/latest
+```
+
+**Response mong đợi:**
+
+```json
+{
+  "tag_name": "v1.0.0",
+  "assets": [
+    {
+      "name": "latest.yml",
+      "browser_download_url": "https://github.com/.../latest.yml"
+    },
+    {
+      "name": "ITS-Billboard-1.0.0-setup.exe",
+      "browser_download_url": "https://github.com/.../setup.exe"
+    }
+  ]
+}
+```
+
+---
+
+## 🧪 **TEST UPDATE NGAY BÂY GIỜ**
+
+Sau khi tạo release:
+
+1. **Mở Admin-Web**
+2. **Click "Kiểm tra cập nhật"**
+3. **Kỳ vọng thấy:** `Update available: v1.0.0`
+
+4. **Hoặc force update ngay:**
+   - Click "Cập nhật ngay"
+   - Xác nhận dialog
+   - App sẽ download và restart
+
+---
+
+## 📝 **CẬP NHẬT VERSION CHO RELEASE TIẾP THEO**
+
+Khi có thay đổi code:
+
+```bash
+# 1. Update version trong package.json
+{
+  "version": "1.0.1"
+}
+
+# 2. Commit thay đổi
+git add package.json
+git commit -m "Bump version to 1.0.1"
+
+# 3. Tạo tag mới
+git tag -a v1.0.1 -m "Release v1.0.1 - Bug fixes"
+
+# 4. Push tag
+git push origin v1.0.1
+
+# 5. Tạo release trên GitHub (như bước 3 ở trên)
+```
+
+---
+
+## ⚙️ **CẤU HÌNH ELECTRON-UPDATER**
+
+**Repository trong package.json:**
+
+```json
+{
+  "build": {
+    "publish": {
+      "provider": "github",
+      "owner": "MinhQuan7",
+      "repo": "ITS_OurdoorBillboard-"
+    }
+  }
+}
+```
+
+**Auto-updater trong main.js:**
+
+```javascript
+// Đã được cấu hình đúng
+autoUpdater.allowDowngrade = false;
+autoUpdater.allowPrerelease = false;
+await autoUpdater.checkForUpdates();
+```
+
+---
+
+## 🔧 **TROUBLESHOOTING**
+
+### **Lỗi: Build thất bại**
+
+```bash
+# Kill tất cả process
+taskkill /f /im electron.exe /im node.exe
+
+# Clean và rebuild
+Remove-Item -Recurse -Force dist,node_modules/.cache
+npm install
+npm run build:renderer
+npm run build:win
+```
+
+### **Lỗi: "No updates available"**
+
+- ✅ Kiểm tra release đã publish chưa
+- ✅ Kiểm tra file `latest.yml` có trong release không
+- ✅ Kiểm tra version trong package.json vs tag version
+
+### **Lỗi: Download failed**
+
+- ✅ Kiểm tra internet connection
+- ✅ Kiểm tra file .exe không bị corrupt
+- ✅ Kiểm tra quyền write vào app folder
+
+---
+
+## 📊 **MONITOR UPDATE STATUS**
+
+**MQTT Topics để monitor:**
+
+| Topic                         | Direction      | Mô tả                                       |
+| ----------------------------- | -------------- | ------------------------------------------- |
+| `its/billboard/commands`      | Admin → Device | Gửi lệnh check/force update                 |
+| `its/billboard/update/status` | Device → Admin | Status update (available/downloading/error) |
+
+**Status codes:**
+
+- `"update_available"` - Có update mới
+- `"no_updates"` - Đã là version mới nhất
+- `"downloading"` - Đang download
+- `"update_in_progress"` - Đang cài đặt
+- `"error"` - Lỗi update
+
+---
+
+## 🎯 **TÓM TẮT QUY TRÌNH**
+
+```
+1. Code changes → Update package.json version
+2. Commit & push code
+3. Tạo git tag (v1.0.1)
+4. Push tag → Trigger build (nếu có GitHub Actions)
+5. Tạo GitHub Release với file .exe + latest.yml
+6. App tự động detect update qua electron-updater
+7. Admin-web có thể trigger manual update qua MQTT
+```
+
+**Bước quan trọng nhất:** File `latest.yml` phải có trong release để electron-updater biết có update!
 
 ## Architecture
 
