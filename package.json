@@ -42,7 +42,7 @@
   },
   "build": {
     "appId": "com.its.outdoor-billboard",
-    "productName": "ITS Outdoor Billboard",
+    "productName": "ITS Billboard",
     "directories": {
       "output": "dist"
     },

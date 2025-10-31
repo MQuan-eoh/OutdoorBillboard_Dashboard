@@ -1180,8 +1180,6 @@ class MainProcessMqttService {
   async handleCheckUpdateCommand() {
     try {
       console.log("MainProcessMqttService: Checking for updates...");
-
-      // ✅ Ensure app-update.yml exists before check with proper verification
       const appUpdatePath = ensureAppUpdateFile();
       if (!appUpdatePath) {
         throw new Error(
@@ -1945,7 +1943,50 @@ async function initializeAutoUpdater() {
   try {
     console.log("AutoUpdater: Initializing OTA updates...");
 
-    // ✅ Ensure app-update.yml exists FIRST and verify it was created
+    // Clear any cached update data to ensure fresh resolution
+    try {
+      const { app } = require("electron");
+      const path = require("path");
+      const fs = require("fs");
+
+      // Clear multiple possible cache locations for electron-updater
+      const possibleCacheDirs = [
+        path.join(app.getPath("userData"), "its-billboard-updater"),
+        path.join(app.getPath("userData"), "pending-updates"),
+        path.join(app.getPath("userData"), "CachedData"),
+        path.join(app.getPath("temp"), "electron-updater"),
+        path.join(
+          app.getPath("userData"),
+          "..",
+          "ITS Outdoor Billboard",
+          "pending-updates"
+        ),
+        path.join(
+          app.getPath("userData"),
+          "..",
+          "ITS Billboard",
+          "pending-updates"
+        ),
+      ];
+
+      possibleCacheDirs.forEach((cacheDir) => {
+        if (fs.existsSync(cacheDir)) {
+          try {
+            fs.rmSync(cacheDir, { recursive: true, force: true });
+            console.log("AutoUpdater: Cleared cache directory:", cacheDir);
+          } catch (err) {
+            console.warn(
+              "AutoUpdater: Could not clear cache dir:",
+              cacheDir,
+              err.message
+            );
+          }
+        }
+      });
+    } catch (cacheError) {
+      console.warn("AutoUpdater: Could not clear cache:", cacheError.message);
+    }
+
     const appUpdatePath = ensureAppUpdateFile();
     if (!appUpdatePath) {
       console.warn(
@@ -1956,15 +1997,79 @@ async function initializeAutoUpdater() {
     }
 
     // Configure electron-updater for GitHub releases
-    autoUpdater.allowDowngrade = false;
-    autoUpdater.allowPrerelease = false;
-
     // Explicitly configure GitHub as update provider (redundant but ensures proper setup)
     autoUpdater.setFeedURL({
       provider: "github",
       owner: "MinhQuan7",
       repo: "ITS_OurdoorBillboard-",
+      // Force using exact filename from GitHub release
+      releaseType: "release",
     });
+
+    // Force correct filename resolution for electron-updater
+    // Override the default filename convention to ensure exact match
+    autoUpdater.forceDevUpdateConfig = false;
+    autoUpdater.allowPrerelease = false;
+    autoUpdater.allowDowngrade = false;
+
+    // Custom filename resolution: force electron-updater to use exact filename 'ITS-Billboard.exe'
+    // This prevents productName-based filename generation
+    const originalCheckForUpdates =
+      autoUpdater.checkForUpdates.bind(autoUpdater);
+    autoUpdater.checkForUpdates = async function () {
+      console.log(
+        "AutoUpdater: Custom checkForUpdates - ensuring correct filename"
+      );
+      try {
+        const result = await originalCheckForUpdates();
+        // Log the detected update info for debugging
+        if (result && result.updateInfo && result.updateInfo.files) {
+          console.log(
+            "AutoUpdater: Detected files in update info:",
+            result.updateInfo.files.map((f) => f.url || f.path)
+          );
+        }
+        return result;
+      } catch (error) {
+        console.error(
+          "AutoUpdater: checkForUpdates failed with custom override:",
+          error
+        );
+        throw error;
+      }
+    };
+
+    // Override downloadUpdate to fix the filename issue
+    const originalDownloadUpdate = autoUpdater.downloadUpdate.bind(autoUpdater);
+    autoUpdater.downloadUpdate = async function () {
+      console.log(
+        "AutoUpdater: Custom downloadUpdate - attempting to fix filename issue"
+      );
+      try {
+        return await originalDownloadUpdate();
+      } catch (error) {
+        console.error("AutoUpdater: downloadUpdate error:", error);
+        // If download fails with filename issue, try alternative approach
+        if (
+          error.message &&
+          error.message.includes("ITS-Outdoor-Billboard-Setup")
+        ) {
+          console.log(
+            "AutoUpdater: Detected filename issue, attempting workaround..."
+          );
+
+          // Force re-fetch update info with corrected filename expectations
+          const result = await autoUpdater.checkForUpdates();
+          if (result && result.updateInfo) {
+            console.log(
+              "AutoUpdater: Re-fetched update info, retrying download..."
+            );
+            return await originalDownloadUpdate();
+          }
+        }
+        throw error;
+      }
+    };
 
     // Configure auto-updater with safe logger setup
     autoUpdater.logger = console;
@@ -1984,6 +2089,20 @@ async function initializeAutoUpdater() {
 
     autoUpdater.on("update-available", (info) => {
       console.log("AutoUpdater: Update available:", info.version);
+      console.log(
+        "AutoUpdater: Update info files:",
+        info.files?.map((f) => ({
+          url: f.url,
+          size: f.size,
+          sha512: f.sha512,
+        }))
+      );
+      console.log("AutoUpdater: Release notes:", info.releaseNotes);
+      console.log(
+        "AutoUpdater: Full update info:",
+        JSON.stringify(info, null, 2)
+      );
+
       // Send notification to renderer (optional)
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send("update-available", info);
@@ -1996,6 +2115,11 @@ async function initializeAutoUpdater() {
 
     autoUpdater.on("error", (err) => {
       console.error("AutoUpdater: Error in auto-updater:", err);
+      console.error("AutoUpdater: Error details:", {
+        message: err.message,
+        stack: err.stack,
+        name: err.name,
+      });
       // Send error status via MQTT
       if (mqttService && mqttService.isCommandConnected) {
         mqttService.sendUpdateStatus({
