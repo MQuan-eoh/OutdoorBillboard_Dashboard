@@ -36,6 +36,9 @@ function showToast(message, type = "info", duration = 5000) {
   console.log(`[${type.toUpperCase()}] ${message}`);
 }
 
+// Track last detected update version from billboard
+let lastDetectedUpdateVersion = null;
+
 // Show modal
 function showModal(title, content) {
   const modal = document.getElementById("modal");
@@ -206,6 +209,21 @@ async function forceUpdate() {
   const statusText = document.getElementById("updateStatusText");
   const updateProgress = document.getElementById("updateProgress");
 
+  // Verify that a check was performed and an update was detected
+  if (!lastDetectedUpdateVersion) {
+    showToast(
+      "Please click 'Check Updates' first to verify an update is available",
+      "warning"
+    );
+    console.warn(
+      "forceUpdate: No detected update version - user must check first"
+    );
+    statusText.textContent =
+      "Error: Please check for updates first before forcing update";
+    updateStatus.style.display = "block";
+    return;
+  }
+
   const confirmed = confirm(
     "⚠️ XÁC NHẬN CẬP NHẬT\n\n" +
       "Hành động này sẽ:\n" +
@@ -224,30 +242,36 @@ async function forceUpdate() {
     btnText.style.display = "none";
     btnLoading.style.display = "inline";
 
-    showToast("⬇️ Initiating update...", "info");
+    showToast(`Initiating update to v${lastDetectedUpdateVersion}...`, "info");
 
     if (!window.MqttClient || !window.MqttClient.connected) {
-      throw new Error("MQTT not connected");
+      throw new Error("MQTT not connected - cannot send update command");
     }
+
+    console.log(
+      "Sending force update command for version:",
+      lastDetectedUpdateVersion
+    );
 
     // Publish force update command
     await window.MqttClient.publish("its/billboard/commands", {
       action: "force_update",
       timestamp: Date.now(),
       source: "admin_web",
+      detectedVersion: lastDetectedUpdateVersion,
     });
 
-    showToast("📤 Update command sent to billboard", "info");
+    showToast("Update command sent to billboard", "info");
 
     updateStatus.style.display = "block";
     updateProgress.style.display = "block";
-    statusText.textContent = "Update in progress...";
+    statusText.textContent = "Waiting for download to start...";
 
     // Simulate progress (will be updated via MQTT)
     let progress = 0;
     const progressInterval = setInterval(() => {
       if (progress < 90) {
-        progress += Math.random() * 20;
+        progress += Math.random() * 15;
         if (progress > 90) progress = 90;
 
         const progressFill = document.getElementById("updateProgressFill");
@@ -257,19 +281,37 @@ async function forceUpdate() {
       }
     }, 1000);
 
-    // Wait for completion (timeout after 60 seconds)
-    setTimeout(() => {
+    // Store interval ID for cleanup
+    window.updateProgressInterval = progressInterval;
+
+    // Wait for completion (timeout after 120 seconds for large downloads)
+    const timeoutId = setTimeout(() => {
       clearInterval(progressInterval);
-      if (statusText.textContent === "Update in progress...") {
+      if (
+        statusText.textContent === "Waiting for download to start..." ||
+        statusText.textContent.includes("progress")
+      ) {
         statusText.textContent =
-          "Update may be in progress - check billboard status";
+          "Update in progress - app will restart when download completes";
+        // Don't show as error - update is likely still happening
       }
-    }, 60000);
+    }, 120000);
+
+    // Store timeout ID for cleanup
+    window.updateTimeoutId = timeoutId;
   } catch (error) {
     console.error("Force update failed:", error);
-    showToast("❌ Force update failed: " + error.message, "error");
+    showToast("Force update failed: " + error.message, "error");
     updateStatus.style.display = "block";
     statusText.textContent = "Error: " + error.message;
+
+    // Clear any timers
+    if (window.updateProgressInterval) {
+      clearInterval(window.updateProgressInterval);
+    }
+    if (window.updateTimeoutId) {
+      clearTimeout(window.updateTimeoutId);
+    }
   } finally {
     forceBtn.disabled = false;
     btnText.style.display = "inline";
@@ -412,6 +454,13 @@ function handleUpdateStatus(status) {
   switch (status.status) {
     case "update_available":
       statusText.textContent = `✅ Update available: v${status.version}`;
+
+      // Store detected version for verification
+      lastDetectedUpdateVersion = status.version;
+      console.log(
+        "handleUpdateStatus: Detected update version:",
+        status.version
+      );
 
       // Enable force update button
       const forceUpdateBtn = document.getElementById("forceUpdateBtn");

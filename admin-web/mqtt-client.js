@@ -7,7 +7,8 @@ class MqttClient {
     this.statusCallbacks = [];
     this.messageCallbacks = [];
     this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 5;
+    this.maxReconnectAttempts = 10; // Increased from 5 to 10 for better resilience
+    this.isReconnecting = false;
   }
 
   // Initialize and connect to MQTT broker
@@ -18,9 +19,15 @@ class MqttClient {
 
       const config = window.BannerConfig.mqtt;
 
-      // Connect to MQTT broker
-      this.client = mqtt.connect(config.broker, {
+      // Configure MQTT with exponential backoff for reconnection
+      // This prevents rapid reconnect attempts that overwhelm the broker
+      const mqttOptions = {
         ...config.options,
+        // Exponential backoff: 1s, 2s, 4s, 8s, 16s, etc.
+        reconnectPeriod: Math.min(
+          1000 * Math.pow(1.5, this.reconnectAttempts),
+          30000
+        ),
         will: {
           topic: config.topic.status,
           payload: JSON.stringify({
@@ -31,7 +38,16 @@ class MqttClient {
           qos: 1,
           retain: false,
         },
+      };
+
+      console.log("MQTT Options:", {
+        broker: config.broker,
+        reconnectPeriod: mqttOptions.reconnectPeriod,
+        connectTimeout: mqttOptions.connectTimeout,
       });
+
+      // Connect to MQTT broker
+      this.client = mqtt.connect(config.broker, mqttOptions);
 
       // Setup event handlers
       this.setupEventHandlers();
@@ -45,6 +61,7 @@ class MqttClient {
           clearTimeout(timeout);
           this.connected = true;
           this.reconnectAttempts = 0;
+          this.isReconnecting = false;
           this.updateStatus("connected");
 
           // Send online status
@@ -76,9 +93,10 @@ class MqttClient {
     if (!this.client) return;
 
     this.client.on("connect", () => {
-      console.log("MQTT Client connected");
+      console.log("MQTT Client connected successfully");
       this.connected = true;
       this.reconnectAttempts = 0;
+      this.isReconnecting = false;
       this.updateStatus("connected");
       this.publishStatus("online");
       // Subscribe to status topics
@@ -93,9 +111,18 @@ class MqttClient {
 
     this.client.on("reconnect", () => {
       this.reconnectAttempts++;
+      this.isReconnecting = true;
+
       console.log(
-        `MQTT Client reconnecting... (attempt ${this.reconnectAttempts})`
+        `MQTT Client reconnecting... (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
       );
+
+      // Calculate exponential backoff delay
+      const backoffDelay = Math.min(
+        1000 * Math.pow(1.5, this.reconnectAttempts - 1),
+        30000
+      );
+      console.log(`Next reconnect in ${(backoffDelay / 1000).toFixed(1)}s`);
 
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
         console.error("Max reconnection attempts reached");

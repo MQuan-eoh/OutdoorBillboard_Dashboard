@@ -51,3 +51,4 @@ CONFIG.mqtt.options.clientId = `banner_admin_${Math.random()
 
 // Export config
 window.BannerConfig = CONFIG;
+

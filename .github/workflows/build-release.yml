@@ -27,17 +27,22 @@ jobs:
         run: npm run build:renderer
 
       - name: Build application
-        run: npm run build:win
+        run: npm run build:nsis
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: List build output for debugging
+        run: |
+          echo "Contents of dist directory:"
+          dir dist /s /b
+        shell: cmd
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            dist/ITS-Billboard-*.exe
-            dist/ITS-Billboard-*.nsis.exe
+            dist/ITS-Billboard*.exe
             dist/*.yml
           draft: false
           prerelease: false

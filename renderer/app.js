@@ -3485,3 +3485,86 @@ document.addEventListener("DOMContentLoaded", () => {
     "WeatherPanel now uses consistent data from GlobalWeatherServiceManager"
   );
 });
+
+// ====================================
+// VERSION INDICATOR FOR OTA TESTING
+// ====================================
+
+/**
+ * Add version indicator for OTA update testing
+ * Shows current app version in bottom-right corner
+ */
+function addVersionIndicator() {
+  // Wait for DOM to be ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", addVersionIndicator);
+    return;
+  }
+
+  // Create version indicator element
+  const versionDiv = document.createElement("div");
+  versionDiv.id = "ota-version-indicator";
+  versionDiv.innerHTML = `🚀 v${window.BannerConfig?.app?.version || "1.0.0"}`;
+
+  // Style the indicator
+  Object.assign(versionDiv.style, {
+    position: "fixed",
+    bottom: "10px",
+    right: "10px",
+    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    color: "white",
+    padding: "8px 12px",
+    borderRadius: "20px",
+    fontSize: "12px",
+    fontWeight: "bold",
+    fontFamily: "Arial, sans-serif",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+    border: "2px solid rgba(255,255,255,0.2)",
+    zIndex: "10000",
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    userSelect: "none",
+  });
+
+  // Add hover effect
+  versionDiv.onmouseover = () => {
+    versionDiv.style.transform = "scale(1.05)";
+    versionDiv.style.boxShadow = "0 6px 20px rgba(0,0,0,0.4)";
+  };
+  versionDiv.onmouseout = () => {
+    versionDiv.style.transform = "scale(1)";
+    versionDiv.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
+  };
+
+  // Add click to show update info
+  versionDiv.onclick = () => {
+    const updateInfo = {
+      version: window.BannerConfig?.app?.version || "1.0.0",
+      timestamp: new Date().toLocaleString("vi-VN"),
+      platform: navigator.platform,
+      userAgent: navigator.userAgent.substring(0, 50) + "...",
+    };
+
+    alert(
+      `📱 ITS Billboard Info:\\n` +
+        `Version: ${updateInfo.version}\\n` +
+        `Time: ${updateInfo.timestamp}\\n` +
+        `Platform: ${updateInfo.platform}\\n\\n` +
+        `💡 Click "KIỂM TRA CẬP NHẬT" in admin-web to test OTA updates!`
+    );
+
+    console.log("📊 App Version Info:", updateInfo);
+  };
+
+  // Add to DOM
+  document.body.appendChild(versionDiv);
+
+  console.log(
+    `🎯 OTA Test Indicator Added: v${
+      window.BannerConfig?.app?.version || "1.0.0"
+    }`
+  );
+}
+
+// Initialize version indicator when app loads
+addVersionIndicator();

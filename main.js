@@ -1181,8 +1181,17 @@ class MainProcessMqttService {
     try {
       console.log("MainProcessMqttService: Checking for updates...");
 
-      // ✅ Ensure app-update.yml exists before check
-      ensureAppUpdateFile();
+      // ✅ Ensure app-update.yml exists before check with proper verification
+      const appUpdatePath = ensureAppUpdateFile();
+      if (!appUpdatePath) {
+        throw new Error(
+          "Failed to create app-update.yml file required for updates"
+        );
+      }
+      console.log(
+        "MainProcessMqttService: app-update.yml verified at:",
+        appUpdatePath
+      );
 
       const result = await autoUpdater.checkForUpdates();
 
@@ -1221,8 +1230,23 @@ class MainProcessMqttService {
     try {
       console.log("MainProcessMqttService: Force update initiated...");
 
-      // ✅ Ensure app-update.yml exists before force update
-      ensureAppUpdateFile();
+      // ✅ Ensure app-update.yml exists before force update with proper verification
+      const appUpdatePath = ensureAppUpdateFile();
+      if (!appUpdatePath) {
+        throw new Error(
+          "Failed to create app-update.yml file required for updates"
+        );
+      }
+      console.log(
+        "MainProcessMqttService: app-update.yml verified at:",
+        appUpdatePath
+      );
+
+      // IMPORTANT: Keep MQTT connected during update to monitor progress
+      // Do NOT disconnect MQTT - admin-web needs to receive status updates
+      console.log(
+        "MainProcessMqttService: Keeping MQTT connection alive for status reporting"
+      );
 
       // Send status - update in progress
       this.sendUpdateStatus({
@@ -1230,8 +1254,16 @@ class MainProcessMqttService {
         timestamp: Date.now(),
       });
 
+      // Give a small delay to ensure status message is sent before starting download
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
       // Check for updates
       const result = await autoUpdater.checkForUpdates();
+
+      console.log("MainProcessMqttService: checkForUpdates result:", {
+        hasUpdateInfo: !!(result && result.updateInfo),
+        result: result && result.updateInfo ? result.updateInfo : null,
+      });
 
       if (result && result.updateInfo) {
         console.log(
@@ -1239,14 +1271,73 @@ class MainProcessMqttService {
           result.updateInfo.version
         );
 
+        // Send downloading status
         this.sendUpdateStatus({
           status: "downloading",
           version: result.updateInfo.version,
           timestamp: Date.now(),
         });
 
-        // Download update
-        await autoUpdater.downloadUpdate();
+        // IMPORTANT: Keep MQTT alive to send progress updates
+        // Download will trigger download-progress events that we send via MQTT
+        console.log(
+          "MainProcessMqttService: Starting download, MQTT will report progress"
+        );
+
+        // Download update (MQTT remains connected for progress reporting)
+        try {
+          await autoUpdater.downloadUpdate();
+        } catch (downloadError) {
+          console.error(
+            "MainProcessMqttService: downloadUpdate failed:",
+            downloadError
+          );
+
+          // If the error indicates that a prior check is required, try one more check then retry
+          const msg =
+            downloadError && downloadError.message
+              ? downloadError.message
+              : String(downloadError);
+          if (msg.toLowerCase().includes("please check update")) {
+            console.log(
+              "MainProcessMqttService: downloadUpdate suggested to re-check for updates, retrying checkForUpdates once..."
+            );
+            try {
+              const retryResult = await autoUpdater.checkForUpdates();
+              if (retryResult && retryResult.updateInfo) {
+                console.log(
+                  "MainProcessMqttService: Retry check found update, attempting download again"
+                );
+                await autoUpdater.downloadUpdate();
+              } else {
+                console.warn(
+                  "MainProcessMqttService: Retry check did not find update"
+                );
+                this.sendUpdateStatus({
+                  status: "error",
+                  error: "Please check update first",
+                  timestamp: Date.now(),
+                });
+              }
+            } catch (retryErr) {
+              console.error(
+                "MainProcessMqttService: Retry downloadUpdate failed:",
+                retryErr
+              );
+              this.sendUpdateStatus({
+                status: "error",
+                error: retryErr.message || String(retryErr),
+                timestamp: Date.now(),
+              });
+            }
+          } else {
+            this.sendUpdateStatus({
+              status: "error",
+              error: msg,
+              timestamp: Date.now(),
+            });
+          }
+        }
       } else {
         console.log(
           "MainProcessMqttService: No updates available for force update"
@@ -1791,17 +1882,23 @@ function ensureAppUpdateFile() {
   const fs = require("fs");
   const path = require("path");
 
-  // Get proper app resources path
-  const resourcePath = path.join(
-    process.env.APPDATA || app.getPath("appData"),
-    "ITS-Outdoor-Billboard",
-    "resources"
-  );
+  // Get the correct app resources path where electron-updater expects the file
+  // In development: app.getAppPath()/resources/
+  // In production: process.resourcesPath/
+  let resourcePath;
+
+  if (app.isPackaged) {
+    // Production: use process.resourcesPath which points to the packaged resources directory
+    resourcePath = process.resourcesPath;
+  } else {
+    // Development: use app.getAppPath() + resources
+    resourcePath = path.join(app.getAppPath(), "resources");
+  }
 
   const appUpdatePath = path.join(resourcePath, "app-update.yml");
 
   try {
-    // Create resources directory if doesn't exist
+    // Create resources directory if doesn't exist (mainly for development)
     if (!fs.existsSync(resourcePath)) {
       fs.mkdirSync(resourcePath, { recursive: true });
       console.log(
@@ -1848,15 +1945,26 @@ async function initializeAutoUpdater() {
   try {
     console.log("AutoUpdater: Initializing OTA updates...");
 
-    // ✅ Ensure app-update.yml exists FIRST
-    ensureAppUpdateFile();
+    // ✅ Ensure app-update.yml exists FIRST and verify it was created
+    const appUpdatePath = ensureAppUpdateFile();
+    if (!appUpdatePath) {
+      console.warn(
+        "AutoUpdater: Failed to create app-update.yml, updates may not work properly"
+      );
+    } else {
+      console.log("AutoUpdater: app-update.yml verified at:", appUpdatePath);
+    }
 
     // Configure electron-updater for GitHub releases
     autoUpdater.allowDowngrade = false;
     autoUpdater.allowPrerelease = false;
 
-    // Configure GitHub as update provider
-    const updateCheckResult = autoUpdater.checkForUpdatesAndNotify();
+    // Explicitly configure GitHub as update provider (redundant but ensures proper setup)
+    autoUpdater.setFeedURL({
+      provider: "github",
+      owner: "MinhQuan7",
+      repo: "ITS_OurdoorBillboard-",
+    });
 
     // Configure auto-updater with safe logger setup
     autoUpdater.logger = console;

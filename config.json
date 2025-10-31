@@ -2,13 +2,13 @@
   "logoMode": "fixed",
   "logoImages": [
     {
-      "name": "z7085121756040_358cffc35564647bef9a6fef40de1c01",
-      "path": "downloads\\logos\\z7085121756040-358cffc35564647bef9a6fef40de1c01-1761711169119.jpg",
-      "size": 430656,
-      "type": "image/jpeg",
-      "id": "z7085121756040-358cffc35564647bef9a6fef40de1c01-1761711169119",
+      "name": "EoH_ERa_Web-Banner_1920x800-1",
+      "path": "downloads\\logos\\eoh-era-web-banner-1920x800-1-1761730314689.png",
+      "size": 733002,
+      "type": "image/png",
+      "id": "eoh-era-web-banner-1920x800-1-1761730314689",
       "source": "github_cdn",
-      "checksum": "z7085121756040358cffc35564647bef9a6fef40de1c01jpg4306561761711172092"
+      "checksum": "eoherawebbanner1920x8001png7330021761730318343"
     }
   ],
   "logoLoopDuration": 4,
@@ -100,6 +100,6 @@
     "retryAttempts": 3,
     "retryDelay": 2000
   },
-  "_manifestVersion": "1.0.1761711172486",
-  "_manifestLastUpdated": "2025-10-29T04:12:52.486Z"
+  "_manifestVersion": "1.0.1761730318725",
+  "_manifestLastUpdated": "2025-10-29T09:31:58.725Z"
 }
