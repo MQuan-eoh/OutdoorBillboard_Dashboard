@@ -1911,10 +1911,10 @@ function ensureAppUpdateFile() {
     if (!fs.existsSync(appUpdatePath)) {
       const updateYaml = `version: ${app.getVersion()}
 files:
-  - url: https://github.com/MinhQuan7/ITS_OurdoorBillboard-/releases/download/v${app.getVersion()}/ITS-Billboard-${app.getVersion()}-setup.exe
+  - url: https://github.com/MinhQuan7/ITS_OurdoorBillboard-/releases/download/v${app.getVersion()}/ITS-Billboard.exe
     sha512: ''
     size: 0
-path: ITS-Billboard-${app.getVersion()}-setup.exe
+path: ITS-Billboard.exe
 sha512: ''
 releaseDate: ${new Date().toISOString()}
 `;

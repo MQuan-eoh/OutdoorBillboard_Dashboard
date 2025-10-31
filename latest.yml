@@ -1,8 +1,8 @@
-version: 1.0.0
+version: 1.0.2
 files:
-  - url: ITS-Billboard-1.0.0-setup.exe
+  - url: ITS-Billboard.exe
     sha512: PLACEHOLDER_SHA512_HASH_WILL_BE_UPDATED_AFTER_BUILD
     size: 0
-path: ITS-Billboard-1.0.0-setup.exe
+path: ITS-Billboard.exe
 sha512: PLACEHOLDER_SHA512_HASH_WILL_BE_UPDATED_AFTER_BUILD
-releaseDate: '2025-10-29T00:00:00.000Z'
+releaseDate: "2025-10-31T00:00:00.000Z"
