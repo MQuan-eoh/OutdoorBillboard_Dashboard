@@ -1147,12 +1147,6 @@ class MainProcessMqttService {
       const command = JSON.parse(messageStr);
 
       switch (command.action) {
-        case "check_update":
-          console.log(
-            "MainProcessMqttService: Processing check_update command"
-          );
-          await this.handleCheckUpdateCommand();
-          break;
         case "force_update":
           console.log(
             "MainProcessMqttService: Processing force_update command"
@@ -1177,173 +1171,57 @@ class MainProcessMqttService {
     }
   }
 
-  async handleCheckUpdateCommand() {
+  async handleForceUpdateCommand(command) {
     try {
-      console.log("MainProcessMqttService: Checking for updates...");
-      const appUpdatePath = ensureAppUpdateFile();
-      if (!appUpdatePath) {
-        throw new Error(
-          "Failed to create app-update.yml file required for updates"
-        );
-      }
-      console.log(
-        "MainProcessMqttService: app-update.yml verified at:",
-        appUpdatePath
-      );
+      console.log("MainProcessMqttService: Force update initiated...", command);
 
-      const result = await autoUpdater.checkForUpdates();
-
-      if (result && result.updateInfo) {
-        console.log(
-          "MainProcessMqttService: Update available:",
-          result.updateInfo.version
-        );
-        // Send status back via MQTT
-        this.sendUpdateStatus({
-          status: "update_available",
-          version: result.updateInfo.version,
-          timestamp: Date.now(),
-        });
-      } else {
-        console.log("MainProcessMqttService: No updates available");
-        this.sendUpdateStatus({
-          status: "no_updates",
-          timestamp: Date.now(),
-        });
-      }
-    } catch (error) {
-      console.error(
-        "MainProcessMqttService: Error checking for updates:",
-        error
-      );
+      // Simplified: Just trigger download directly
+      // No need to check current version or compare versions
       this.sendUpdateStatus({
-        status: "error",
-        error: error.message,
-        timestamp: Date.now(),
-      });
-    }
-  }
-
-  async handleForceUpdateCommand() {
-    try {
-      console.log("MainProcessMqttService: Force update initiated...");
-
-      // ✅ Ensure app-update.yml exists before force update with proper verification
-      const appUpdatePath = ensureAppUpdateFile();
-      if (!appUpdatePath) {
-        throw new Error(
-          "Failed to create app-update.yml file required for updates"
-        );
-      }
-      console.log(
-        "MainProcessMqttService: app-update.yml verified at:",
-        appUpdatePath
-      );
-
-      // IMPORTANT: Keep MQTT connected during update to monitor progress
-      // Do NOT disconnect MQTT - admin-web needs to receive status updates
-      console.log(
-        "MainProcessMqttService: Keeping MQTT connection alive for status reporting"
-      );
-
-      // Send status - update in progress
-      this.sendUpdateStatus({
-        status: "update_in_progress",
+        status: "downloading",
         timestamp: Date.now(),
       });
 
       // Give a small delay to ensure status message is sent before starting download
       await new Promise((resolve) => setTimeout(resolve, 200));
 
-      // Check for updates
-      const result = await autoUpdater.checkForUpdates();
-
-      console.log("MainProcessMqttService: checkForUpdates result:", {
-        hasUpdateInfo: !!(result && result.updateInfo),
-        result: result && result.updateInfo ? result.updateInfo : null,
-      });
-
-      if (result && result.updateInfo) {
-        console.log(
-          "MainProcessMqttService: Update available, downloading:",
-          result.updateInfo.version
+      // Download update directly
+      try {
+        await autoUpdater.downloadUpdate();
+      } catch (downloadError) {
+        console.error(
+          "MainProcessMqttService: downloadUpdate failed:",
+          downloadError
         );
 
-        // Send downloading status
-        this.sendUpdateStatus({
-          status: "downloading",
-          version: result.updateInfo.version,
-          timestamp: Date.now(),
-        });
+        // If error indicates prior check is required, do one check then retry
+        const msg =
+          downloadError && downloadError.message
+            ? downloadError.message
+            : String(downloadError);
 
-        // IMPORTANT: Keep MQTT alive to send progress updates
-        // Download will trigger download-progress events that we send via MQTT
-        console.log(
-          "MainProcessMqttService: Starting download, MQTT will report progress"
-        );
-
-        // Download update (MQTT remains connected for progress reporting)
-        try {
-          await autoUpdater.downloadUpdate();
-        } catch (downloadError) {
-          console.error(
-            "MainProcessMqttService: downloadUpdate failed:",
-            downloadError
+        if (msg.toLowerCase().includes("please check update")) {
+          console.log(
+            "MainProcessMqttService: Retrying with checkForUpdates..."
           );
-
-          // If the error indicates that a prior check is required, try one more check then retry
-          const msg =
-            downloadError && downloadError.message
-              ? downloadError.message
-              : String(downloadError);
-          if (msg.toLowerCase().includes("please check update")) {
-            console.log(
-              "MainProcessMqttService: downloadUpdate suggested to re-check for updates, retrying checkForUpdates once..."
-            );
-            try {
-              const retryResult = await autoUpdater.checkForUpdates();
-              if (retryResult && retryResult.updateInfo) {
-                console.log(
-                  "MainProcessMqttService: Retry check found update, attempting download again"
-                );
-                await autoUpdater.downloadUpdate();
-              } else {
-                console.warn(
-                  "MainProcessMqttService: Retry check did not find update"
-                );
-                this.sendUpdateStatus({
-                  status: "error",
-                  error: "Please check update first",
-                  timestamp: Date.now(),
-                });
-              }
-            } catch (retryErr) {
-              console.error(
-                "MainProcessMqttService: Retry downloadUpdate failed:",
-                retryErr
-              );
-              this.sendUpdateStatus({
-                status: "error",
-                error: retryErr.message || String(retryErr),
-                timestamp: Date.now(),
-              });
-            }
-          } else {
+          try {
+            await autoUpdater.checkForUpdates();
+            await autoUpdater.downloadUpdate();
+          } catch (retryErr) {
+            console.error("MainProcessMqttService: Retry failed:", retryErr);
             this.sendUpdateStatus({
               status: "error",
-              error: msg,
+              error: retryErr.message || String(retryErr),
               timestamp: Date.now(),
             });
           }
+        } else {
+          this.sendUpdateStatus({
+            status: "error",
+            error: msg,
+            timestamp: Date.now(),
+          });
         }
-      } else {
-        console.log(
-          "MainProcessMqttService: No updates available for force update"
-        );
-        this.sendUpdateStatus({
-          status: "no_updates",
-          timestamp: Date.now(),
-        });
       }
     } catch (error) {
       console.error("MainProcessMqttService: Error in force update:", error);
@@ -1479,6 +1357,24 @@ class MainProcessMqttService {
         "MainProcessMqttService: Error sending update status:",
         error
       );
+    }
+  }
+
+  triggerResetApp(options = {}) {
+    try {
+      console.log("MainProcessMqttService: Triggering reset_app...", options);
+
+      const command = {
+        action: "reset_app",
+        reason: options.reason || "manual",
+        version: options.version || app.getVersion(),
+        timestamp: Date.now(),
+      };
+
+      // Handle reset app internally
+      this.handleResetAppCommand(command);
+    } catch (error) {
+      console.error("MainProcessMqttService: Error triggering reset:", error);
     }
   }
 }
@@ -2141,20 +2037,47 @@ async function initializeAutoUpdater() {
         progressObj.total +
         ")";
       console.log("AutoUpdater: Download progress:", log_message);
+
+      // Send progress update via MQTT
+      if (mqttService) {
+        mqttService.sendUpdateStatus({
+          status: "downloading",
+          percent: Math.round(progressObj.percent),
+          bytesPerSecond: progressObj.bytesPerSecond,
+          transferred: progressObj.transferred,
+          total: progressObj.total,
+          timestamp: Date.now(),
+        });
+      }
     });
 
     autoUpdater.on("update-downloaded", (info) => {
       console.log("AutoUpdater: Update downloaded:", info.version);
-      // Send notification to renderer
+
+      // Send update success status
+      if (mqttService) {
+        mqttService.sendUpdateStatus({
+          status: "update_success",
+          version: info.version,
+          timestamp: Date.now(),
+        });
+
+        // Auto-trigger reset app after 1 second
+        setTimeout(() => {
+          console.log(
+            "AutoUpdater: Auto-triggering reset_app after download success"
+          );
+          mqttService.triggerResetApp({
+            reason: "post_update",
+            version: info.version,
+          });
+        }, 1000);
+      }
+
+      // Send notification to renderer (optional)
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send("update-downloaded", info);
       }
-
-      // Auto-install after 5 seconds (gives time for user notification)
-      setTimeout(() => {
-        console.log("AutoUpdater: Installing update and restarting...");
-        autoUpdater.quitAndInstall(false, true); // isSilent=true, forceRunAfter=true
-      }, 5000);
     });
 
     // Check for updates (but don't download automatically)

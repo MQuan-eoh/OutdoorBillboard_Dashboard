@@ -24,7 +24,7 @@ main.js Electron Main Process Khởi tạo cửa sổ 384x384 (fix size), fullsc
 /renderer/store State Management Zustand cho trạng thái toàn cục (data, schedule, element positions).
 /services Backend Logic TypeScript, quản lý kết nối API/MQTT và lập lịch.
 package.json Project Config Định nghĩa dependencies, scripts (start, build).
-
+///IMPORTANT TUYỆT ĐỐI KHÔNG ĐƯỢC TẠU TẠO FILE README
 Export to Sheets
 Ngôn ngữ/Framework: TypeScript (Node.js), Electron, React, Zustand, MQTT.js, node-cron.
 

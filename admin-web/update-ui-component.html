@@ -1,0 +1,803 @@
+<!-- 
+  Update UI Component - OTA Update Interface (Simplified Model v2.0)
+  
+  Features:
+  - Input version number
+  - Real-time progress monitoring
+  - Automatic reset trigger after update success
+  - Professional UI with animations
+  
+  MQTT Flow:
+  1. Admin → Desktop: force_update { version }
+  2. Desktop → Admin: update/status { downloading, percent, ... }
+  3. Desktop → Admin: update/status { update_success }
+  4. Desktop → Admin: reset/status { reset_success }
+  5. Admin receives completion
+-->
+
+<section class="glass-panel update-section">
+  <div class="update-container">
+    <!-- Header -->
+    <div class="update-header">
+      <h2 class="update-title">🔄 Cập Nhật Ứng Dụng Desktop</h2>
+      <p class="update-subtitle">
+        Cập nhật phiên bản mới nhất cho billboard display
+      </p>
+    </div>
+
+    <!-- Update Form -->
+    <div class="update-form-group">
+      <label class="form-label">
+        <span class="label-icon">📦</span>
+        <span class="label-text">Phiên Bản Mới</span>
+      </label>
+
+      <div class="form-input-wrapper">
+        <input
+          type="text"
+          id="updateVersion"
+          class="form-input update-version-input"
+          placeholder="VD: 1.0.3"
+          pattern="\d+\.\d+\.\d+"
+          disabled
+        />
+        <span class="input-hint-small">Nhập phiên bản (VD: 1.0.3)</span>
+      </div>
+
+      <div class="form-button-group">
+        <button
+          class="btn btn-success btn-lg"
+          id="updateBtn"
+          onclick="triggerUpdateWithVersion()"
+          disabled
+        >
+          <span class="btn-icon">⬇️</span>
+          <span class="btn-text">Cập Nhật Ngay</span>
+          <span class="btn-loading" style="display: none"
+            >⏳ Đang cập nhật...</span
+          >
+        </button>
+      </div>
+    </div>
+
+    <!-- Update Status Display -->
+    <div
+      class="update-status-container"
+      id="updateStatusContainer"
+      style="display: none"
+    >
+      <!-- Status Card -->
+      <div class="status-card update-card">
+        <div class="status-header">
+          <h3 class="status-title">
+            <span class="status-icon" id="statusIcon">⏳</span>
+            <span id="statusLabel">Chuẩn bị cập nhật...</span>
+          </h3>
+          <span class="status-badge" id="statusBadge">Chờ xử lý</span>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-section">
+          <div class="progress-info">
+            <span class="progress-label">
+              <span id="progressPercent">0</span>%
+            </span>
+            <span class="progress-version" id="progressVersion"> v1.0.3 </span>
+          </div>
+
+          <div class="progress-wrapper">
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="updateProgressBar"></div>
+            </div>
+          </div>
+
+          <div class="progress-details">
+            <div class="progress-detail-item">
+              <span class="detail-label">Tốc độ:</span>
+              <span class="detail-value" id="downloadSpeed">-</span>
+            </div>
+            <div class="progress-detail-item">
+              <span class="detail-label">Tải:</span>
+              <span class="detail-value" id="downloadSize">-</span>
+            </div>
+            <div class="progress-detail-item">
+              <span class="detail-label">Thời gian:</span>
+              <span class="detail-value" id="elapsedTime">0s</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="update-timeline">
+          <div class="timeline-item timeline-initializing" id="timelineInit">
+            <div class="timeline-circle"></div>
+            <div class="timeline-content">
+              <span class="timeline-label">Bắt đầu cập nhật</span>
+            </div>
+          </div>
+
+          <div class="timeline-item timeline-downloading" id="timelineDownload">
+            <div class="timeline-circle"></div>
+            <div class="timeline-content">
+              <span class="timeline-label">Tải phiên bản mới</span>
+              <span class="timeline-desc" id="downloadDesc"></span>
+            </div>
+          </div>
+
+          <div class="timeline-item timeline-verifying" id="timelineVerify">
+            <div class="timeline-circle"></div>
+            <div class="timeline-content">
+              <span class="timeline-label">Xác nhận cập nhật</span>
+            </div>
+          </div>
+
+          <div class="timeline-item timeline-restart" id="timelineRestart">
+            <div class="timeline-circle"></div>
+            <div class="timeline-content">
+              <span class="timeline-label">Khởi động lại ứng dụng</span>
+            </div>
+          </div>
+
+          <div class="timeline-item timeline-complete" id="timelineComplete">
+            <div class="timeline-circle"></div>
+            <div class="timeline-content">
+              <span class="timeline-label">Hoàn thành cập nhật</span>
+              <span class="timeline-desc" id="completeDesc"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div class="status-messages">
+          <div class="status-message" id="statusMessage"></div>
+          <div
+            class="error-message"
+            id="errorMessage"
+            style="display: none"
+          ></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Information Card -->
+    <div class="info-card update-info-card">
+      <div class="card-header">
+        <h3 class="card-title">💡 Thông Tin Cập Nhật</h3>
+      </div>
+      <div class="card-body">
+        <ul class="info-list">
+          <li class="info-item">
+            <span class="info-icon">1</span>
+            <span class="info-text">
+              <strong>Nhập phiên bản:</strong> Nhập số phiên bản mới (VD: 1.0.3)
+            </span>
+          </li>
+          <li class="info-item">
+            <span class="info-icon">2</span>
+            <span class="info-text">
+              <strong>Tải tự động:</strong> Desktop app sẽ tự động tải từ GitHub
+              Release
+            </span>
+          </li>
+          <li class="info-item">
+            <span class="info-icon">3</span>
+            <span class="info-text">
+              <strong>Cài đặt tự động:</strong> Cài đặt và khởi động lại tự động
+            </span>
+          </li>
+          <li class="info-item">
+            <span class="info-icon">4</span>
+            <span class="info-text">
+              <strong>Thời gian:</strong> Quá trình cập nhật mất 2-5 phút
+            </span>
+          </li>
+          <li class="info-item">
+            <span class="info-icon">5</span>
+            <span class="info-text">
+              <strong>Xác nhận:</strong> Nén dữ liệu sẽ tự trigger reset sau cập
+              nhật thành công
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* Update Section Styles */
+
+  .update-section {
+    margin-bottom: 30px;
+  }
+
+  .update-container {
+    padding: 30px;
+  }
+
+  .update-header {
+    margin-bottom: 30px;
+    text-align: center;
+  }
+
+  .update-title {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #ffffff;
+  }
+
+  .update-subtitle {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  /* Form Group */
+  .update-form-group {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 25px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .form-label {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    font-weight: 500;
+    color: #ffffff;
+  }
+
+  .label-icon {
+    margin-right: 8px;
+    font-size: 18px;
+  }
+
+  .label-text {
+    font-size: 14px;
+  }
+
+  .form-input-wrapper {
+    margin-bottom: 15px;
+  }
+
+  .update-version-input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    font-size: 16px;
+    transition: all 0.3s ease;
+  }
+
+  .update-version-input:focus {
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.08);
+    outline: none;
+  }
+
+  .update-version-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .input-hint-small {
+    display: block;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 6px;
+  }
+
+  .form-button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+  }
+
+  .btn-lg {
+    padding: 14px 24px;
+    font-size: 16px;
+    min-width: 200px;
+  }
+
+  /* Update Status Container */
+  .update-status-container {
+    margin-bottom: 25px;
+  }
+
+  .update-card {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 25px;
+    border-radius: 12px;
+  }
+
+  .status-card {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .status-title {
+    display: flex;
+    align-items: center;
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+  }
+
+  .status-icon {
+    margin-right: 10px;
+    font-size: 24px;
+    animation: pulse-icon 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-icon {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.7;
+      transform: scale(1.1);
+    }
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+  }
+
+  /* Progress Section */
+  .progress-section {
+    margin-bottom: 25px;
+  }
+
+  .progress-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .progress-label {
+    font-size: 24px;
+    font-weight: 600;
+    color: #ffffff;
+  }
+
+  .progress-version {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .progress-wrapper {
+    margin-bottom: 15px;
+  }
+
+  .progress-bar-bg {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4caf50, #45a049);
+    border-radius: 10px;
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+
+  .progress-details {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+  }
+
+  .progress-detail-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  .detail-label {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .detail-value {
+    color: #ffffff;
+    font-weight: 600;
+  }
+
+  /* Timeline */
+  .update-timeline {
+    margin: 25px 0;
+    padding: 20px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .timeline-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    position: relative;
+    opacity: 0.5;
+    transition: opacity 0.3s ease;
+  }
+
+  .timeline-item.timeline-initializing,
+  .timeline-item.timeline-downloading.active,
+  .timeline-item.timeline-verifying.active,
+  .timeline-item.timeline-restart.active,
+  .timeline-item.timeline-complete.active {
+    opacity: 1;
+  }
+
+  .timeline-circle {
+    width: 20px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    margin-right: 15px;
+    margin-top: 2px;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .timeline-item.active .timeline-circle {
+    background: #4caf50;
+    border-color: #4caf50;
+  }
+
+  .timeline-item.active .timeline-circle::after {
+    content: "";
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: white;
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .timeline-content {
+    flex: 1;
+  }
+
+  .timeline-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: #ffffff;
+  }
+
+  .timeline-desc {
+    display: block;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 4px;
+  }
+
+  /* Status Messages */
+  .status-messages {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .status-message {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 10px;
+    background: rgba(76, 175, 80, 0.1);
+    border-left: 3px solid #4caf50;
+    border-radius: 4px;
+    margin-bottom: 10px;
+  }
+
+  .error-message {
+    font-size: 14px;
+    color: #ff6b6b;
+    padding: 10px;
+    background: rgba(255, 107, 107, 0.1);
+    border-left: 3px solid #ff6b6b;
+    border-radius: 4px;
+  }
+
+  /* Info Card */
+  .update-info-card {
+    background: rgba(76, 175, 80, 0.08);
+    border: 1px solid rgba(76, 175, 80, 0.2);
+  }
+
+  .info-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .info-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+
+  .info-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .info-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: #4caf50;
+    border-radius: 50%;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+
+  .info-text {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.5;
+  }
+
+  .info-text strong {
+    color: #ffffff;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .update-container {
+      padding: 20px;
+    }
+
+    .progress-details {
+      grid-template-columns: 1fr;
+    }
+
+    .btn-lg {
+      min-width: auto;
+      width: 100%;
+    }
+
+    .form-button-group {
+      flex-direction: column;
+    }
+
+    .update-title {
+      font-size: 24px;
+    }
+  }
+</style>
+
+<script>
+  /**
+   * Update UI Controller Functions
+   */
+
+  // Trigger update with version input
+  async function triggerUpdateWithVersion() {
+    const versionInput = document.getElementById("updateVersion");
+    const version = versionInput.value.trim();
+
+    if (!version) {
+      showToast("Vui lòng nhập phiên bản", "warning");
+      return;
+    }
+
+    // Use UpdateService to handle the update
+    const success = await window.UpdateService.triggerUpdate(version);
+
+    if (success) {
+      // Show update status UI
+      showUpdateStatusUI();
+
+      // Setup listeners
+      setupUpdateListeners();
+    }
+  }
+
+  // Show update status UI
+  function showUpdateStatusUI() {
+    const container = document.getElementById("updateStatusContainer");
+    if (container) {
+      container.style.display = "block";
+    }
+  }
+
+  // Setup update listeners
+  function setupUpdateListeners() {
+    // Status change listener
+    window.UpdateService.on("statusChange", (data) => {
+      updateStatusDisplay(data);
+      updateTimeline(data.status);
+    });
+
+    // Progress change listener
+    window.UpdateService.on("progressChange", (data) => {
+      updateProgressDisplay(data);
+    });
+
+    // Success listener
+    window.UpdateService.on("success", (data) => {
+      showToast(`Cập nhật thành công! (v${data.version})`, "success");
+      setTimeout(() => {
+        document.getElementById("updateVersion").value = "";
+        document.getElementById("updateStatusContainer").style.display = "none";
+      }, 3000);
+    });
+
+    // Error listener
+    window.UpdateService.on("error", (error) => {
+      showErrorMessage(error.message);
+      showToast(error.message, "error");
+    });
+  }
+
+  // Update status display
+  function updateStatusDisplay(data) {
+    const statusLabel = document.getElementById("statusLabel");
+    const statusIcon = document.getElementById("statusIcon");
+    const statusMessage = document.getElementById("statusMessage");
+    const statusBadge = document.getElementById("statusBadge");
+
+    const icons = {
+      initializing: "⏳",
+      downloading: "⬇️",
+      verifying: "🔍",
+      completed: "✅",
+    };
+
+    const badges = {
+      initializing: "Chuẩn bị",
+      downloading: "Tải xuống",
+      verifying: "Xác nhận",
+      completed: "Hoàn thành",
+    };
+
+    const messages = {
+      initializing: "Bắt đầu cập nhật...",
+      downloading: data.message,
+      verifying: "Cập nhật thành công, đang khởi động lại...",
+      completed: data.message,
+    };
+
+    statusIcon.textContent = icons[data.status] || "⏳";
+    statusLabel.textContent = data.version
+      ? `Cập nhật v${data.version}`
+      : "Cập nhật";
+    statusBadge.textContent = badges[data.status] || "Đang xử lý";
+    statusMessage.textContent = messages[data.status] || data.message;
+
+    // Update version in progress
+    const progressVersion = document.getElementById("progressVersion");
+    if (data.version) {
+      progressVersion.textContent = `v${data.version}`;
+    }
+  }
+
+  // Update progress display
+  function updateProgressDisplay(data) {
+    const progressBar = document.getElementById("updateProgressBar");
+    const progressPercent = document.getElementById("progressPercent");
+    const downloadSpeed = document.getElementById("downloadSpeed");
+    const downloadSize = document.getElementById("downloadSize");
+    const elapsedTime = document.getElementById("elapsedTime");
+
+    if (data.percent !== undefined) {
+      progressBar.style.width = Math.min(data.percent, 100) + "%";
+      progressPercent.textContent = Math.round(data.percent);
+    }
+
+    if (data.bytesPerSecond) {
+      const mb = (data.bytesPerSecond / (1024 * 1024)).toFixed(1);
+      downloadSpeed.textContent = `${mb} MB/s`;
+    }
+
+    if (data.transferred && data.total) {
+      const transferred = (data.transferred / (1024 * 1024)).toFixed(1);
+      const total = (data.total / (1024 * 1024)).toFixed(0);
+      downloadSize.textContent = `${transferred} / ${total} MB`;
+    }
+
+    // Calculate elapsed time
+    const updateService = window.UpdateService;
+    if (updateService.updateStartTime) {
+      const elapsed = Math.floor(
+        (Date.now() - updateService.updateStartTime) / 1000
+      );
+      elapsedTime.textContent = elapsed + "s";
+    }
+  }
+
+  // Update timeline
+  function updateTimeline(status) {
+    const steps = ["Init", "Download", "Verify", "Restart", "Complete"];
+    const timelineIds = [
+      "timelineInit",
+      "timelineDownload",
+      "timelineVerify",
+      "timelineRestart",
+      "timelineComplete",
+    ];
+
+    const statusMap = {
+      initializing: 0,
+      downloading: 1,
+      verifying: 2,
+      restart: 3,
+      completed: 4,
+    };
+
+    const currentStep = statusMap[status] !== undefined ? statusMap[status] : 0;
+
+    timelineIds.forEach((id, index) => {
+      const element = document.getElementById(id);
+      if (element) {
+        if (index <= currentStep) {
+          element.classList.add("active");
+        } else {
+          element.classList.remove("active");
+        }
+      }
+    });
+  }
+
+  // Show error message
+  function showErrorMessage(message) {
+    const errorContainer = document.getElementById("errorMessage");
+    if (errorContainer) {
+      errorContainer.textContent = message;
+      errorContainer.style.display = "block";
+    }
+  }
+
+  // Disable/enable update version input based on connection
+  function updateVersionInputStatus(isConnected) {
+    const versionInput = document.getElementById("updateVersion");
+    const updateBtn = document.getElementById("updateBtn");
+
+    if (isConnected) {
+      versionInput.disabled = false;
+      updateBtn.disabled = false;
+      versionInput.placeholder = "VD: 1.0.3";
+    } else {
+      versionInput.disabled = true;
+      updateBtn.disabled = true;
+      versionInput.placeholder = "Kết nối MQTT để cập nhật...";
+    }
+  }
+</script>
