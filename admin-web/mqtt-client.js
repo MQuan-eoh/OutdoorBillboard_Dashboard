@@ -9,6 +9,8 @@ class MqttClient {
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 10; // Increased from 5 to 10 for better resilience
     this.isReconnecting = false;
+    // ✅ NEW: Acknowledgment tracking
+    this.pendingAcknowledgments = new Map(); // messageId -> {resolve, reject, timeout}
   }
 
   // Initialize and connect to MQTT broker
@@ -142,6 +144,21 @@ class MqttClient {
       try {
         const data = JSON.parse(message.toString());
         console.log("MQTT message received:", { topic, data });
+
+        // ✅ NEW: Handle acknowledgments
+        if (topic === "its/billboard/update/ack") {
+          const messageId = data.messageId;
+          if (this.pendingAcknowledgments.has(messageId)) {
+            const ack = this.pendingAcknowledgments.get(messageId);
+            clearTimeout(ack.timeout);
+            ack.resolve(data);
+            this.pendingAcknowledgments.delete(messageId);
+            console.log(
+              `[OTA] Acknowledgment received for message ${messageId}`
+            );
+          }
+        }
+
         this.notifyMessageCallbacks(topic, data);
       } catch (error) {
         console.error("Error parsing MQTT message:", error);
@@ -468,6 +485,22 @@ class MqttClient {
       console.error("MQTT connection test failed:", error);
       throw error;
     }
+  }
+
+  // ✅ NEW: Wait for acknowledgment from desktop app
+  async waitForAcknowledgment(messageId, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+      const timeoutHandle = setTimeout(() => {
+        this.pendingAcknowledgments.delete(messageId);
+        reject(new Error(`Acknowledgment timeout for ${messageId}`));
+      }, timeout);
+
+      this.pendingAcknowledgments.set(messageId, {
+        resolve,
+        reject,
+        timeout: timeoutHandle,
+      });
+    }).catch(() => false); // Return false on timeout
   }
 }
 

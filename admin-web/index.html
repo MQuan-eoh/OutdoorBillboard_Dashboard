@@ -288,7 +288,6 @@
                         class="btn btn-success btn-block"
                         onclick="forceUpdate()"
                         id="forceUpdateBtn"
-                        disabled
                       >
                         <span class="btn-icon">⬇️</span>
                         <span class="btn-text">Cập Nhật Ngay</span>
@@ -355,45 +354,45 @@
             </div>
           </div>
 
-          <!-- Info Card -->
-          <div class="settings-card info-card">
+          <!-- Device Information Card - NEW -->
+          <div class="settings-card">
             <div class="card-header">
-              <h3 class="card-title">💡 Mẹo & Hướng Dẫn</h3>
+              <h3 class="card-title">� Thông Tin Thiết Bị</h3>
+              <p class="card-subtitle">
+                Trạng thái và thông tin của billboard display
+              </p>
             </div>
             <div class="card-body">
-              <div class="tips-list">
-                <div class="tip-item">
-                  <span class="tip-icon">1</span>
-                  <div class="tip-content">
-                    <strong>Chế độ Xoay Vòng:</strong> Tự động chuyển đổi giữa
-                    các banner theo thời gian bạn thiết lập. Tốt nhất cho hiển
-                    thị quảng cáo.
+              <div class="device-info-grid">
+                <div class="device-info-item">
+                  <div class="info-label">Phiên Bản Hiện Tại</div>
+                  <div class="info-value" id="currentDeviceVersion">
+                    Đang tải...
                   </div>
                 </div>
-                <div class="tip-item">
-                  <span class="tip-icon">2</span>
-                  <div class="tip-content">
-                    <strong>Chế độ Cố Định:</strong> Hiển thị một banner duy
-                    nhất cho đến khi bạn thay đổi. Phù hợp cho thông báo quan
-                    trọng.
+                <div class="device-info-item">
+                  <div class="info-label">ID Thiết Bị</div>
+                  <div class="info-value" id="deviceId">Chưa kết nối</div>
+                </div>
+                <div class="device-info-item">
+                  <div class="info-label">Trạng Thái MQTT</div>
+                  <div class="info-value" id="deviceMqttStatus">
+                    <span class="status-indicator offline"></span>
+                    Chưa kết nối
                   </div>
                 </div>
-                <div class="tip-item">
-                  <span class="tip-icon">3</span>
-                  <div class="tip-content">
-                    <strong>Chế độ Theo Lịch:</strong> Hiển thị banner dựa trên
-                    lịch trình cụ thể. Tốt cho sự kiện có thời gian nhất định.
-                  </div>
-                </div>
-                <div class="tip-item">
-                  <span class="tip-icon">4</span>
-                  <div class="tip-content">
-                    <strong>Luôn Lưu Cài Đặt:</strong> Nhấn "Lưu & Đồng Bộ Cài
-                    Đặt" sau khi thay đổi để đảm bảo billboard nhận được các
-                    thay đổi mới.
-                  </div>
+                <div class="device-info-item">
+                  <div class="info-label">Lần Cập Nhật Cuối</div>
+                  <div class="info-value" id="lastUpdateTime">Chưa có</div>
                 </div>
               </div>
+              <button
+                class="btn btn-outline btn-sm"
+                onclick="refreshDeviceInfo()"
+              >
+                <span class="btn-icon">🔄</span>
+                <span class="btn-text">Làm Mới</span>
+              </button>
             </div>
           </div>
         </section>

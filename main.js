@@ -917,26 +917,50 @@ class MainProcessMqttService {
   subscribeToCommandTopics() {
     if (!this.commandClient || !this.commandClient.connected) {
       console.warn(
-        "MainProcessMqttService: Cannot subscribe to command topics - client not connected"
+        "MainProcessMqttService: Cannot subscribe - client not connected, will retry when connected"
       );
+
+      // Set up auto-retry when connection is established
+      if (!this.commandClient.isSubscriptionPending) {
+        this.commandClient.isSubscriptionPending = true;
+        this.commandClient.once("connect", () => {
+          console.log(
+            "MainProcessMqttService: Client reconnected, subscribing to topics..."
+          );
+          delete this.commandClient.isSubscriptionPending;
+          this.subscribeToCommandTopics();
+        });
+      }
       return;
     }
 
     // Subscribe to remote commands from admin-web
     const commandsTopic = "its/billboard/commands";
+    console.log(`MainProcessMqttService: Subscribing to ${commandsTopic}...`);
+
     this.commandClient.subscribe(commandsTopic, { qos: 1 }, (err) => {
       if (err) {
-        console.log(
-          "MainProcessMqttService: ❌ Failed to subscribe to commands topic:",
+        console.error(
+          `MainProcessMqttService: ❌ Failed to subscribe to ${commandsTopic}:`,
           err.message
         );
-        // Retry after 5 seconds
-        setTimeout(() => this.subscribeToCommandTopics(), 5000);
+
+        // Exponential backoff retry
+        const retryDelay = Math.min(
+          2000 * (this.subscriptionRetryCount || 1),
+          30000
+        );
+        this.subscriptionRetryCount = (this.subscriptionRetryCount || 0) + 1;
+
+        console.log(
+          `MainProcessMqttService: Retrying subscription in ${retryDelay}ms (attempt ${this.subscriptionRetryCount})`
+        );
+        setTimeout(() => this.subscribeToCommandTopics(), retryDelay);
       } else {
         console.log(
-          "MainProcessMqttService: ✅ Successfully subscribed to commands:",
-          commandsTopic
+          `MainProcessMqttService: ✅ Successfully subscribed to ${commandsTopic}`
         );
+        this.subscriptionRetryCount = 0; // Reset counter on success
       }
     });
 
@@ -944,14 +968,13 @@ class MainProcessMqttService {
     const manifestTopic = "its/billboard/manifest/refresh";
     this.commandClient.subscribe(manifestTopic, { qos: 1 }, (err) => {
       if (err) {
-        console.log(
-          "MainProcessMqttService: ❌ Failed to subscribe to manifest topic:",
+        console.error(
+          `MainProcessMqttService: ❌ Failed to subscribe to ${manifestTopic}:`,
           err.message
         );
       } else {
         console.log(
-          "MainProcessMqttService: ✅ Successfully subscribed to manifest refresh:",
-          manifestTopic
+          `MainProcessMqttService: ✅ Successfully subscribed to ${manifestTopic}`
         );
       }
     });
@@ -1151,7 +1174,7 @@ class MainProcessMqttService {
           console.log(
             "MainProcessMqttService: Processing force_update command"
           );
-          await this.handleForceUpdateCommand();
+          await this.handleForceUpdateCommand(command);
           break;
         case "reset_app":
           console.log("MainProcessMqttService: Processing reset_app command");
@@ -1173,13 +1196,45 @@ class MainProcessMqttService {
 
   async handleForceUpdateCommand(command) {
     try {
-      console.log("MainProcessMqttService: Force update initiated...", command);
+      // Validate command structure
+      if (!command || typeof command !== "object") {
+        console.error("[OTA] Invalid command object:", command);
+        this.sendUpdateStatus({
+          status: "error",
+          error: "Invalid command format - expected object",
+          timestamp: Date.now(),
+          errorCode: "INVALID_COMMAND",
+        });
+        return;
+      }
 
-      // Simplified: Just trigger download directly
-      // No need to check current version or compare versions
+      const version = command.version || command.targetVersion;
+      const messageId = command.messageId;
+
+      console.log("[OTA] Force update initiated", {
+        version: version,
+        messageId: messageId,
+        source: command.source || "unknown",
+        requestTime: command.timestamp,
+        currentAppVersion: app.getVersion(),
+      });
+
+      // Send acknowledgment back to admin-web
+      if (messageId) {
+        this.sendUpdateAcknowledgment({
+          messageId: messageId,
+          status: "acknowledged",
+          timestamp: Date.now(),
+          message: "Update command received and processing",
+        });
+      }
+
+      // Send status update
       this.sendUpdateStatus({
         status: "downloading",
         timestamp: Date.now(),
+        version: version,
+        messageId: messageId,
       });
 
       // Give a small delay to ensure status message is sent before starting download
@@ -1187,12 +1242,10 @@ class MainProcessMqttService {
 
       // Download update directly
       try {
+        console.log("[OTA] Calling autoUpdater.downloadUpdate()");
         await autoUpdater.downloadUpdate();
       } catch (downloadError) {
-        console.error(
-          "MainProcessMqttService: downloadUpdate failed:",
-          downloadError
-        );
+        console.error("[OTA] downloadUpdate failed:", downloadError);
 
         // If error indicates prior check is required, do one check then retry
         const msg =
@@ -1201,18 +1254,20 @@ class MainProcessMqttService {
             : String(downloadError);
 
         if (msg.toLowerCase().includes("please check update")) {
-          console.log(
-            "MainProcessMqttService: Retrying with checkForUpdates..."
-          );
+          console.log("[OTA] Retrying with checkForUpdates...");
           try {
             await autoUpdater.checkForUpdates();
             await autoUpdater.downloadUpdate();
+            console.log("[OTA] Download successful after retry");
           } catch (retryErr) {
-            console.error("MainProcessMqttService: Retry failed:", retryErr);
+            console.error("[OTA] Retry failed:", retryErr);
             this.sendUpdateStatus({
               status: "error",
               error: retryErr.message || String(retryErr),
               timestamp: Date.now(),
+              version: version,
+              messageId: messageId,
+              errorCode: "DOWNLOAD_FAILED",
             });
           }
         } else {
@@ -1220,15 +1275,19 @@ class MainProcessMqttService {
             status: "error",
             error: msg,
             timestamp: Date.now(),
+            version: version,
+            messageId: messageId,
+            errorCode: "UPDATE_ERROR",
           });
         }
       }
     } catch (error) {
-      console.error("MainProcessMqttService: Error in force update:", error);
+      console.error("[OTA] Error in force update:", error);
       this.sendUpdateStatus({
         status: "error",
         error: error.message,
         timestamp: Date.now(),
+        errorCode: "HANDLER_ERROR",
       });
     }
   }
@@ -1357,6 +1416,43 @@ class MainProcessMqttService {
         "MainProcessMqttService: Error sending update status:",
         error
       );
+    }
+  }
+
+  /**
+   * Send update command acknowledgment
+   * Confirms that the desktop app received the command from admin-web
+   */
+  sendUpdateAcknowledgment(ackData) {
+    try {
+      const fullAckData = {
+        type: "ota_ack",
+        deviceId: app.getName(),
+        deviceVersion: app.getVersion(),
+        ...ackData,
+      };
+
+      if (this.commandClient && this.commandClient.connected) {
+        this.commandClient.publish(
+          "its/billboard/update/ack",
+          JSON.stringify(fullAckData),
+          { qos: 1 }
+        );
+        console.log("[OTA] Update acknowledgment sent:", fullAckData);
+      } else if (this.client && this.client.connected) {
+        // Fallback to E-Ra broker
+        this.client.publish(
+          "its/billboard/update/ack",
+          JSON.stringify(fullAckData),
+          { qos: 1 }
+        );
+      } else {
+        console.warn(
+          "[OTA] Cannot send acknowledgment - no MQTT broker connected"
+        );
+      }
+    } catch (error) {
+      console.error("[OTA] Error sending update acknowledgment:", error);
     }
   }
 

@@ -4,7 +4,7 @@ Instruction Chuẩn cho Copilot/Dev Team (Phần chuyên nghiệp, tập trung v
 Chat và giải thích trong readme thì tiếng việt còn khi code và comment trong code thì sử dụng tiếng anh 
 1. Instruction Chuẩn cho Copilot/Dev Team (Prompt Chuyên Nghiệp)
    Project Title: ITS Outdoor Billboard Display App (Electron + React/TS)
-
+   IMPORTANT TUYỆT ĐỐI KHÔNG ĐƯỢC TẠU TẠO FILE README
 Context: Develop a cross-platform Electron mini-app for displaying real-time weather, IoT data, and scheduled advertisements on a dedicated outdoor LED screen.
 
 🎯 Mục Tiêu Dự Án
@@ -24,7 +24,7 @@ main.js Electron Main Process Khởi tạo cửa sổ 384x384 (fix size), fullsc
 /renderer/store State Management Zustand cho trạng thái toàn cục (data, schedule, element positions).
 /services Backend Logic TypeScript, quản lý kết nối API/MQTT và lập lịch.
 package.json Project Config Định nghĩa dependencies, scripts (start, build).
-///IMPORTANT TUYỆT ĐỐI KHÔNG ĐƯỢC TẠU TẠO FILE README
+
 Export to Sheets
 Ngôn ngữ/Framework: TypeScript (Node.js), Electron, React, Zustand, MQTT.js, node-cron.
 
