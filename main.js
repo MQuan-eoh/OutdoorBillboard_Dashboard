@@ -2001,12 +2001,10 @@ async function initializeAutoUpdater() {
     }
 
     // Configure electron-updater for GitHub releases
-    // Explicitly configure GitHub as update provider (redundant but ensures proper setup)
     autoUpdater.setFeedURL({
       provider: "github",
       owner: "MinhQuan7",
       repo: "ITS_OurdoorBillboard-",
-      // Force using exact filename from GitHub release
       releaseType: "release",
     });
 

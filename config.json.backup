@@ -1,0 +1,104 @@
+{
+  "logoMode": "loop",
+  "logoImages": [
+    {
+      "name": "Screenshot 2024-09-26 102423",
+      "path": "downloads\\logos\\screenshot-2024-09-26-102423-1762153562927.png",
+      "size": 171366,
+      "type": "image/png",
+      "id": "screenshot-2024-09-26-102423-1762153562927",
+      "source": "github_cdn"
+    }
+  ],
+  "logoLoopDuration": 10,
+  "layoutPositions": {
+    "weather": {
+      "x": 0,
+      "y": 0,
+      "width": 192,
+      "height": 288
+    },
+    "iot": {
+      "x": 192,
+      "y": 0,
+      "width": 192,
+      "height": 288
+    },
+    "logo": {
+      "x": 0,
+      "y": 288,
+      "width": 384,
+      "height": 96
+    }
+  },
+  "schedules": [
+    {
+      "time": "14:54",
+      "logoIndex": "0",
+      "days": "weekdays"
+    },
+    {
+      "time": "14:55",
+      "logoIndex": "0",
+      "days": "weekdays"
+    },
+    {
+      "time": "",
+      "logoIndex": null,
+      "days": "daily"
+    },
+    {
+      "time": "",
+      "logoIndex": null,
+      "days": "daily"
+    },
+    {
+      "time": "",
+      "logoIndex": null,
+      "days": "daily"
+    },
+    {
+      "time": "",
+      "logoIndex": null,
+      "days": "daily"
+    }
+  ],
+  "eraIot": {
+    "enabled": true,
+    "authToken": "Token 78072b06a81e166b8b900d95f4c2ba1234272955",
+    "gatewayToken": "f7d2fe19-587d-471d-a7ff-273bb32c5d6a",
+    "baseUrl": "https://backend.eoh.io",
+    "sensorConfigs": {
+      "temperature": 138997,
+      "humidity": 138998,
+      "pm25": 138999,
+      "pm10": 139000
+    },
+    "updateInterval": 5,
+    "timeout": 15000,
+    "retryAttempts": 3,
+    "retryDelay": 2000
+  },
+  "bannerSync": {
+    "enabled": true,
+    "mqttBroker": "wss://broker.hivemq.com:8884/mqtt",
+    "topics": {
+      "bannerUpdate": "its/billboard/banner/update",
+      "bannerDelete": "its/billboard/banner/delete",
+      "bannerSync": "its/billboard/banner/sync"
+    },
+    "downloadPath": "./downloads",
+    "maxCacheSize": 100
+  },
+  "logoManifest": {
+    "enabled": true,
+    "manifestUrl": "https://mquan-eoh.github.io/billboard-logos-cdn/manifest.json",
+    "pollInterval": 10,
+    "downloadPath": "./downloads",
+    "maxCacheSize": 50,
+    "retryAttempts": 3,
+    "retryDelay": 2000
+  },
+  "_manifestVersion": "1.0.1762153566690",
+  "_manifestLastUpdated": "2025-11-03T07:06:06.690Z"
+}

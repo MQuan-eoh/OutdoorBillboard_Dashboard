@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ITS Outdoor Billboard Display</title>
+    <!-- Import CSS files -->
+    <link rel="stylesheet" href="components/BillboardLayout.css" />
+    <link rel="stylesheet" href="components/WeatherPanel.css" />
+    <link rel="stylesheet" href="components/IoTPanel.css" />
+    <link rel="stylesheet" href="components/CompanyLogo.css" />
+    <link rel="stylesheet" href="components/EraIotConfig.css" />
+
+    <style>
+      /* Reset CSS và cấu hình cơ bản */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        width: 384px;
+        height: 384px;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+        background-color: #000;
+      }
+
+      #root {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- React App will be loaded here -->
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.development.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
+    ></script>
+    <!-- MQTT.js library for IoT connectivity -->
+    <script src="https://unpkg.com/mqtt@4.3.7/dist/mqtt.min.js"></script>
+    <!-- Main application with integrated patches -->
+    <script src="app.js"></script>
+  </body>
+</html>

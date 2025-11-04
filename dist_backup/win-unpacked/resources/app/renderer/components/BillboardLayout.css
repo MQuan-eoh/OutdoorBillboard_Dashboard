@@ -1,0 +1,185 @@
+/* BillboardLayout.css - Styles for 384x384 LED screen */
+
+/* Main container */
+.billboard-container {
+  width: 384px;
+  height: 384px;
+  display: flex;
+  flex-direction: column;
+  /* background-color: #000; */
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Top row - Two columns layout */
+.top-row {
+  flex: 3; /* Takes 3/4 = 75% height */
+  display: flex;
+  width: 100%;
+  gap: 0; /* No gap between panels */
+}
+
+/* Weather column - 60% width as per design */
+.weather-column {
+  flex: 0 0 60%; /* Fixed 60% width */
+  width: 60%;
+  height: 100%;
+}
+
+/* IoT column - 40% width as per design */
+.iot-column {
+  flex: 0 0 40%; /* Fixed 40% width */
+  width: 40%;
+  height: 100%;
+}
+
+/* Weather Panel in column layout */
+.weather-panel-column {
+  width: 100%;
+  height: 100%;
+  background-color: transparent;
+  padding: 0;
+  border: none;
+  margin: 0;
+}
+
+/* IoT Panel in column layout */
+.iot-panel-column {
+  width: 100%;
+  height: 100%;
+  background-color: transparent;
+  padding: 0;
+  border: none;
+  margin: 0;
+}
+
+/* Legacy unified weather support - in case we need to revert */
+.unified-weather {
+  flex: 1;
+  width: 100%;
+  background-color: transparent;
+  padding: 0;
+  border: none;
+  margin: 0;
+}
+
+/* Weather Alert Banner - Positioned with proper spacing from edges */
+.weather-alert-banner {
+  position: absolute;
+  bottom: 110px; /* Position above logo with 14px spacing from logo section */
+  left: 16px; /* 16px margin from left edge */
+  right: 16px; /* 16px margin from right edge */
+  height: 48px;
+  width: calc(100% - 32px); /* Full width minus left and right margins */
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: #ffe600ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 16px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+  z-index: 10000000;
+  box-sizing: border-box;
+  border-radius: 4px; /* Subtle rounding for modern look */
+  animation: alertPulse 2s ease-in-out infinite;
+}
+
+.alert-icon-warning {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  flex-shrink: 0;
+  color: #dc2626;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.alert-icon-warning::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 16px solid transparent;
+  border-right: 16px solid transparent;
+  border-bottom: 26px solid #fbbf24;
+  z-index: -1;
+}
+
+.alert-text-large {
+  font-size: 18px;
+  font-weight: bold;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.alert-content-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@keyframes alertPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.6);
+  }
+}
+
+/* Bottom row (Company Logo) */
+.bottom-row {
+  flex: 1; /* Takes 1/4 = 25% height */
+  background-color: #ff6b35;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+/* Typography styles */
+.panel-title {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.temperature-large {
+  font-size: 32px;
+  font-weight: bold;
+  background-color: #10263b;
+}
+
+.info-text {
+  font-size: 12px;
+}
+
+.info-text-small {
+  font-size: 10px;
+  margin-top: 5px;
+}
+
+.sensor-value {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.status-badge {
+  font-size: 10px;
+  background-color: green;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-top: 5px;
+}

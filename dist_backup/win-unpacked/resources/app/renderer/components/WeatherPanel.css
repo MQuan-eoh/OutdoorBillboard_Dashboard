@@ -1,0 +1,655 @@
+/* WeatherPanel.css - Professional 3D billboard weather panel for 192x288 pixels */
+
+.weather-panel {
+  width: auto; /* Let flex control the width instead of forcing 100% */
+  height: 100%;
+  background: linear-gradient(135deg, #142a3f 0%, #1e3a5f 50%, #1e3a5f 100%);
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  cursor: pointer;
+  font-family: "Arial", "Segoe UI", sans-serif;
+  color: white;
+  overflow: hidden;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.3), 0 4px 20px rgba(0, 0, 0, 0.4);
+  border-radius: 0;
+}
+
+.weather-panel.professional {
+  background: linear-gradient(135deg, #142a3f 0%, #1e3a5f 50%, #1e3a5f 100%);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.4), 0 6px 25px rgba(0, 0, 0, 0.5),
+    0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.weather-panel.professional:hover {
+  background: linear-gradient(135deg, #142a3f 0%, #1e3a5f 50%, #1e3a5f 100%);
+  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.3), 0 8px 30px rgba(0, 0, 0, 0.6),
+    0 4px 15px rgba(0, 0, 0, 0.4);
+  transform: translateY(-1px);
+  transition: all 0.3s ease;
+}
+
+/* Professional background overlay */
+.weather-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  z-index: 1;
+}
+
+/* Header section - Professional styling */
+.weather-header {
+  padding: 0px 6px; /* Reduced right padding to align with IoT panel */
+  position: relative;
+  width: 100%; /* Use full width of its container */
+  box-sizing: border-box;
+  z-index: 2;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.city-name {
+  font-size: 14px;
+  font-weight: bold;
+  text-align: left; /* Changed from center to left to align with IoT panel */
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.1);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin-right: 50px;
+}
+
+/* Weather title class for loading/error states - aligned with IoT panel */
+.weather-title {
+  font-size: 14px;
+  font-weight: bold;
+  text-align: left; /* Changed from center to left to align with IoT panel */
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.1);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+  margin-right: 20px;
+}
+
+.connection-indicator {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ff0000;
+  z-index: 3;
+  box-shadow: 0 0 8px rgba(255, 0, 0, 0.6);
+}
+
+.connection-indicator.connected {
+  background-color: #00ff00;
+  box-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+}
+
+.connection-indicator.error {
+  background-color: #ff0000;
+  box-shadow: 0 0 8px rgba(255, 0, 0, 0.8);
+  animation: blink 1s infinite;
+}
+
+/* Main weather section - Professional 3D design */
+.weather-main-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px;
+  position: relative;
+  z-index: 2;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  margin: 6px 8px 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.weather-icon-container {
+  flex-shrink: 0;
+}
+
+.weather-icon-3d {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+  transform: scale(1);
+  transition: transform 0.3s ease;
+}
+
+.weather-icon-3d:hover {
+  transform: scale(1.05);
+}
+
+.weather-icon-3d svg {
+  width: 100%;
+  height: 100%;
+}
+
+.temperature-display {
+  text-align: center;
+  margin-left: 8px;
+}
+
+.temp-main {
+  font-size: 36px;
+  font-weight: bold;
+  line-height: 1;
+  color: #ffffff;
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.8), 0 2px 0 rgba(255, 255, 255, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.2);
+  letter-spacing: -1px;
+}
+
+.temp-feels {
+  font-size: 14px;
+  color: #e2e8f0;
+  opacity: 0.9;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  margin-top: 2px;
+}
+
+/* Weather details grid - Professional 2x2 layout: Hàng 1: Độ ẩm & UV, Hàng 2: Mưa & Gió */
+.weather-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 2 columns of equal width */
+  grid-template-rows: 1fr 1fr; /* 2 rows of equal height */
+  gap: 4px; /* Consistent gap between all items */
+  padding: 6px 8px;
+  position: relative;
+  z-index: 2;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  margin: 0 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  width: calc(100% - 16px); /* Account for margin */
+  box-sizing: border-box;
+}
+
+.weather-details-grid .detail-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+  padding: 6px 4px;
+  min-height: 35px; /* Ensure consistent height */
+}
+
+.weather-details-grid .detail-label {
+  display: inline-block;
+  font-size: 12px;
+  color: #cbd5e0;
+  opacity: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  margin-bottom: 0px;
+  margin-right: 8px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  text-transform: capitalize;
+  white-space: nowrap; /* Prevent label wrapping */
+}
+
+.weather-details-grid .detail-value {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  line-height: 1.1;
+  white-space: nowrap; /* Prevent value wrapping */
+}
+
+/* New Air Quality Element - positioned higher to avoid alert banner */
+.weather-air-quality {
+  padding: 6px 8px;
+  position: relative;
+  z-index: 2;
+  background: linear-gradient(
+    135deg,
+    rgba(72, 187, 120, 0.1) 0%,
+    rgba(72, 187, 120, 0.05) 100%
+  );
+  margin: -16px 8px 4px 8px; /* Increased negative top margin to push even higher */
+  border-radius: 4px;
+  border: 1px solid rgba(72, 187, 120, 0.2);
+}
+
+.air-quality-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: center;
+  padding: 4px 6px;
+}
+
+.air-quality-label {
+  font-size: 13px;
+  color: #e2e8f0;
+  opacity: 0.9;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.air-quality-status-value {
+  font-size: 15px;
+  font-weight: bold;
+  color: #48bb78;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(72, 187, 120, 0.3);
+  padding: 2px 8px;
+  background: linear-gradient(
+    135deg,
+    rgba(72, 187, 120, 0.2) 0%,
+    rgba(72, 187, 120, 0.1) 100%
+  );
+  border-radius: 3px;
+  border: 1px solid rgba(72, 187, 120, 0.3);
+  white-space: nowrap;
+}
+
+/* Device measurements section - Optimized 2x2 grid layout */
+.device-measurements-section {
+  padding: 8px;
+  position: relative;
+  z-index: 2;
+  background: transparent;
+  margin: 2px 15px 10px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.device-title {
+  font-size: 16px; /* Changed from 11px to match city name */
+  font-weight: bold;
+  color: #ffffff;
+  text-align: left; /* Changed from center to left to align with city name */
+  margin-bottom: 8px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.1);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 4px;
+}
+
+/* CSS class for THIẾT BỊ ĐO title - aligned with city name and moved up */
+.device-title-aligned {
+  font-size: 16px; /* Match city name font size */
+  font-weight: bold;
+  color: #ffffff;
+  text-align: left; /* Align with city name */
+  margin-bottom: 10px; /* Adjusted for proper spacing */
+  margin-top: -30px; /* Move it up more to get closer to TP. THỪA THIÊN HUẾ level */
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.device-readings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sensor-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.sensor-item {
+  flex: 1;
+  text-align: center;
+  padding: 6px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sensor-item.pm-item {
+  border: 1px solid rgba(255, 82, 82, 0.2);
+}
+
+.sensor-label {
+  display: block;
+  font-size: 10px;
+  color: #e2e8f0;
+  opacity: 0.9;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  margin-bottom: 2px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.sensor-value {
+  display: block;
+  font-size: 13px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  line-height: 1.1;
+}
+
+.sensor-value.pm-value {
+  color: #ff5252;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(255, 82, 82, 0.3);
+}
+
+.unit {
+  font-size: 8px;
+  font-weight: normal;
+  opacity: 0.8;
+  margin-left: 1px;
+  color: #cbd5e0;
+}
+
+/* Air quality status - Professional styling */
+.air-quality-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  position: relative;
+  z-index: 2;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  margin: 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.air-quality-text {
+  font-size: 11px;
+  color: #e2e8f0;
+  opacity: 0.9;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.air-quality-badge {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: bold;
+  text-align: center;
+  padding: 4px 10px;
+  border-radius: 4px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 6px rgba(72, 187, 120, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.5px;
+}
+
+.air-quality-badge.good {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  box-shadow: 0 2px 6px rgba(72, 187, 120, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.air-quality-badge.moderate {
+  background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+  box-shadow: 0 2px 6px rgba(237, 137, 54, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.air-quality-badge.poor {
+  background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+  box-shadow: 0 2px 6px rgba(245, 101, 101, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Loading states */
+.weather-panel.loading {
+  justify-content: center;
+  padding: 0px 6px; /* Match IoT panel alignment */
+}
+
+.weather-panel.loading .weather-title {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.weather-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 2;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top: 3px solid #ffffff;
+  border-radius: 50%;
+  animation: spin 1.2s linear infinite;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.loading-text {
+  font-size: 12px;
+  color: #e2e8f0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* Error states */
+.weather-panel.error {
+  justify-content: center;
+  padding: 0px 6px; /* Match IoT panel alignment */
+}
+
+.weather-panel.error .weather-title {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.weather-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 2;
+}
+
+.error-icon {
+  font-size: 28px;
+  color: #ff6b6b;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.error-text {
+  font-size: 12px;
+  color: #ff6b6b;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.retry-button {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 6px rgba(255, 107, 107, 0.4);
+}
+
+.retry-button:hover {
+  background: linear-gradient(135deg, #ff5252 0%, #e53e3e 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 107, 107, 0.6);
+}
+
+/* Refresh overlay */
+.refresh-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+.refresh-spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid #ffffff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+/* Animations */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Weather type specific styling - All use same gradient background */
+.weather-panel.sunny {
+  background: linear-gradient(135deg, #142a3f 0%, #1e3a5f 50%, #1e3a5f 100%);
+}
+
+.weather-panel.rainy {
+  background: linear-gradient(135deg, #142a3f 0%, #1e3a5f 50%, #1e3a5f 100%);
+}
+
+.weather-panel.cloudy {
+  background: linear-gradient(135deg, #142a3f 0%, #1e3a5f 50%, #1e3a5f 100%);
+}
+
+.weather-panel.stormy {
+  background: linear-gradient(135deg, #142a3f 0%, #1e3a5f 50%, #1e3a5f 100%);
+}
+
+/* Responsive adjustments for 192px width */
+@media (max-width: 192px) {
+  .temp-main {
+    font-size: 32px;
+  }
+
+  .weather-icon-3d {
+    width: 50px;
+    height: 50px;
+  }
+
+  .device-readings {
+    gap: 4px;
+  }
+
+  .reading-row {
+    padding: 3px 6px;
+  }
+
+  .weather-main-section {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .city-name {
+    font-size: 12px;
+  }
+
+  /* Adjust single row layout for smaller screens */
+  .weather-details-single-row {
+    gap: 4px;
+    padding: 4px 2px;
+    margin: 0 2px 0 1px;
+  }
+
+  .weather-details-single-row .detail-item {
+    padding: 3px 2px;
+    min-height: 25px;
+  }
+
+  .weather-details-single-row .detail-label {
+    font-size: 8px;
+  }
+
+  .weather-details-single-row .detail-value {
+    font-size: 11px;
+  }
+}
+
+/* Professional enhancements for outdoor billboard */
+.weather-panel.professional .weather-icon-3d svg {
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.7));
+}
+
+.weather-panel.professional .temp-main {
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.9), 0 2px 0 rgba(255, 255, 255, 0.15),
+    0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.weather-panel.professional .air-quality-badge.good {
+  animation: pulse 3s ease-in-out infinite;
+}

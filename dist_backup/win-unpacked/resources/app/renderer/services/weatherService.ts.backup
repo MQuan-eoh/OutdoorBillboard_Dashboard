@@ -1,0 +1,667 @@
+// weatherService.ts - Robust weather service with real API integration
+// Designed for 24/7 operation with accurate weather data for Huế
+
+import axios   /**
+   * Fetch from specific API endpoint
+   */
+  private async fetchFromAPI(api: any): Promise<WeatherData | null> {
+    const { lat, lon, city } = this.config.location;
+
+    console.log(`WeatherService: Attempting to fetch from ${api.name} API`);
+
+    switch (api.name) {
+      case "OpenWeatherMap":
+        return this.fetchFromOpenWeatherMap(api, lat, lon, city);
+
+      case "WeatherAPI":
+        return this.fetchFromWeatherAPI(api, lat, lon, city);
+
+      case "OpenMeteo":
+        return this.fetchFromOpenMeteo(api, lat, lon, city);
+
+      default:
+        console.error(`WeatherService: Unknown API name: ${api.name}`);
+        return null;
+    }
+  }ort interface WeatherData {
+  cityName: string;
+  temperature: number;
+  feelsLike: number;
+  humidity: number;
+  windSpeed: number;
+  uvIndex: number;
+  rainProbability: number;
+  weatherCondition: string;
+  weatherCode: number;
+  airQuality: string;
+  aqi: number;
+  visibility: number;
+  lastUpdated: Date;
+}
+
+export interface WeatherConfig {
+  location: {
+    lat: number;
+    lon: number;
+    city: string;
+  };
+  updateInterval: number; // minutes
+  retryInterval: number; // minutes on failure
+  maxRetries: number;
+}
+
+class WeatherService {
+  private config: WeatherConfig;
+  private currentData: WeatherData | null = null;
+  private updateTimer: NodeJS.Timeout | null = null;
+  private retryCount: number = 0;
+  private isUpdating: boolean = false;
+
+  // Multiple API endpoints for failover - Using free APIs
+  private apiEndpoints = [
+    {
+      name: "OpenMeteo", // Free API, no key required - primary
+      baseUrl: "https://api.open-meteo.com/v1",
+      key: "",
+      enabled: true,
+    },
+    {
+      name: "WeatherAPI_Demo", // Demo key with limited requests
+      baseUrl: "https://api.weatherapi.com/v1",
+      key: "demo", // Replace with real key if available
+      enabled: false,
+    },
+  ];
+
+  constructor(config: WeatherConfig) {
+    this.config = config;
+    this.initializeService();
+  }
+
+  private async initializeService(): Promise<void> {
+    console.log("WeatherService: Initializing weather service for", this.config.location.city);
+    
+    // Immediate first fetch to prevent loading state
+    try {
+      await this.fetchWeatherData();
+      console.log("WeatherService: Initial data fetch completed successfully");
+    } catch (error) {
+      console.error("WeatherService: Initial data fetch failed:", error);
+    }
+    
+    this.startPeriodicUpdates();
+  }
+
+  /**
+   * Start periodic weather data updates
+   */
+  public startPeriodicUpdates(): void {
+    if (this.updateTimer) {
+      clearInterval(this.updateTimer);
+    }
+
+    // Initial fetch
+    this.fetchWeatherData();
+
+    // Set up periodic updates
+    this.updateTimer = setInterval(() => {
+      this.fetchWeatherData();
+    }, this.config.updateInterval * 60 * 1000);
+
+    console.log(
+      `WeatherService: Started periodic updates every ${this.config.updateInterval} minutes`
+    );
+  }
+
+  /**
+   * Stop periodic updates
+   */
+  public stopPeriodicUpdates(): void {
+    if (this.updateTimer) {
+      clearInterval(this.updateTimer);
+      this.updateTimer = null;
+    }
+    console.log("WeatherService: Stopped periodic updates");
+  }
+
+  /**
+   * Fetch weather data with fallback strategy
+   */
+  private async fetchWeatherData(): Promise<void> {
+    if (this.isUpdating) {
+      console.log("WeatherService: Update already in progress, skipping");
+      return;
+    }
+
+    this.isUpdating = true;
+
+    try {
+      for (const api of this.apiEndpoints) {
+        if (!api.enabled) continue;
+
+        try {
+          const data = await this.fetchFromAPI(api);
+          if (data) {
+            this.currentData = data;
+            this.retryCount = 0;
+            console.log(
+              `WeatherService: Successfully updated weather data from ${api.name}`
+            );
+            break;
+          }
+        } catch (error) {
+          console.error(
+            `WeatherService: Failed to fetch from ${api.name}:`,
+            error
+          );
+          continue;
+        }
+      }
+
+      // If all APIs failed
+      if (!this.currentData || this.isDataStale()) {
+        this.handleFetchFailure();
+      }
+    } catch (error) {
+      console.error(
+        "WeatherService: Critical error in fetchWeatherData:",
+        error
+      );
+      this.handleFetchFailure();
+    } finally {
+      this.isUpdating = false;
+    }
+  }
+
+  /**
+   * Fetch data from specific API endpoint
+   */
+  private async fetchFromAPI(api: any): Promise<WeatherData | null> {
+    const { lat, lon, city } = this.config.location;
+
+    switch (api.name) {
+      case "OpenWeatherMap":
+        return this.fetchFromOpenWeatherMap(api, lat, lon, city);
+
+      case "WeatherAPI":
+        return this.fetchFromWeatherAPI(api, lat, lon, city);
+
+      case "OpenMeteo":
+        return this.fetchFromOpenMeteo(api, lat, lon, city);
+
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Fetch from OpenWeatherMap API with Air Quality data
+   */
+  private async fetchFromOpenWeatherMap(
+    api: any,
+    lat: number,
+    lon: number,
+    city: string
+  ): Promise<WeatherData | null> {
+    const weatherUrl = `${api.baseUrl}/weather?lat=${lat}&lon=${lon}&appid=${api.key}&units=metric&lang=vi`;
+    const forecastUrl = `${api.baseUrl}/forecast?lat=${lat}&lon=${lon}&appid=${api.key}&units=metric&cnt=1`;
+    const airQualityUrl = `${api.baseUrl}/air_pollution?lat=${lat}&lon=${lon}&appid=${api.key}`;
+
+    try {
+      const [weatherResponse, forecastResponse, airQualityResponse] =
+        await Promise.all([
+          axios.get(weatherUrl, { timeout: 15000 }),
+          axios.get(forecastUrl, { timeout: 15000 }),
+          axios.get(airQualityUrl, { timeout: 15000 }),
+        ]);
+
+      const weather = weatherResponse.data;
+      const forecast = forecastResponse.data;
+      const airQuality = airQualityResponse.data;
+
+      // Get UV index from forecast data (current weather doesn't include UV in OWM 2.5)
+      const uvIndex = forecast.list[0]?.main?.uvi || 0;
+
+      // Calculate rain probability from forecast
+      const rainProbability = forecast.list[0]?.pop
+        ? Math.round(forecast.list[0].pop * 100)
+        : weather.rain
+        ? 80
+        : 0;
+
+      // Get Air Quality Index (1-5 scale from OpenWeatherMap)
+      const aqi = airQuality.list[0]?.main?.aqi || 1;
+      const aqiText = this.getAirQualityText(aqi);
+
+      // Convert weather description to proper Vietnamese
+      const weatherCondition = this.translateWeatherCondition(
+        weather.weather[0].description,
+        weather.weather[0].main
+      );
+
+      return {
+        cityName: city,
+        temperature: Math.round(weather.main.temp),
+        feelsLike: Math.round(weather.main.feels_like),
+        humidity: weather.main.humidity,
+        windSpeed: Math.round(weather.wind.speed * 3.6), // Convert m/s to km/h
+        uvIndex: Math.round(uvIndex),
+        rainProbability: rainProbability,
+        weatherCondition: weatherCondition,
+        weatherCode: weather.weather[0].id,
+        airQuality: aqiText,
+        aqi: aqi,
+        visibility: Math.round(weather.visibility / 1000),
+        lastUpdated: new Date(),
+      };
+    } catch (error) {
+      console.error("Error fetching from OpenWeatherMap:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Translate weather condition to proper Vietnamese
+   */
+  private translateWeatherCondition(description: string, main: string): string {
+    const translations: { [key: string]: string } = {
+      // Clear
+      "clear sky": "Trời quang đãng",
+      "sky is clear": "Trời quang đãng",
+
+      // Clouds
+      "few clouds": "Ít mây",
+      "scattered clouds": "Mây rải rác",
+      "broken clouds": "Nhiều mây",
+      "overcast clouds": "U ám",
+
+      // Rain
+      "light rain": "Mưa nhẹ",
+      "moderate rain": "Mưa vừa",
+      "heavy intensity rain": "Mưa to",
+      "very heavy rain": "Mưa rất to",
+      "extreme rain": "Mưa cực to",
+      "shower rain": "Mưa rào",
+      "heavy intensity shower rain": "Mưa rào to",
+      "ragged shower rain": "Mưa rào không đều",
+
+      // Drizzle
+      "light intensity drizzle": "Mưa phùn nhẹ",
+      drizzle: "Mưa phùn",
+      "heavy intensity drizzle": "Mưa phùn to",
+
+      // Thunderstorm
+      "thunderstorm with light rain": "Dông có mưa nhẹ",
+      "thunderstorm with rain": "Dông có mưa",
+      "thunderstorm with heavy rain": "Dông có mưa to",
+      "light thunderstorm": "Dông nhẹ",
+      thunderstorm: "Dông",
+      "heavy thunderstorm": "Dông mạnh",
+
+      // Atmosphere
+      mist: "Sương mù",
+      smoke: "Khói",
+      haze: "Sương mù mờ",
+      fog: "Sương mù dày",
+
+      // Snow
+      "light snow": "Tuyết nhẹ",
+      snow: "Tuyết",
+      "heavy snow": "Tuyết to",
+    };
+
+    // Try to find exact match
+    const lowerDesc = description.toLowerCase();
+    if (translations[lowerDesc]) {
+      return translations[lowerDesc];
+    }
+
+    // Try partial matches
+    for (const [key, value] of Object.entries(translations)) {
+      if (lowerDesc.includes(key.toLowerCase())) {
+        return value;
+      }
+    }
+
+    // Fallback to capitalized description
+    return description.charAt(0).toUpperCase() + description.slice(1);
+  }
+
+  /**
+   * Get Air Quality text from AQI value
+   * AQI scale from OpenWeatherMap: 1 (Good) to 5 (Very Poor)
+   */
+  private getAirQualityText(aqi: number): string {
+    switch (aqi) {
+      case 1:
+        return "Tốt";
+      case 2:
+        return "Khá";
+      case 3:
+        return "Trung bình";
+      case 4:
+        return "Kém";
+      case 5:
+        return "Rất kém";
+      default:
+        return "Không xác định";
+    }
+  }
+
+  /**
+   * Fetch from WeatherAPI (Backup - not currently enabled)
+   */
+  private async fetchFromWeatherAPI(
+    api: any,
+    lat: number,
+    lon: number,
+    city: string
+  ): Promise<WeatherData | null> {
+    const url = `${api.baseUrl}/current.json?key=${api.key}&q=${lat},${lon}&aqi=yes&lang=vi`;
+
+    const response = await axios.get(url, { timeout: 10000 });
+    const data = response.data;
+
+    // Get AQI from WeatherAPI (uses US EPA standard)
+    const aqiValue = data.current.air_quality?.["us-epa-index"] || 1;
+    const aqiText = this.getAirQualityText(aqiValue);
+
+    return {
+      cityName: city,
+      temperature: Math.round(data.current.temp_c),
+      feelsLike: Math.round(data.current.feelslike_c),
+      humidity: data.current.humidity,
+      windSpeed: Math.round(data.current.wind_kph),
+      uvIndex: Math.round(data.current.uv),
+      rainProbability: data.current.precip_mm > 0 ? 100 : 0,
+      weatherCondition: data.current.condition.text,
+      weatherCode: data.current.condition.code,
+      airQuality: aqiText,
+      aqi: aqiValue,
+      visibility: Math.round(data.current.vis_km),
+      lastUpdated: new Date(),
+    };
+  }
+
+  /**
+   * Enhanced OpenMeteo API fetch with more comprehensive data
+   */
+  private async fetchFromOpenMeteo(
+    api: any,
+    lat: number,
+    lon: number,
+    city: string
+  ): Promise<WeatherData | null> {
+    const url = `${api.baseUrl}/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relativehumidity_2m,windspeed_10m,uv_index,apparent_temperature,precipitation_probability,visibility&daily=weathercode&timezone=Asia/Ho_Chi_Minh&forecast_days=1`;
+
+    const response = await axios.get(url, { timeout: 15000 });
+    const data = response.data;
+    const current = data.current_weather;
+    const hourly = data.hourly;
+
+    // Get current hour index
+    const currentTime = new Date();
+    const currentHour = currentTime.getHours();
+
+    // Get enhanced weather data
+    const feelsLike =
+      hourly.apparent_temperature?.[currentHour] || current.temperature;
+    const humidity = hourly.relativehumidity_2m?.[currentHour] || 70;
+    const uvIndex = hourly.uv_index?.[currentHour] || 3;
+    const rainProbability =
+      hourly.precipitation_probability?.[currentHour] ||
+      (current.weathercode >= 51 ? 80 : 20);
+    const visibility = hourly.visibility?.[currentHour]
+      ? Math.round(hourly.visibility[currentHour] / 1000)
+      : 10;
+
+    // Enhanced weather condition with better Vietnamese translation
+    const weatherCondition = this.getEnhancedWeatherCondition(
+      current.weathercode,
+      rainProbability
+    );
+
+    // Get Air Quality based on weather conditions (estimated)
+    const airQualityData = this.estimateAirQuality(
+      current.weathercode,
+      visibility
+    );
+
+    return {
+      cityName: city,
+      temperature: Math.round(current.temperature),
+      feelsLike: Math.round(feelsLike),
+      humidity: Math.round(humidity),
+      windSpeed: Math.round(current.windspeed),
+      uvIndex: Math.round(uvIndex),
+      rainProbability: Math.round(rainProbability),
+      weatherCondition: weatherCondition,
+      weatherCode: current.weathercode,
+      airQuality: airQualityData.text,
+      aqi: airQualityData.index,
+      visibility: visibility,
+      lastUpdated: new Date(),
+    };
+  }
+
+  /**
+   * Enhanced weather condition translation with more detail
+   */
+  private getEnhancedWeatherCondition(code: number, rainProb: number): string {
+    const conditions: { [key: number]: string } = {
+      0: "Trời quang đãng",
+      1: "Chủ yếu quang đãng",
+      2: "Một phần có mây",
+      3: "U ám",
+      45: "Sương mù",
+      48: "Sương mù đóng băng",
+      51: "Mưa phùn nhẹ",
+      53: "Mưa phùn vừa",
+      55: "Mưa phùn dày đặc",
+      56: "Mưa phùn lạnh nhẹ",
+      57: "Mưa phùn lạnh dày đặc",
+      61: "Mưa nhẹ",
+      63: "Mưa vừa",
+      65: "Mưa to",
+      66: "Mưa lạnh nhẹ",
+      67: "Mưa lạnh to",
+      71: "Tuyết nhẹ",
+      73: "Tuyết vừa",
+      75: "Tuyết to",
+      77: "Hạt tuyết",
+      80: "Mưa rào nhẹ",
+      81: "Mưa rào vừa",
+      82: "Mưa rào to",
+      85: "Tuyết rào nhẹ",
+      86: "Tuyết rào to",
+      95: "Dông",
+      96: "Dông có mưa đá nhẹ",
+      99: "Dông có mưa đá to",
+    };
+
+    let condition = conditions[code] || "Không xác định";
+
+    // Add rain probability context for better understanding
+    if (rainProb > 70 && !condition.includes("mưa")) {
+      condition += " (có khả năng mưa)";
+    }
+
+    return condition;
+  }
+
+  /**
+   * Estimate air quality based on weather conditions
+   */
+  private estimateAirQuality(
+    weatherCode: number,
+    visibility: number
+  ): { text: string; index: number } {
+    // Estimate based on weather conditions and visibility
+    if (visibility >= 10) {
+      if (weatherCode <= 3) return { text: "Tốt", index: 1 };
+      if (weatherCode >= 61 && weatherCode <= 82)
+        return { text: "Khá", index: 2 }; // Rain helps clean air
+      return { text: "Trung bình", index: 3 };
+    } else if (visibility >= 5) {
+      return { text: "Trung bình", index: 3 };
+    } else {
+      return { text: "Kém", index: 4 }; // Low visibility usually means poor air quality
+    }
+  }
+
+  /**
+   * Convert weather code to Vietnamese description
+   */
+  private getWeatherConditionFromCode(code: number): string {
+    const conditions: { [key: number]: string } = {
+      0: "Trời quang",
+      1: "Chủ yếu quang đãng",
+      2: "Một phần có mây",
+      3: "U ám",
+      45: "Sương mù",
+      48: "Sương mù đóng băng",
+      51: "Mưa phùn nhẹ",
+      53: "Mưa phùn vừa",
+      55: "Mưa phùn nặng",
+      61: "Mưa nhẹ",
+      63: "Mưa vừa",
+      65: "Mưa to",
+      71: "Tuyết nhẹ",
+      73: "Tuyết vừa",
+      75: "Tuyết to",
+      95: "Dông",
+      96: "Dông có mưa đá nhẹ",
+      99: "Dông có mưa đá to",
+    };
+
+    return conditions[code] || "Không xác định";
+  }
+
+  /**
+   * Handle fetch failure with exponential backoff
+   */
+  private handleFetchFailure(): void {
+    this.retryCount++;
+    console.error(
+      `WeatherService: Failed to update weather data (attempt ${this.retryCount}/${this.config.maxRetries})`
+    );
+
+    if (this.retryCount >= this.config.maxRetries) {
+      console.error("WeatherService: Max retries reached, using fallback data");
+      this.useFallbackData();
+      this.retryCount = 0; // Reset for next cycle
+    } else {
+      // Exponential backoff retry
+      const retryDelay = Math.min(
+        this.config.retryInterval * Math.pow(2, this.retryCount - 1),
+        30
+      );
+      setTimeout(() => {
+        this.fetchWeatherData();
+      }, retryDelay * 60 * 1000);
+    }
+  }
+
+  /**
+   * Use fallback data when all APIs fail - Only use if no existing data
+   */
+  private useFallbackData(): void {
+    if (!this.currentData) {
+      // Only create fallback data if we have absolutely no data
+      this.currentData = {
+        cityName: this.config.location.city,
+        temperature: 25,
+        feelsLike: 27,
+        humidity: 70,
+        windSpeed: 5,
+        uvIndex: 3,
+        rainProbability: 30,
+        weatherCondition: "Không có dữ liệu",
+        weatherCode: 0,
+        airQuality: "Tốt",
+        aqi: 1,
+        visibility: 10,
+        lastUpdated: new Date(),
+      };
+      console.log(
+        "WeatherService: Using default fallback data (no existing data)"
+      );
+    } else {
+      // Keep existing data but update timestamp to indicate it's stale
+      console.log(
+        "WeatherService: Keeping cached weather data, API temporarily unavailable"
+      );
+      // Don't update lastUpdated to preserve original fetch time
+    }
+  }
+
+  /**
+   * Check if current data is stale (older than 2 hours)
+   */
+  private isDataStale(): boolean {
+    if (!this.currentData) return true;
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    return this.currentData.lastUpdated < twoHoursAgo;
+  }
+
+  /**
+   * Get current weather data
+   */
+  public getCurrentWeather(): WeatherData | null {
+    return this.currentData;
+  }
+
+  /**
+   * Force refresh weather data with intelligent caching
+   */
+  public async refreshWeatherData(): Promise<void> {
+    // Check if we have recent data (less than 5 minutes old)
+    if (this.currentData) {
+      const dataAge = Date.now() - this.currentData.lastUpdated.getTime();
+      const fiveMinutes = 5 * 60 * 1000;
+      
+      if (dataAge < fiveMinutes) {
+        console.log(`WeatherService: Data is fresh (${Math.round(dataAge/60000)}min old), skipping API call`);
+        return;
+      }
+    }
+    
+    console.log("WeatherService: Manual refresh - fetching new data from API");
+    await this.fetchWeatherData();
+  }
+
+  /**
+   * Update configuration
+   */
+  public updateConfig(newConfig: Partial<WeatherConfig>): void {
+    this.config = { ...this.config, ...newConfig };
+    console.log("WeatherService: Configuration updated");
+    this.startPeriodicUpdates();
+  }
+
+  /**
+   * Get service status
+   */
+  public getStatus(): {
+    isRunning: boolean;
+    lastUpdate: Date | null;
+    retryCount: number;
+  } {
+    return {
+      isRunning: this.updateTimer !== null,
+      lastUpdate: this.currentData?.lastUpdated || null,
+      retryCount: this.retryCount,
+    };
+  }
+
+  /**
+   * Cleanup resources
+   */
+  public destroy(): void {
+    this.stopPeriodicUpdates();
+    this.currentData = null;
+    console.log("WeatherService: Service destroyed");
+  }
+}
+
+export default WeatherService;

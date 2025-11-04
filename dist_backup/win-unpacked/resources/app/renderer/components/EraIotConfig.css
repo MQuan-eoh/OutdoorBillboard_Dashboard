@@ -1,0 +1,259 @@
+/* EraIotConfig.css - Styling for E-Ra IoT configuration panel */
+
+.era-config-trigger {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  z-index: 999;
+}
+
+.config-hint {
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.config-hint:hover {
+  opacity: 1;
+}
+
+.era-config-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* z-index: 1000; */
+  padding: 20px;
+}
+
+.era-config-panel {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.era-config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: white;
+  border-radius: 8px 8px 0 0;
+}
+
+.era-config-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.era-config-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease;
+}
+
+.era-config-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.era-config-content {
+  padding: 20px;
+}
+
+.era-config-section {
+  margin-bottom: 20px;
+}
+
+.era-config-section label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+
+.era-config-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box;
+}
+
+.era-config-input:focus {
+  outline: none;
+  border-color: #2a5298;
+  box-shadow: 0 0 0 2px rgba(42, 82, 152, 0.2);
+}
+
+.era-config-input.small {
+  max-width: 120px;
+}
+
+.era-config-section small {
+  display: block;
+  margin-top: 4px;
+  color: #666;
+  font-size: 12px;
+}
+
+.era-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.era-config-test-result {
+  padding: 12px;
+  border-radius: 4px;
+  font-weight: 600;
+  margin: 16px 0;
+  font-size: 14px;
+}
+
+.era-config-test-result.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.era-config-test-result.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.era-config-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #f8f9fa;
+  border-top: 1px solid #eee;
+  border-radius: 0 0 8px 8px;
+}
+
+.era-config-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 120px;
+}
+
+.era-config-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.era-config-button.test {
+  background: #17a2b8;
+  color: white;
+}
+
+.era-config-button.test:hover:not(:disabled) {
+  background: #138496;
+  transform: translateY(-1px);
+}
+
+.era-config-button.save {
+  background: #28a745;
+  color: white;
+}
+
+.era-config-button.save:hover:not(:disabled) {
+  background: #218838;
+  transform: translateY(-1px);
+}
+
+.era-config-help {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 4px;
+  margin-top: 16px;
+}
+
+.era-config-help h4 {
+  margin: 0 0 12px 0;
+  color: #333;
+  font-size: 14px;
+}
+
+.era-config-help ol {
+  margin: 0 0 12px 0;
+  padding-left: 20px;
+}
+
+.era-config-help li {
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: #555;
+}
+
+.era-config-help p {
+  margin: 0;
+  font-size: 13px;
+  color: #666;
+  font-style: italic;
+}
+
+.era-config-help a {
+  color: #2a5298;
+  text-decoration: none;
+}
+
+.era-config-help a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .era-config-panel {
+    margin: 10px;
+    max-width: none;
+  }
+
+  .era-config-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .era-config-footer {
+    flex-direction: column;
+  }
+
+  .era-config-input.small {
+    max-width: none;
+  }
+}

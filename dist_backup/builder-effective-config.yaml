@@ -1,0 +1,37 @@
+directories:
+  output: dist
+  buildResources: build
+appId: com.its.outdoor-billboard
+productName: ITS Billboard
+asar: false
+files:
+  - filter:
+      - main.js
+      - preload.js
+      - renderer/**/*
+      - package.json
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+  requestedExecutionLevel: asInvoker
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: ITS Billboard
+  artifactName: ITS-Billboard-Setup-${version}.exe
+portable:
+  artifactName: ITS-Billboard-Portable-${version}.exe
+publish:
+  provider: github
+  owner: MinhQuan7
+  repo: ITS_OurdoorBillboard-
+extraMetadata:
+  main: main.js
+electronVersion: 25.9.8

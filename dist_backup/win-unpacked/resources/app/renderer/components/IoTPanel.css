@@ -1,0 +1,304 @@
+/* IoTPanel.css - Simple styling for IoT sensor data display */
+
+.iot-panel {
+  width: 100%;
+  height: 100%;
+  background: none; /* Completely remove background */
+  background-color: transparent; /* Explicitly transparent */
+  color: white;
+  position: relative;
+  overflow: hidden;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+/* Header section - Simple design */
+.iot-header {
+  text-align: left; /* Changed from center to left to align with weather header */
+  margin-bottom: 2px; /* Further reduced for better alignment */
+  position: relative;
+  padding: 0px 6px; /* Reduced right padding to shift title left for alignment with weather city name */
+  background: none; /* Ensure no background */
+  background-color: transparent; /* Explicitly transparent */
+}
+
+.iot-title {
+  font-size: 16px; /* Changed from 14px to 16px to match city-name size */
+  font-weight: bold;
+  text-align: left; /* Changed from center to left to align with city-name */
+  margin-bottom: 2px;
+  letter-spacing: 0.8px; /* Match city-name letter spacing */
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.1); /* Match city-name text shadow */
+  text-transform: uppercase; /* Match city-name uppercase */
+}
+
+.iot-subtitle {
+  font-size: 8px;
+  opacity: 0.8;
+  text-align: center;
+  font-weight: normal;
+}
+
+.connection-indicator {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.connection-indicator.connected {
+  background-color: #4caf50;
+}
+
+.connection-indicator.error {
+  background-color: #f44336;
+}
+
+.connection-indicator.offline {
+  background-color: #757575;
+}
+
+/* Status banner - Simple */
+.status-banner {
+  width: 100%;
+  padding: 4px 6px;
+  text-align: center;
+  font-size: 8px;
+  font-weight: bold;
+  margin-bottom: 6px;
+  border-radius: 3px;
+}
+
+.status-banner.partial {
+  background-color: rgba(255, 193, 7, 0.8);
+  color: #333;
+}
+
+.status-banner.error {
+  background-color: rgba(244, 67, 54, 0.8);
+  color: white;
+}
+
+/* Sensors grid - Single column layout, 4 rows */
+.sensors-grid {
+  display: grid;
+  grid-template-columns: 1fr; /* Single column */
+  grid-template-rows: repeat(4, 1fr); /* 4 equal rows */
+  gap: 6px;
+  margin-bottom: 8px;
+  width: 95%; /* Fill almost full width */
+  margin: 0 auto 8px auto; /* Center the grid */
+  background: none; /* Ensure no background */
+  background-color: transparent; /* Explicitly transparent */
+}
+
+.sensor-item {
+  display: flex;
+  flex-direction: row; /* Horizontal layout */
+  align-items: center;
+  justify-content: flex-start; /* Align to left with more space */
+  text-align: left;
+  padding: 8px 8px; /* Reduced right padding to shift left */
+  border-radius: 0; /* Remove rounded corners */
+  width: 100%; /* Fill full width */
+  box-sizing: border-box;
+  background: none; /* Ensure no background */
+  background-color: transparent; /* Explicitly transparent */
+}
+
+.sensor-content {
+  flex: 1;
+  display: flex;
+  flex-direction: row; /* Horizontal layout */
+  align-items: center;
+  justify-content: flex-start; /* Align to left instead of space-between */
+  width: 100%;
+  background: none; /* Ensure no background */
+  background-color: transparent; /* Explicitly transparent */
+  gap: 8px; /* Add gap between label and value for spacing */
+}
+
+.sensor-label {
+  font-size: 14px; /* Increased font size for better readability */
+  font-weight: bold;
+  color: white;
+  opacity: 0.9;
+  white-space: nowrap; /* Prevent text wrapping */
+  flex: 0 0 auto; /* Don't grow or shrink, keep natural width */
+  text-align: left;
+  margin-left: -4px; /* Shift slightly to the left for more space */
+}
+
+.sensor-value-container {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start; /* Align left instead of right */
+  flex-shrink: 0; /* Don't shrink */
+}
+
+.sensor-value {
+  font-size: 16px; /* Larger value font for better visibility */
+  font-weight: bold;
+  margin-right: 4px; /* Space before unit */
+  color: white;
+  white-space: nowrap; /* Prevent wrapping */
+}
+
+.sensor-unit {
+  font-size: 10px; /* Slightly larger unit font */
+  opacity: 0.8;
+  font-weight: normal;
+  white-space: nowrap; /* Prevent wrapping */
+  color: #b3d9ff; /* Light blue color for units */
+}
+
+/* Remove status indicators completely */
+.sensor-status-indicator {
+  display: none;
+}
+
+/* Air Quality Indicator */
+.air-quality-container {
+  display: flex;
+  justify-content: center;
+  margin: 0px auto 0px auto; /* Increased margin for better spacing */
+  width: 95%;
+}
+
+.air-quality-indicator {
+  background-color: #4caf50; /* Default green, will be overridden by inline style */
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 6px 16px;
+  border-radius: 6px;
+  text-align: center;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  min-width: 60px;
+}
+
+/* Footer - Simple */
+.iot-footer {
+  text-align: center;
+}
+
+.last-updated {
+  font-size: 7px;
+  opacity: 0.7;
+  text-align: center;
+  font-weight: normal;
+}
+
+.error-message-small {
+  font-size: 7px;
+  color: #ffcdd2;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Loading states - Simple */
+.iot-loading,
+.iot-error,
+.iot-offline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: calc(100% - 30px);
+}
+
+.loading-spinner,
+.refresh-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 6px;
+}
+
+.loading-text,
+.error-text,
+.offline-text {
+  font-size: 9px;
+  text-align: center;
+  margin-bottom: 8px;
+  font-weight: normal;
+}
+
+.error-icon,
+.offline-icon {
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.retry-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 8px;
+  cursor: pointer;
+  font-weight: normal;
+}
+
+/* Refresh overlay - Simple */
+.refresh-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* background: rgba(16, 38, 59, 0.8); */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Panel state variants - Completely transparent */
+.iot-panel.loading {
+  background: none;
+  background-color: transparent;
+}
+
+.iot-panel.error {
+  background: none;
+  background-color: transparent;
+}
+
+.iot-panel.offline {
+  background: none;
+  background-color: transparent;
+}
+
+.iot-panel.connected {
+  background: none;
+  background-color: transparent;
+}
+
+.iot-panel.active {
+  background: none;
+  background-color: transparent;
+}
+
+.iot-panel.unified {
+  background: none;
+  background-color: transparent;
+}
+
+/* Basic animation only */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

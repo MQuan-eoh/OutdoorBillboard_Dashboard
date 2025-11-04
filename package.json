@@ -76,10 +76,10 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "ITS Billboard",
-      "artifactName": "ITS-Billboard.exe"
+      "artifactName": "ITS-Billboard-Setup-${version}.exe"
     },
     "portable": {
-      "artifactName": "ITS-Billboard-${version}-portable.exe"
+      "artifactName": "ITS-Billboard-Portable-${version}.exe"
     },
     "publish": {
       "provider": "github",
