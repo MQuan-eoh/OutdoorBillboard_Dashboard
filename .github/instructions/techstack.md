@@ -1,10 +1,10 @@
 Đây là bộ hướng dẫn chi tiết dành cho dự án Mini App Desktop hiển thị thông tin lên màn hình LED quảng cáo, được soạn theo yêu cầu của bạn, với vai trò là Tech Lead Engineer.
 
 Instruction Chuẩn cho Copilot/Dev Team (Phần chuyên nghiệp, tập trung vào kỹ thuật và yêu cầu dự án)
-Chat và giải thích trong readme thì tiếng việt còn khi code và comment trong code thì sử dụng tiếng anh 
+
 1. Instruction Chuẩn cho Copilot/Dev Team (Prompt Chuyên Nghiệp)
    Project Title: ITS Outdoor Billboard Display App (Electron + React/TS)
-   IMPORTANT TUYỆT ĐỐI KHÔNG ĐƯỢC TẠU TẠO FILE README
+   IMPORTANT TUYỆT ĐỐI KHÔNG ĐƯỢC TẠO FILE README
 Context: Develop a cross-platform Electron mini-app for displaying real-time weather, IoT data, and scheduled advertisements on a dedicated outdoor LED screen.
 
 🎯 Mục Tiêu Dự Án

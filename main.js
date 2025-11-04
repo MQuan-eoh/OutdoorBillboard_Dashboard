@@ -852,7 +852,9 @@ class MainProcessMqttService {
         );
         if (this.commandClient) {
           this.commandClient.end();
+          this.commandClient = null;
         }
+        this.isCommandConnected = false;
       }, 20000);
 
       this.commandClient.on("connect", () => {
@@ -874,11 +876,19 @@ class MainProcessMqttService {
           "MainProcessMqttService: ❌ Command broker error:",
           error.message
         );
+        // Safely cleanup the client on error
+        if (this.commandClient) {
+          this.commandClient.end();
+          this.commandClient = null;
+        }
+        this.isCommandConnected = false;
       });
 
       this.commandClient.on("close", () => {
         console.log("MainProcessMqttService: Command broker connection closed");
         this.isCommandConnected = false;
+        // Set client to null when connection is closed
+        this.commandClient = null;
       });
     } catch (error) {
       console.error(
@@ -920,15 +930,17 @@ class MainProcessMqttService {
         "MainProcessMqttService: Cannot subscribe - client not connected, will retry when connected"
       );
 
-      // Set up auto-retry when connection is established
-      if (!this.commandClient.isSubscriptionPending) {
+      // Set up auto-retry when connection is established - null safety check
+      if (this.commandClient && !this.commandClient.isSubscriptionPending) {
         this.commandClient.isSubscriptionPending = true;
         this.commandClient.once("connect", () => {
           console.log(
             "MainProcessMqttService: Client reconnected, subscribing to topics..."
           );
-          delete this.commandClient.isSubscriptionPending;
-          this.subscribeToCommandTopics();
+          if (this.commandClient) {
+            delete this.commandClient.isSubscriptionPending;
+            this.subscribeToCommandTopics();
+          }
         });
       }
       return;
@@ -974,7 +986,7 @@ class MainProcessMqttService {
         );
       } else {
         console.log(
-          `MainProcessMqttService: ✅ Successfully subscribed to ${manifestTopic}`
+          `MainProcessMqttService: Successfully subscribed to ${manifestTopic}`
         );
       }
     });
@@ -2207,15 +2219,52 @@ async function initializeMqttService() {
 
       if (mqttService) {
         mqttService.disconnect();
+        mqttService = null;
       }
 
       mqttService = new MainProcessMqttService();
-      await mqttService.initialize(config.eraIot);
+
+      // Attempt initialization with retry
+      const maxRetries = 3;
+      let retryCount = 0;
+
+      while (retryCount < maxRetries) {
+        try {
+          const success = await mqttService.initialize(config.eraIot);
+          if (success) {
+            console.log("MQTT service initialized successfully");
+            return;
+          }
+          throw new Error("MQTT service initialization returned false");
+        } catch (error) {
+          retryCount++;
+          console.error(
+            `MQTT initialization attempt ${retryCount} failed:`,
+            error.message
+          );
+
+          if (retryCount < maxRetries) {
+            const delay = 2000 * retryCount; // 2s, 4s, 6s
+            console.log(`Retrying MQTT initialization in ${delay}ms...`);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          } else {
+            console.error("All MQTT initialization attempts failed");
+            if (mqttService) {
+              mqttService.disconnect();
+              mqttService = null;
+            }
+          }
+        }
+      }
     } else {
       console.log("E-Ra IoT not configured or disabled");
     }
   } catch (error) {
     console.error("Failed to initialize MQTT service:", error);
+    if (mqttService) {
+      mqttService.disconnect();
+      mqttService = null;
+    }
   }
 }
 

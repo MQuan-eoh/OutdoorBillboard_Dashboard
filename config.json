@@ -1,17 +1,16 @@
 {
-  "logoMode": "fixed",
+  "logoMode": "loop",
   "logoImages": [
     {
-      "name": "EoH_ERa_Web-Banner_1920x800-1",
-      "path": "downloads\\logos\\eoh-era-web-banner-1920x800-1-1761730314689.png",
-      "size": 733002,
+      "name": "Screenshot 2024-09-26 102423",
+      "path": "downloads\\logos\\screenshot-2024-09-26-102423-1762153562927.png",
+      "size": 171366,
       "type": "image/png",
-      "id": "eoh-era-web-banner-1920x800-1-1761730314689",
-      "source": "github_cdn",
-      "checksum": "eoherawebbanner1920x8001png7330021761730318343"
+      "id": "screenshot-2024-09-26-102423-1762153562927",
+      "source": "github_cdn"
     }
   ],
-  "logoLoopDuration": 4,
+  "logoLoopDuration": 10,
   "layoutPositions": {
     "weather": {
       "x": 0,
@@ -100,6 +99,6 @@
     "retryAttempts": 3,
     "retryDelay": 2000
   },
-  "_manifestVersion": "1.0.1761730318725",
-  "_manifestLastUpdated": "2025-10-29T09:31:58.725Z"
+  "_manifestVersion": "1.0.1762153566690",
+  "_manifestLastUpdated": "2025-11-03T07:06:06.690Z"
 }

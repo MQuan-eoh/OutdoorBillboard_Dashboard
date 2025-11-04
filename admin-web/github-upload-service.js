@@ -8,16 +8,47 @@
 
 class GitHubUploadService {
   constructor() {
-    this.config = window.ConfigLoader?.getGitHubConfig() || window.GitHubConfig;
+    // Use unified configuration
+    this.configManager = window.GitHubConfigManager;
+    this.config = this.configManager ? this.configManager.exportLegacyConfig() : this.getDefaultConfig();
+    
     this.token = null;
     this.isAuthenticated = false;
     this.authenticatedUser = null;
     this.listeners = {};
 
-    console.log("[GitHubUploadService] Initialized with config:", {
+    console.log("[GitHubUploadService] Initialized with unified config:", {
       owner: this.config.repository.owner,
       repo: this.config.repository.repo,
     });
+  }
+
+  /**
+   * Get default configuration fallback
+   */
+  getDefaultConfig() {
+    return {
+      repository: {
+        owner: "MQuan-eoh",
+        repo: "billboard-logos-cdn",
+        branch: "main",
+        uploadPath: "logos/"
+      },
+      api: {
+        endpoint: "https://api.github.com",
+        cdnEndpoint: "https://mquan-eoh.github.io/billboard-logos-cdn"
+      }
+    };
+  }
+
+  /**
+   * Update configuration from unified manager
+   */
+  updateConfig() {
+    if (this.configManager) {
+      this.config = this.configManager.exportLegacyConfig();
+      console.log("[GitHubUploadService] Configuration updated:", this.config.repository);
+    }
   }
 
   /**
@@ -64,49 +95,105 @@ class GitHubUploadService {
   }
 
   /**
-   * Test GitHub authentication
+   * Test GitHub authentication with enhanced error handling
    */
   async testAuthentication() {
     if (!this.token) return false;
 
     try {
       console.log("[GitHubUploadService] Testing authentication...");
-      const response = await fetch(`${this.config.api.endpoint}/user`, {
-        headers: {
-          Authorization: `token ${this.token}`,
-          Accept: "application/vnd.github.v3+json",
-        },
-      });
+      const response = await this.makeApiRequest(`${this.config.api.endpoint}/user`);
 
       if (response.ok) {
         const userData = await response.json();
         this.authenticatedUser = userData;
-        console.log(
-          "[GitHubUploadService] Authenticated user:",
-          userData.login
-        );
+        console.log("[GitHubUploadService] Authenticated user:", userData.login);
 
-        console.log(
-          "[GitHubUploadService] Testing repository access..."
-        );
+        console.log("[GitHubUploadService] Testing repository access...");
         const repoAccess = await this.testRepositoryAccess();
 
         if (repoAccess.success) {
           console.log("[GitHubUploadService] Repository access confirmed");
           return true;
         } else {
-          console.log(
-            "[GitHubUploadService] Repository access denied, trying alternatives..."
-          );
+          console.log("[GitHubUploadService] Repository access denied, trying alternatives...");
           return await this.handleRepositoryFallback();
         }
       }
 
-      return response.ok;
+      return false;
     } catch (error) {
       console.error("[GitHubUploadService] Auth test failed:", error);
       return false;
     }
+  }
+
+  /**
+   * Make API request with retry mechanism
+   */
+  async makeApiRequest(url, options = {}, retries = 3) {
+    const defaultOptions = {
+      headers: {
+        Authorization: `token ${this.token}`,
+        Accept: "application/vnd.github.v3+json",
+        "Content-Type": "application/json",
+        ...options.headers
+      },
+      ...options
+    };
+
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        console.log(`[GitHubUploadService] API request attempt ${attempt}/${retries}: ${url}`);
+        
+        const response = await fetch(url, defaultOptions);
+        
+        if (response.ok) {
+          return response;
+        }
+        
+        // Handle specific HTTP errors
+        if (response.status === 401) {
+          throw new Error("Authentication failed - Invalid token");
+        }
+        
+        if (response.status === 403) {
+          const errorData = await response.json().catch(() => ({}));
+          if (errorData.message?.includes("rate limit")) {
+            console.log("[GitHubUploadService] Rate limited, waiting before retry...");
+            await this.delay(5000 * attempt);
+            continue;
+          }
+          throw new Error("Access denied - Check token permissions");
+        }
+        
+        if (response.status === 404) {
+          throw new Error("Repository or resource not found");
+        }
+
+        if (attempt === retries) {
+          throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+        }
+
+        console.log(`[GitHubUploadService] Request failed, retrying in ${2000 * attempt}ms...`);
+        await this.delay(2000 * attempt);
+        
+      } catch (error) {
+        if (attempt === retries || error.message.includes("Authentication failed")) {
+          throw error;
+        }
+        
+        console.log(`[GitHubUploadService] Request error, retrying: ${error.message}`);
+        await this.delay(2000 * attempt);
+      }
+    }
+  }
+
+  /**
+   * Delay helper
+   */
+  async delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
@@ -254,7 +341,7 @@ class GitHubUploadService {
   }
 
   /**
-   * Upload logo file
+   * Upload logo file with enhanced URL generation
    */
   async uploadLogo(file, metadata = {}) {
     if (!this.isAuthenticated) {
@@ -265,9 +352,15 @@ class GitHubUploadService {
       console.log(`[GitHubUploadService] Uploading ${file.name}...`);
 
       const base64Content = await this.fileToBase64(file);
-      const filename =
-        metadata.filename || this.generateUniqueFilename(file.name);
+      const filename = metadata.filename || this.generateUniqueFilename(file.name);
       const filePath = this.config.repository.uploadPath + filename;
+
+      // Use unified config manager for URL generation if available
+      const uploadUrl = this.configManager 
+        ? this.configManager.getUploadUrl(filename)
+        : `${this.config.api.endpoint}/repos/${this.config.repository.owner}/${this.config.repository.repo}/contents/${filePath}`;
+
+      console.log("[GitHubUploadService] Upload URL:", uploadUrl);
 
       const existingFile = await this.getFileInfo(filePath);
 
@@ -283,45 +376,23 @@ class GitHubUploadService {
         commitData.sha = existingFile.sha;
       }
 
-      const uploadUrl = `${this.config.api.endpoint}/repos/${this.config.repository.owner}/${this.config.repository.repo}/contents/${filePath}`;
-
-      const uploadResponse = await fetch(uploadUrl, {
+      const uploadResponse = await this.makeApiRequest(uploadUrl, {
         method: "PUT",
-        headers: {
-          Authorization: `token ${this.token}`,
-          Accept: "application/vnd.github.v3+json",
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(commitData),
       });
-
-      if (!uploadResponse.ok) {
-        const errorData = await uploadResponse.json().catch(() => ({
-          message: `HTTP ${uploadResponse.status}: ${uploadResponse.statusText}`,
-        }));
-
-        if (uploadResponse.status === 404) {
-          throw new Error(
-            `Repository not found: ${this.config.repository.owner}/${this.config.repository.repo}`
-          );
-        } else if (uploadResponse.status === 401) {
-          throw new Error("Authentication failed. Check your GitHub token.");
-        } else if (uploadResponse.status === 403) {
-          throw new Error("Access denied. Check write permissions.");
-        } else {
-          throw new Error(
-            `Upload failed: ${errorData.message || uploadResponse.statusText}`
-          );
-        }
-      }
 
       const uploadResult = await uploadResponse.json();
       console.log(`[GitHubUploadService] File uploaded: ${filename}`);
 
+      // Generate CDN URL using unified config manager
+      const logoUrl = this.configManager 
+        ? this.configManager.getFileUrl(filename)
+        : uploadResult.content.download_url;
+
       const logoMetadata = {
         id: this.generateLogoId(filename),
         name: metadata.name || file.name.replace(/\.[^/.]+$/, ""),
-        url: uploadResult.content.download_url,
+        url: logoUrl,
         filename: filename,
         size: file.size,
         type: file.type,
@@ -334,6 +405,7 @@ class GitHubUploadService {
 
       this._emit("logoUploaded", logoMetadata);
       return logoMetadata;
+
     } catch (error) {
       console.error("[GitHubUploadService] Upload failed:", error);
       this._emit("error", { message: error.message });
