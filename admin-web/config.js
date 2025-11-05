@@ -9,9 +9,9 @@ const CONFIG = {
     repo: "ITS_OurdoorBillboard-",
     branch: "main",
     apiEndpoint: "https://api.github.com",
-    cdnEndpoint: "https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn",
+    cdnEndpoint: "https://mquan-eoh.github.io/billboard-logos-cdn",
     manifestUrl:
-      "https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn/manifest.json",
+      "https://mquan-eoh.github.io/billboard-logos-cdn/manifest.json",
     uploadPath: "logos/",
     maxFileSize: 10 * 1024 * 1024, // 10MB for GitHub
   },

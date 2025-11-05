@@ -2,27 +2,27 @@
   "logoMode": "loop",
   "logoImages": [
     {
-      "name": "maxresdefault (3)",
-      "path": "downloads\\logos\\maxresdefault--3--1762328121837.jpg",
-      "size": 91817,
-      "type": "image/jpeg",
-      "id": "maxresdefault-3-1762328121837",
+      "name": "background6",
+      "path": "downloads\\logos\\background6-1762337377093.png",
+      "size": 4092287,
+      "type": "image/png",
+      "id": "background6-1762337377093",
       "source": "github_cdn"
     },
     {
-      "name": "macos-app-store-glassmorphism",
-      "path": "downloads\\logos\\macos-app-store-glassmorphism-1762328124510.jpg",
-      "size": 71838,
+      "name": "background2",
+      "path": "downloads\\logos\\background2-1762337381136.jpg",
+      "size": 732142,
       "type": "image/jpeg",
-      "id": "macos-app-store-glassmorphism-1762328124510",
+      "id": "background2-1762337381136",
       "source": "github_cdn"
     },
     {
-      "name": "463855777_1198489501665425_7893202219701407131_n",
-      "path": "downloads\\logos\\463855777-1198489501665425-7893202219701407131-n-1762328126257.jpg",
-      "size": 608084,
-      "type": "image/jpeg",
-      "id": "463855777-1198489501665425-7893202219701407131-n-1762328126257",
+      "name": "iphone-16-stock-wallpaper-bright-orange-default-best-high-resolution-iphone-16-pro-max-wallpaper-4k-hd-16pro-13-mini-17-air-27-10-2024-1730073680-hd-wallpaper (1)",
+      "path": "downloads\\logos\\iphone-16-stock-wallpaper-bright-orange-default-best-high-resolution-iphone-16-pro-max-wallpaper-4k-hd-16pro-13-mini-17-air-27-10-2024-1730073680-hd-wallpaper--1--1762337384328.png",
+      "size": 4095757,
+      "type": "image/png",
+      "id": "iphone-16-stock-wallpaper-bright-orange-default-best-high-resolution-iphone-16-pro-max-wallpaper-4k-hd-16pro-13-mini-17-air-27-10-2024-1730073680-hd-wallpaper-1-1762337384328",
       "source": "github_cdn"
     }
   ],
@@ -108,13 +108,13 @@
   },
   "logoManifest": {
     "enabled": true,
-    "manifestUrl": "https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn/manifest.json",
+    "manifestUrl": "https://mquan-eoh.github.io/billboard-logos-cdn/manifest.json",
     "pollInterval": 10,
     "downloadPath": "./downloads",
     "maxCacheSize": 50,
     "retryAttempts": 3,
     "retryDelay": 2000
   },
-  "_manifestVersion": "1.0.1762328129215",
-  "_manifestLastUpdated": "2025-11-05T07:35:29.215Z"
+  "_manifestVersion": "1.0.1762337389549",
+  "_manifestLastUpdated": "2025-11-05T10:09:49.549Z"
 }

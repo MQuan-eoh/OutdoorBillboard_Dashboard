@@ -31,13 +31,19 @@ export class LogoManager {
     try {
       console.log("[LogoManager] Fetching manifest from:", this.manifestUrl);
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       const response = await fetch(this.manifestUrl, {
         cache: "no-cache",
+        signal: controller.signal,
         headers: {
           "Cache-Control": "no-cache",
           Pragma: "no-cache",
         },
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         this.currentManifest = await response.json();
@@ -52,9 +58,21 @@ export class LogoManager {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
-      console.error("[LogoManager] Failed to fetch manifest:", error);
+      if (error.name === "AbortError") {
+        console.error("[LogoManager] Fetch timeout:", error);
+        uiCore.showToast("Timeout khi tải manifest từ GitHub", "error");
+      } else if (error.message.includes("404")) {
+        console.error("[LogoManager] Manifest not found:", error);
+        uiCore.showToast(
+          "Manifest không tồn tại trên GitHub. Kiểm tra URL repository.",
+          "error"
+        );
+      } else {
+        console.error("[LogoManager] Failed to fetch manifest:", error);
+        uiCore.showToast("Không thể tải manifest từ GitHub", "error");
+      }
+
       this.updateManifestStatus("error");
-      uiCore.showToast("Không thể tải manifest từ GitHub", "error");
       return null;
     }
   }

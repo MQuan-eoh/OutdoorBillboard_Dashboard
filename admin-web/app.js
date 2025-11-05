@@ -745,7 +745,7 @@ function refreshDeviceInfo() {
 class LogoManifestManager {
   constructor() {
     this.manifestUrl =
-      "https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn/manifest.json";
+      "https://mquan-eoh.github.io/billboard-logos-cdn/manifest.json";
     this.currentManifest = null;
 
     this.initializeManifestUI();
@@ -761,13 +761,19 @@ class LogoManifestManager {
     try {
       console.log("Fetching current manifest from GitHub...");
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       const response = await fetch(this.manifestUrl, {
         cache: "no-cache",
+        signal: controller.signal,
         headers: {
           "Cache-Control": "no-cache",
           Pragma: "no-cache",
         },
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         this.currentManifest = await response.json();
@@ -780,9 +786,21 @@ class LogoManifestManager {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
-      console.error("Failed to fetch manifest:", error);
+      if (error.name === "AbortError") {
+        console.error("Fetch timeout:", error);
+        showToast("Timeout khi tải manifest từ GitHub", "error");
+      } else if (error.message.includes("404")) {
+        console.error("Manifest not found:", error);
+        showToast(
+          "Manifest không tồn tại trên GitHub. Kiểm tra URL repository.",
+          "error"
+        );
+      } else {
+        console.error("Failed to fetch manifest:", error);
+        showToast("Không thể tải manifest từ GitHub", "error");
+      }
+
       this.updateManifestStatus("error");
-      showToast("Không thể tải manifest từ GitHub", "error");
       return null;
     }
   }

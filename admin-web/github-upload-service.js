@@ -32,14 +32,13 @@ class GitHubUploadService {
     return {
       repository: {
         owner: "MinhQuan7",
-        repo: "ITS_OurdoorBillboard-",
+        repo: "billboard-logos-cdn",
         branch: "main",
         uploadPath: "logos/",
       },
       api: {
         endpoint: "https://api.github.com",
-        cdnEndpoint:
-          "https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn",
+        cdnEndpoint: "https://mquan-eoh.github.io/billboard-logos-cdn",
       },
     };
   }

@@ -1,8 +1,8 @@
 version: 1.0.3
 files:
   - url: https://github.com/MinhQuan7/ITS_OurdoorBillboard-/releases/download/v1.0.3/ITS-Billboard-Setup-1.0.3.exe
-    sha512: ""
+    sha512: ''
     size: 0
 path: ITS-Billboard-Setup-1.0.3.exe
-sha512: ""
-releaseDate: 2025-11-05T08:32:07.411Z
+sha512: ''
+releaseDate: 2025-11-05T10:07:45.849Z

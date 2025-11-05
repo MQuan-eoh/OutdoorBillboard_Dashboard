@@ -19,7 +19,10 @@ class MqttClient {
       console.log("Connecting to MQTT broker...");
       this.updateStatus("connecting");
 
-      const config = window.BannerConfig.mqtt;
+      const config = window.BannerConfig?.mqtt;
+      if (!config) {
+        throw new Error("MQTT config not found in BannerConfig");
+      }
 
       // Configure MQTT with exponential backoff for reconnection
       // This prevents rapid reconnect attempts that overwhelm the broker
@@ -31,24 +34,35 @@ class MqttClient {
           30000
         ),
         will: {
-          topic: config.topic.status,
+          topic: config.topic?.status || "its/billboard/status",
           payload: JSON.stringify({
-            clientId: config.options.clientId,
+            clientId: config.options?.clientId || `client_${Date.now()}`,
             status: "offline",
             timestamp: Date.now(),
           }),
           qos: 1,
           retain: false,
         },
+        keepalive: 60,
+        reschedulePings: true,
+        protocolId: "MQTT",
+        protocolVersion: 4,
+        clean: true,
       };
 
       console.log("MQTT Options:", {
         broker: config.broker,
+        clientId: mqttOptions.clientId,
         reconnectPeriod: mqttOptions.reconnectPeriod,
         connectTimeout: mqttOptions.connectTimeout,
       });
 
-      // Connect to MQTT broker
+      // Validate broker URL
+      if (!config.broker || !config.broker.startsWith("wss://")) {
+        throw new Error("Invalid MQTT broker URL");
+      }
+
+      // Connect to MQTT broker with timeout protection
       this.client = mqtt.connect(config.broker, mqttOptions);
 
       // Setup event handlers
