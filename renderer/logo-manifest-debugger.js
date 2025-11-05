@@ -91,7 +91,7 @@ async function testLogoDownloads() {
 
   try {
     const manifestUrl =
-      "https://mquan-eoh.github.io/billboard-logos-cdn/manifest.json";
+      "https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn/manifest.json";
     const response = await fetch(manifestUrl);
     const manifest = await response.json();
 

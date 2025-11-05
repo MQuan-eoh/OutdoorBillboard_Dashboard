@@ -1,0 +1,293 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'logos/**'
+      - 'manifest.json'
+      - 'admin-web/**'
+      - 'docs/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Force rebuild all components'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: |
+        npm init -y
+        npm install sharp mime crypto
+        
+    - name: Create output directory structure
+      run: |
+        mkdir -p dist
+        mkdir -p dist/admin
+        mkdir -p dist/logos-cdn
+        
+    - name: Copy admin-web to dist/admin
+      run: |
+        if [ -d "admin-web" ]; then
+          cp -r admin-web/* dist/admin/
+          echo "Admin web copied successfully"
+        else
+          echo "Admin web directory not found"
+        fi
+        
+    - name: Generate logo manifest and CDN
+      run: |
+        node << 'EOF'
+        const fs = require('fs');
+        const path = require('path');
+        const crypto = require('crypto');
+        const sharp = require('sharp');
+        const mime = require('mime-types');
+
+        async function generateManifest() {
+          console.log('Generating logo manifest...');
+          
+          const logosDir = './logos';
+          const outputDir = './dist/logos-cdn';
+          
+          // Create output directory
+          if (!fs.existsSync(outputDir)) {
+            fs.mkdirSync(outputDir, { recursive: true });
+          }
+          
+          // Copy logos directory to dist/logos-cdn
+          if (fs.existsSync(logosDir)) {
+            fs.cpSync(logosDir, path.join(outputDir, 'logos'), { recursive: true });
+          }
+          
+          const logos = [];
+          
+          if (fs.existsSync(logosDir)) {
+            const files = fs.readdirSync(logosDir);
+            
+            for (const file of files) {
+              const filePath = path.join(logosDir, file);
+              const stat = fs.statSync(filePath);
+              
+              if (stat.isFile() && /\.(png|jpg|jpeg|gif|svg)$/i.test(file)) {
+                const fileContent = fs.readFileSync(filePath);
+                const checksum = crypto.createHash('md5').update(fileContent).digest('hex');
+                const mimeType = mime.lookup(filePath) || 'application/octet-stream';
+                
+                const id = file.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+                
+                const logoItem = {
+                  id: id,
+                  name: file.replace(/\.[^/.]+$/, ""),
+                  url: 'https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn/logos/' + file,
+                  filename: file,
+                  size: stat.size,
+                  type: mimeType,
+                  checksum: checksum,
+                  priority: logos.length + 1,
+                  active: true,
+                  uploadedAt: new Date().toISOString()
+                };
+                
+                logos.push(logoItem);
+                console.log('Processed logo: ' + file + ' (' + stat.size + ' bytes)');
+              }
+            }
+          }
+          
+          const manifest = {
+            version: '1.0.' + Date.now(),
+            lastUpdated: new Date().toISOString(),
+            logos: logos,
+            settings: {
+              logoMode: "loop",
+              logoLoopDuration: 30,
+              schedules: []
+            },
+            metadata: {
+              author: "GitHub Actions",
+              description: "Auto-generated manifest for ITS Billboard logos",
+              apiVersion: "v1",
+              buildTime: new Date().toISOString(),
+              logoCount: logos.length,
+              totalSize: logos.reduce((sum, logo) => sum + logo.size, 0)
+            }
+          };
+          
+          fs.writeFileSync(
+            path.join(outputDir, 'manifest.json'), 
+            JSON.stringify(manifest, null, 2)
+          );
+          
+          console.log('Manifest generated successfully:');
+          console.log('- Version: ' + manifest.version);
+          console.log('- Logo count: ' + logos.length);
+          console.log('- Total size: ' + (manifest.metadata.totalSize / 1024).toFixed(1) + 'KB');
+          
+          // Generate index.html for logos CDN
+          const indexHtml = [
+            '<!DOCTYPE html>',
+            '<html lang="en">',
+            '<head>',
+            '    <meta charset="UTF-8">',
+            '    <meta name="viewport" content="width=device-width, initial-scale=1.0">',
+            '    <title>ITS Billboard Logos CDN</title>',
+            '    <style>',
+            '        body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; }',
+            '        .container { max-width: 1200px; margin: 0 auto; }',
+            '        .header { text-align: center; margin-bottom: 30px; }',
+            '        .logo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }',
+            '        .logo-item { background: white; border: 1px solid #ddd; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }',
+            '        .logo-item img { width: 100%; height: 120px; object-fit: contain; margin-bottom: 10px; }',
+            '        .logo-info { font-size: 12px; color: #666; }',
+            '        .manifest-info { background: white; padding: 20px; border-radius: 8px; margin-bottom: 30px; border: 1px solid #ddd; }',
+            '        .nav { margin-bottom: 20px; }',
+            '        .nav a { margin-right: 15px; color: #007bff; text-decoration: none; }',
+            '        .nav a:hover { text-decoration: underline; }',
+            '    </style>',
+            '</head>',
+            '<body>',
+            '    <div class="container">',
+            '        <div class="nav">',
+            '            <a href="../admin/">Admin Panel</a>',
+            '            <a href="./manifest.json">API Manifest</a>',
+            '        </div>',
+            '        ',
+            '        <div class="header">',
+            '            <h1>🖼️ ITS Billboard Logos CDN</h1>',
+            '            <p>Centralized logo management system</p>',
+            '        </div>',
+            '        ',
+            '        <div class="manifest-info">',
+            '            <h3>📊 Manifest Information</h3>',
+            '            <p><strong>Version:</strong> ' + manifest.version + '</p>',
+            '            <p><strong>Last Updated:</strong> ' + new Date(manifest.lastUpdated).toLocaleString() + '</p>',
+            '            <p><strong>Logo Count:</strong> ' + manifest.metadata.logoCount + '</p>',
+            '            <p><strong>Total Size:</strong> ' + (manifest.metadata.totalSize / 1024).toFixed(1) + 'KB</p>',
+            '        </div>',
+            '        ',
+            '        <h3>🎨 Available Logos</h3>',
+            '        <div class="logo-grid">'
+          ].join('\n');
+          
+          let logoItemsHtml = logos.map(logo => 
+            '\n            <div class="logo-item">' +
+            '\n                <img src="./logos/' + logo.filename + '" alt="' + logo.name + '" onerror="this.style.display=\'none\'">' +
+            '\n                <div class="logo-info">' +
+            '\n                    <strong>' + logo.name + '</strong><br>' +
+            '\n                    ID: <code>' + logo.id + '</code><br>' +
+            '\n                    Size: ' + (logo.size / 1024).toFixed(1) + 'KB<br>' +
+            '\n                    Type: ' + logo.type + '<br>' +
+            '\n                    Checksum: <code>' + logo.checksum.substring(0, 8) + '...</code>' +
+            '\n                </div>' +
+            '\n            </div>'
+          ).join('');
+          
+          const footerHtml = [
+            logoItemsHtml,
+            '        </div>',
+            '    </div>',
+            '    ',
+            '    <script>',
+            '        setTimeout(() => location.reload(), 60000);',
+            '    </script>',
+            '</body>',
+            '</html>'
+          ].join('\n');
+          
+          fs.writeFileSync(path.join(outputDir, 'index.html'), indexHtml + footerHtml);
+          console.log('Generated CDN index.html');
+        }
+
+        generateManifest().catch(console.error);
+        EOF
+        
+    - name: Create main index.html
+      run: |
+        cat > dist/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>ITS Billboard System</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+                .container { max-width: 800px; margin: 0 auto; text-align: center; color: white; }
+                .card { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 15px; padding: 30px; margin: 20px 0; border: 1px solid rgba(255,255,255,0.2); }
+                .btn { display: inline-block; padding: 12px 30px; margin: 10px; background: rgba(255,255,255,0.2); color: white; text-decoration: none; border-radius: 25px; border: 2px solid rgba(255,255,255,0.3); transition: all 0.3s; }
+                .btn:hover { background: rgba(255,255,255,0.3); transform: translateY(-2px); }
+                .logo { width: 80px; height: 80px; margin: 0 auto 20px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="card">
+                    <div class="logo">🖥️</div>
+                    <h1>ITS Billboard System</h1>
+                    <p>Digital signage management platform for outdoor displays</p>
+                </div>
+                
+                <div class="card">
+                    <h3>🎛️ System Components</h3>
+                    <a href="./admin/" class="btn">Admin Panel</a>
+                    <a href="./logos-cdn/" class="btn">Logos CDN</a>
+                </div>
+                
+                <div class="card">
+                    <h3>📖 Documentation</h3>
+                    <p>Complete system for managing digital billboards with logo rotation, weather integration, and remote management capabilities.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        EOF
+        
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+      
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: './dist'
+        
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+      
+    - name: Verify deployment
+      run: |
+        echo "🚀 Deployment completed successfully!"
+        echo "Main site: https://mquan-eoh.github.io/ITS_OurdoorBillboard-/"
+        echo "Admin Panel: https://mquan-eoh.github.io/ITS_OurdoorBillboard-/admin/"
+        echo "Logos CDN: https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn/"
+        echo "Manifest API: https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn/manifest.json"
+        
+        sleep 15
+        echo "Testing endpoints..."
+        curl -f "https://mquan-eoh.github.io/ITS_OurdoorBillboard-/" > /dev/null && echo "✅ Main site accessible" || echo "❌ Main site not accessible"
+        curl -f "https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn/manifest.json" > /dev/null && echo "✅ Manifest API accessible" || echo "❌ Manifest API not accessible"

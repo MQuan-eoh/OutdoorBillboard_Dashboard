@@ -2,11 +2,27 @@
   "logoMode": "loop",
   "logoImages": [
     {
-      "name": "Screenshot 2024-09-26 102423",
-      "path": "downloads\\logos\\screenshot-2024-09-26-102423-1762153562927.png",
-      "size": 171366,
-      "type": "image/png",
-      "id": "screenshot-2024-09-26-102423-1762153562927",
+      "name": "maxresdefault (3)",
+      "path": "downloads\\logos\\maxresdefault--3--1762328121837.jpg",
+      "size": 91817,
+      "type": "image/jpeg",
+      "id": "maxresdefault-3-1762328121837",
+      "source": "github_cdn"
+    },
+    {
+      "name": "macos-app-store-glassmorphism",
+      "path": "downloads\\logos\\macos-app-store-glassmorphism-1762328124510.jpg",
+      "size": 71838,
+      "type": "image/jpeg",
+      "id": "macos-app-store-glassmorphism-1762328124510",
+      "source": "github_cdn"
+    },
+    {
+      "name": "463855777_1198489501665425_7893202219701407131_n",
+      "path": "downloads\\logos\\463855777-1198489501665425-7893202219701407131-n-1762328126257.jpg",
+      "size": 608084,
+      "type": "image/jpeg",
+      "id": "463855777-1198489501665425-7893202219701407131-n-1762328126257",
       "source": "github_cdn"
     }
   ],
@@ -92,13 +108,13 @@
   },
   "logoManifest": {
     "enabled": true,
-    "manifestUrl": "https://mquan-eoh.github.io/billboard-logos-cdn/manifest.json",
+    "manifestUrl": "https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn/manifest.json",
     "pollInterval": 10,
     "downloadPath": "./downloads",
     "maxCacheSize": 50,
     "retryAttempts": 3,
     "retryDelay": 2000
   },
-  "_manifestVersion": "1.0.1762153566690",
-  "_manifestLastUpdated": "2025-11-03T07:06:06.690Z"
+  "_manifestVersion": "1.0.1762328129215",
+  "_manifestLastUpdated": "2025-11-05T07:35:29.215Z"
 }

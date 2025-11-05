@@ -1,7 +1,7 @@
 /**
  * GitHub Upload Service - Global Wrapper
  * Bridges ES6 GitHubService with Global Context
- * 
+ *
  * This wraps the modular GitHubService class and exposes it globally
  * for use in HTML event handlers and legacy code
  */
@@ -10,8 +10,10 @@ class GitHubUploadService {
   constructor() {
     // Use unified configuration
     this.configManager = window.GitHubConfigManager;
-    this.config = this.configManager ? this.configManager.exportLegacyConfig() : this.getDefaultConfig();
-    
+    this.config = this.configManager
+      ? this.configManager.exportLegacyConfig()
+      : this.getDefaultConfig();
+
     this.token = null;
     this.isAuthenticated = false;
     this.authenticatedUser = null;
@@ -29,15 +31,16 @@ class GitHubUploadService {
   getDefaultConfig() {
     return {
       repository: {
-        owner: "MQuan-eoh",
-        repo: "billboard-logos-cdn",
+        owner: "MinhQuan7",
+        repo: "ITS_OurdoorBillboard-",
         branch: "main",
-        uploadPath: "logos/"
+        uploadPath: "logos/",
       },
       api: {
         endpoint: "https://api.github.com",
-        cdnEndpoint: "https://mquan-eoh.github.io/billboard-logos-cdn"
-      }
+        cdnEndpoint:
+          "https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn",
+      },
     };
   }
 
@@ -47,7 +50,10 @@ class GitHubUploadService {
   updateConfig() {
     if (this.configManager) {
       this.config = this.configManager.exportLegacyConfig();
-      console.log("[GitHubUploadService] Configuration updated:", this.config.repository);
+      console.log(
+        "[GitHubUploadService] Configuration updated:",
+        this.config.repository
+      );
     }
   }
 
@@ -102,12 +108,17 @@ class GitHubUploadService {
 
     try {
       console.log("[GitHubUploadService] Testing authentication...");
-      const response = await this.makeApiRequest(`${this.config.api.endpoint}/user`);
+      const response = await this.makeApiRequest(
+        `${this.config.api.endpoint}/user`
+      );
 
       if (response.ok) {
         const userData = await response.json();
         this.authenticatedUser = userData;
-        console.log("[GitHubUploadService] Authenticated user:", userData.login);
+        console.log(
+          "[GitHubUploadService] Authenticated user:",
+          userData.login
+        );
 
         console.log("[GitHubUploadService] Testing repository access...");
         const repoAccess = await this.testRepositoryAccess();
@@ -116,7 +127,9 @@ class GitHubUploadService {
           console.log("[GitHubUploadService] Repository access confirmed");
           return true;
         } else {
-          console.log("[GitHubUploadService] Repository access denied, trying alternatives...");
+          console.log(
+            "[GitHubUploadService] Repository access denied, trying alternatives..."
+          );
           return await this.handleRepositoryFallback();
         }
       }
@@ -137,53 +150,67 @@ class GitHubUploadService {
         Authorization: `token ${this.token}`,
         Accept: "application/vnd.github.v3+json",
         "Content-Type": "application/json",
-        ...options.headers
+        ...options.headers,
       },
-      ...options
+      ...options,
     };
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        console.log(`[GitHubUploadService] API request attempt ${attempt}/${retries}: ${url}`);
-        
+        console.log(
+          `[GitHubUploadService] API request attempt ${attempt}/${retries}: ${url}`
+        );
+
         const response = await fetch(url, defaultOptions);
-        
+
         if (response.ok) {
           return response;
         }
-        
+
         // Handle specific HTTP errors
         if (response.status === 401) {
           throw new Error("Authentication failed - Invalid token");
         }
-        
+
         if (response.status === 403) {
           const errorData = await response.json().catch(() => ({}));
           if (errorData.message?.includes("rate limit")) {
-            console.log("[GitHubUploadService] Rate limited, waiting before retry...");
+            console.log(
+              "[GitHubUploadService] Rate limited, waiting before retry..."
+            );
             await this.delay(5000 * attempt);
             continue;
           }
           throw new Error("Access denied - Check token permissions");
         }
-        
+
         if (response.status === 404) {
           throw new Error("Repository or resource not found");
         }
 
         if (attempt === retries) {
-          throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+          throw new Error(
+            `Request failed: ${response.status} ${response.statusText}`
+          );
         }
 
-        console.log(`[GitHubUploadService] Request failed, retrying in ${2000 * attempt}ms...`);
+        console.log(
+          `[GitHubUploadService] Request failed, retrying in ${
+            2000 * attempt
+          }ms...`
+        );
         await this.delay(2000 * attempt);
-        
       } catch (error) {
-        if (attempt === retries || error.message.includes("Authentication failed")) {
+        if (
+          attempt === retries ||
+          error.message.includes("Authentication failed")
+        ) {
           throw error;
         }
-        
-        console.log(`[GitHubUploadService] Request error, retrying: ${error.message}`);
+
+        console.log(
+          `[GitHubUploadService] Request error, retrying: ${error.message}`
+        );
         await this.delay(2000 * attempt);
       }
     }
@@ -193,7 +220,7 @@ class GitHubUploadService {
    * Delay helper
    */
   async delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -297,7 +324,10 @@ class GitHubUploadService {
       }
 
       const createError = await createRepoResponse.json().catch(() => ({}));
-      console.error("[GitHubUploadService] Repository creation failed:", createError);
+      console.error(
+        "[GitHubUploadService] Repository creation failed:",
+        createError
+      );
       return false;
     } catch (error) {
       console.error("[GitHubUploadService] Error creating repository:", error);
@@ -335,7 +365,10 @@ class GitHubUploadService {
       console.warn("[GitHubUploadService] Could not enable GitHub Pages");
       return false;
     } catch (error) {
-      console.error("[GitHubUploadService] Error enabling GitHub Pages:", error);
+      console.error(
+        "[GitHubUploadService] Error enabling GitHub Pages:",
+        error
+      );
       return false;
     }
   }
@@ -352,11 +385,12 @@ class GitHubUploadService {
       console.log(`[GitHubUploadService] Uploading ${file.name}...`);
 
       const base64Content = await this.fileToBase64(file);
-      const filename = metadata.filename || this.generateUniqueFilename(file.name);
+      const filename =
+        metadata.filename || this.generateUniqueFilename(file.name);
       const filePath = this.config.repository.uploadPath + filename;
 
       // Use unified config manager for URL generation if available
-      const uploadUrl = this.configManager 
+      const uploadUrl = this.configManager
         ? this.configManager.getUploadUrl(filename)
         : `${this.config.api.endpoint}/repos/${this.config.repository.owner}/${this.config.repository.repo}/contents/${filePath}`;
 
@@ -385,7 +419,7 @@ class GitHubUploadService {
       console.log(`[GitHubUploadService] File uploaded: ${filename}`);
 
       // Generate CDN URL using unified config manager
-      const logoUrl = this.configManager 
+      const logoUrl = this.configManager
         ? this.configManager.getFileUrl(filename)
         : uploadResult.content.download_url;
 
@@ -405,7 +439,6 @@ class GitHubUploadService {
 
       this._emit("logoUploaded", logoMetadata);
       return logoMetadata;
-
     } catch (error) {
       console.error("[GitHubUploadService] Upload failed:", error);
       this._emit("error", { message: error.message });
@@ -432,10 +465,15 @@ class GitHubUploadService {
         results.push(result);
 
         console.log(
-          `[GitHubUploadService] Batch upload ${i + 1}/${files.length} completed`
+          `[GitHubUploadService] Batch upload ${i + 1}/${
+            files.length
+          } completed`
         );
       } catch (error) {
-        console.error(`[GitHubUploadService] Batch upload ${i + 1} failed:`, error);
+        console.error(
+          `[GitHubUploadService] Batch upload ${i + 1} failed:`,
+          error
+        );
         errors.push({ file: file.name, error: error.message });
       }
     }
@@ -765,7 +803,10 @@ class GitHubUploadService {
         manifest: currentManifest,
       };
     } catch (error) {
-      console.error("[GitHubUploadService] Complete upload workflow failed:", error);
+      console.error(
+        "[GitHubUploadService] Complete upload workflow failed:",
+        error
+      );
       this._emit("error", { message: error.message });
       throw error;
     }

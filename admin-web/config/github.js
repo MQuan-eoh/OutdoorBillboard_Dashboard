@@ -6,8 +6,8 @@
 export const GITHUB_CONFIG = {
   // Primary repository
   repository: {
-    owner: "MQuan-eoh",
-    repo: "billboard-logos-cdn",
+    owner: "MinhQuan7",
+    repo: "ITS_OurdoorBillboard-",
     branch: "main",
     uploadPath: "logos/",
   },
@@ -15,14 +15,14 @@ export const GITHUB_CONFIG = {
   // API endpoints
   api: {
     endpoint: "https://api.github.com",
-    cdnEndpoint: "https://mquan-eoh.github.io/billboard-logos-cdn",
+    cdnEndpoint: "https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn",
   },
 
   // Fallback repositories
   fallback: [
     {
-      owner: "MinhQuan7",
-      repo: "billboard-logos-cdn",
+      owner: "MQuan-eoh",
+      repo: "ITS_OurdoorBillboard-",
       branch: "main",
       uploadPath: "logos/",
     },

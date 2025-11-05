@@ -21,7 +21,7 @@ const App: React.FC = () => {
         const manifestConfig = {
           enabled: true,
           manifestUrl:
-            "https://mquan-eoh.github.io/billboard-logos-cdn/manifest.json",
+            "https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn/manifest.json",
           pollInterval: 30, // 30 seconds
           downloadPath: "./downloads",
           maxCacheSize: 100 * 1024 * 1024, // 100MB

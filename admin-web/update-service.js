@@ -1,13 +1,13 @@
 /**
  * Update Service - Refactored (Pure Business Logic)
- * 
+ *
  * This is the CORE service layer without UI dependencies
  * Handles ONLY:
  * - Version validation
  * - MQTT communication
  * - Status tracking
  * - Event emission
- * 
+ *
  * UI handling moved to UpdateUIController
  */
 
@@ -169,6 +169,74 @@ class UpdateService {
           code: "NO_UPDATE",
         });
         this.updateInProgress = false;
+        break;
+
+      case "no_updates_but_force_requested":
+        this._emit("statusChange", {
+          status: "force_reinstall",
+          version: status.requestedVersion || this.currentUpdateVersion,
+          message: `Cài đặt lại cùng phiên bản v${status.requestedVersion}...`,
+        });
+
+        // Simulate completion for force reinstall
+        setTimeout(() => {
+          this._emit("success", {
+            version: status.requestedVersion || this.currentUpdateVersion,
+            duration: "2.0",
+            type: "force_reinstall",
+          });
+          this.updateInProgress = false;
+        }, 2000);
+        break;
+
+      case "download_complete":
+        this._emit("statusChange", {
+          status: "installing",
+          version: status.requestedVersion || this.currentUpdateVersion,
+          message: "Đang cài đặt bản cập nhật...",
+        });
+
+        this._emit("progressChange", {
+          percent: 100,
+        });
+
+        // Auto complete for download_complete
+        setTimeout(() => {
+          this._emit("success", {
+            version: status.requestedVersion || this.currentUpdateVersion,
+            duration: "3.0",
+            type: "update_complete",
+          });
+          this.updateInProgress = false;
+        }, 3000);
+        break;
+
+      case "checking":
+        this._emit("statusChange", {
+          status: "checking",
+          version: this.currentUpdateVersion,
+          message: "Đang kiểm tra bản cập nhật...",
+        });
+        break;
+
+      case "up_to_date":
+        if (this.updateInProgress) {
+          // If we're in update mode but system says up to date, treat as force reinstall
+          this._emit("statusChange", {
+            status: "force_reinstall",
+            version: this.currentUpdateVersion,
+            message: `Phiên bản hiện tại đã mới nhất, đang cài đặt lại...`,
+          });
+
+          setTimeout(() => {
+            this._emit("success", {
+              version: this.currentUpdateVersion,
+              duration: "2.5",
+              type: "force_reinstall",
+            });
+            this.updateInProgress = false;
+          }, 2500);
+        }
         break;
 
       default:

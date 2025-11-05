@@ -44,6 +44,9 @@ let currentDeviceInfo = {
   lastUpdateTime: null,
 };
 
+// Track last detected update version
+let lastDetectedUpdateVersion = null;
+
 // Show modal
 function showModal(title, content) {
   const modal = document.getElementById("modal");
@@ -215,11 +218,11 @@ async function forceUpdate() {
 
   if (!lastDetectedUpdateVersion) {
     showToast(
-      "Please click 'Check Updates' first to verify an update is available",
+      "⚠️ Vui lòng click 'KIỂM TRA CẬP NHẬT' trước để xác định phiên bản",
       "warning"
     );
     statusText.textContent =
-      "Error: Please check for updates first before forcing update";
+      "Lỗi: Cần kiểm tra cập nhật trước khi thực hiện force update";
     updateStatus.style.display = "block";
     return;
   }
@@ -238,9 +241,11 @@ async function forceUpdate() {
   const confirmed = confirm(
     "⚠️ XÁC NHẬN CẬP NHẬT\n\n" +
       "Hành động này sẽ:\n" +
-      "- Tải phiên bản mới nhất\n" +
-      "- Cài đặt bản cập nhật\n" +
-      "- Khởi động lại ứng dụng\n\n" +
+      "- Tải và cài đặt phiên bản v" +
+      lastDetectedUpdateVersion +
+      "\n" +
+      "- Khởi động lại ứng dụng\n" +
+      "- Áp dụng mọi thay đổi cấu hình\n\n" +
       "Bạn có chắc chắn muốn tiếp tục?"
   );
 
@@ -253,7 +258,10 @@ async function forceUpdate() {
     btnText.style.display = "none";
     btnLoading.style.display = "inline";
 
-    showToast(`Initiating update to v${lastDetectedUpdateVersion}...`, "info");
+    showToast(
+      `🚀 Bắt đầu cập nhật/cài đặt lại v${lastDetectedUpdateVersion}...`,
+      "info"
+    );
 
     updateStatus.style.display = "block";
     statusText.textContent = "Preparing update...";
@@ -543,25 +551,60 @@ function handleUpdateStatus(status) {
 
   // Also handle UI updates for compatibility
   switch (status.status) {
+    case "checking":
+      statusText.textContent = "Checking for updates...";
+      showToast("🔍 Checking for updates...", "info");
+      break;
+
     case "update_available":
-      statusText.textContent = `Update available: v${status.version}`;
-      lastDetectedUpdateVersion = status.version;
+      statusText.textContent = `Update available: v${
+        status.latestVersion || status.version
+      }`;
+      lastDetectedUpdateVersion = status.latestVersion || status.version;
 
       const forceUpdateBtn = document.getElementById("forceUpdateBtn");
       if (forceUpdateBtn) {
         forceUpdateBtn.disabled = false;
       }
-      showToast(`Update available: v${status.version}`, "success");
+      showToast(
+        `✅ Update available: v${status.latestVersion || status.version}`,
+        "success"
+      );
       break;
 
+    case "up_to_date":
     case "no_updates":
-      statusText.textContent = "Already up to date";
-      showToast("Already up to date", "info");
+      statusText.textContent = `Already up to date (v${status.currentVersion})`;
+
+      lastDetectedUpdateVersion = status.currentVersion;
+
+      const forceUpdateBtnUpToDate = document.getElementById("forceUpdateBtn");
+      if (forceUpdateBtnUpToDate) {
+        forceUpdateBtnUpToDate.disabled = false;
+      }
+      showToast("✅ Already up to date", "success");
+      break;
+
+    case "no_updates_but_force_requested":
+      statusText.textContent = `Force reinstall requested for v${status.requestedVersion}`;
+      showToast(
+        `🔄 Force reinstall: No newer version available, but force reinstall was requested for v${status.requestedVersion}`,
+        "warning"
+      );
+
+      // For force reinstall, we need to handle this as a special case
+      setTimeout(() => {
+        statusText.textContent = `Force reinstall completed for v${status.requestedVersion}`;
+        showToast(
+          `Force reinstall completed for v${status.requestedVersion}`,
+          "success"
+        );
+      }, 2000);
       break;
 
     case "error":
       statusText.textContent = `Error: ${status.error}`;
-      showToast(`Update error: ${status.error}`, "error");
+      showToast(`❌ Update error: ${status.error}`, "error");
       break;
 
     default:
@@ -622,6 +665,31 @@ function handleUpdateAcknowledgment(ack) {
   );
 }
 
+// Update device information display
+function updateDeviceInfoDisplay() {
+  // Update device version
+  const deviceVersionEl = document.getElementById("currentDeviceVersion");
+  if (deviceVersionEl) {
+    deviceVersionEl.textContent =
+      currentDeviceInfo.deviceVersion || "Đang tải...";
+  }
+
+  // Update device ID
+  const deviceIdEl = document.getElementById("deviceId");
+  if (deviceIdEl) {
+    deviceIdEl.textContent = currentDeviceInfo.deviceId || "Chưa kết nối";
+  }
+
+  // Update last update time
+  const lastUpdateEl = document.getElementById("lastUpdateTime");
+  if (lastUpdateEl) {
+    lastUpdateEl.textContent = currentDeviceInfo.lastUpdateTime || "Chưa có";
+  }
+
+  // Update MQTT status (handled by separate function for modularity)
+  updateMqttStatusDisplay();
+}
+
 // Update MQTT status display
 function updateMqttStatusDisplay() {
   const statusEl = document.getElementById("deviceMqttStatus");
@@ -677,7 +745,7 @@ function refreshDeviceInfo() {
 class LogoManifestManager {
   constructor() {
     this.manifestUrl =
-      "https://mquan-eoh.github.io/billboard-logos-cdn/manifest.json";
+      "https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn/manifest.json";
     this.currentManifest = null;
 
     this.initializeManifestUI();
@@ -1328,16 +1396,17 @@ function updateRepositoryDisplay(status) {
 
   // Update repository info with enhanced display
   repoInfo.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-      <div>
-        <strong>Repository:</strong> ${status.repository || "Unknown"}<br>
-        <small style="color: #666;">User: ${
-          status.authenticatedUser || "Unknown"
-        }</small>
+    <div class="repo-info-content">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h4>Repository Information</h4>
+          <p><strong>Repository:</strong> ${status.repository || "Unknown"}</p>
+          <p><strong>User:</strong> ${status.authenticatedUser || "Unknown"}</p>
+        </div>
+        <button id="githubLogoutBtn" class="btn btn-outline btn-sm" onclick="logoutGitHub()">
+          Logout
+        </button>
       </div>
-      <button id="githubLogoutBtn" class="btn btn-outline btn-sm" onclick="logoutGitHub()">
-        Logout
-      </button>
     </div>
   `;
 }

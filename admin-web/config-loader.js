@@ -12,19 +12,20 @@ class ConfigLoader {
     // Load all configs here
     this.github = {
       repository: {
-        owner: "MQuan-eoh",
-        repo: "billboard-logos-cdn",
+        owner: "MinhQuan7",
+        repo: "ITS_OurdoorBillboard-",
         branch: "main",
         uploadPath: "logos/",
       },
       api: {
         endpoint: "https://api.github.com",
-        cdnEndpoint: "https://mquan-eoh.github.io/billboard-logos-cdn",
+        cdnEndpoint:
+          "https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn",
       },
       alternatives: [
         {
-          owner: "MinhQuan7",
-          repo: "billboard-logos-cdn",
+          owner: "MQuan-eoh",
+          repo: "ITS_OurdoorBillboard-",
           branch: "main",
           uploadPath: "logos/",
         },

@@ -5,11 +5,13 @@ const CONFIG = {
   // GitHub CDN Configuration (Primary upload system)
   github: {
     enabled: true,
-    owner: "MQuan-eoh", // Will be auto-updated with authenticated user
-    repo: "billboard-logos-cdn",
+    owner: "MinhQuan7", // Updated to match repository owner
+    repo: "ITS_OurdoorBillboard-",
     branch: "main",
     apiEndpoint: "https://api.github.com",
-    cdnEndpoint: "https://MQuan-eoh.github.io/billboard-logos-cdn",
+    cdnEndpoint: "https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn",
+    manifestUrl:
+      "https://mquan-eoh.github.io/ITS_OurdoorBillboard-/logos-cdn/manifest.json",
     uploadPath: "logos/",
     maxFileSize: 10 * 1024 * 1024, // 10MB for GitHub
   },
@@ -51,4 +53,3 @@ CONFIG.mqtt.options.clientId = `banner_admin_${Math.random()
 
 // Export config
 window.BannerConfig = CONFIG;
-
