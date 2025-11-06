@@ -65,14 +65,14 @@
   ],
   "eraIot": {
     "enabled": true,
-    "authToken": "Token 78072b06a81e166b8b900d95f4c2ba1234272955",
-    "gatewayToken": "f7d2fe19-587d-471d-a7ff-273bb32c5d6a",
+    "authToken": "Token a159b7047b33aebfdb2e83f614c5049e5d760d6d",
+    "gatewayToken": "1fb0dddf-8fd1-43f2-a229-32afeec4b0bf",
     "baseUrl": "https://backend.eoh.io",
     "sensorConfigs": {
       "temperature": 145634,
-      "humidity": 145615,
-      "pm25": 145635,
-      "pm10": 145636
+      "humidity": null,
+      "pm25": null,
+      "pm10": null
     },
     "updateInterval": 5,
     "timeout": 15000,

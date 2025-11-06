@@ -122,6 +122,7 @@ class GlobalWeatherServiceManager {
           );
           return {
             authToken: config.eraIot.authToken,
+            gatewayToken: config.eraIot.gatewayToken || "", // Add required gatewayToken field
             baseUrl: config.eraIot.baseUrl || "https://backend.eoh.io",
             sensorConfigs: config.eraIot.sensorConfigs || {
               temperature: null,

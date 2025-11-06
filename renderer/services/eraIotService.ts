@@ -39,6 +39,7 @@ export interface EraIotData {
 export interface EraIotConfig {
   enabled?: boolean;
   authToken: string; // E-RA authentication token for API calls
+  gatewayToken: string; // E-RA gateway token for MQTT authentication (separate from authToken)
   baseUrl: string; // E-RA API base URL (for config management only)
   sensorConfigs: {
     temperature: number | null;
@@ -88,21 +89,20 @@ class EraIotService {
 
   private initializeMqttService(): void {
     try {
-      console.log(
-        "EraIotService: Initializing MQTT service with authToken",
-        this.config.authToken
-      );
+      console.log("EraIotService: Initializing MQTT service with config");
 
-      // Extract GATEWAY_TOKEN from authToken
-      const gatewayToken = this.extractGatewayToken(this.config.authToken);
+      // FIXED: Use gatewayToken directly from config instead of extracting
+      // Test shows gatewayToken works but extracted token fails authentication
+      const gatewayToken = this.config.gatewayToken;
       if (!gatewayToken) {
-        console.error(
-          "EraIotService: Could not extract GATEWAY_TOKEN from authToken"
-        );
+        console.error("EraIotService: gatewayToken not found in config");
         return;
       }
 
-      console.log("EraIotService: Successfully extracted gateway token");
+      console.log(
+        "EraIotService: Using gatewayToken from config:",
+        gatewayToken.substring(0, 15) + "..."
+      );
 
       const mqttConfig: MqttConfig = {
         enabled: this.config.enabled,

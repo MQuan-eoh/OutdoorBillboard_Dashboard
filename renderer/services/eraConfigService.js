@@ -370,28 +370,79 @@ class EraConfigService {
 
     this.cachedDatastreams.forEach((stream) => {
       const lowerName = stream.name.toLowerCase();
+      const lowerDesc = (stream.description || "").toLowerCase();
 
+      // Enhanced temperature detection
       if (
-        (lowerName.includes("temp") || lowerName.includes("nhiệt")) &&
+        (lowerName.includes("temp") ||
+          lowerName.includes("nhiệt") ||
+          lowerName.includes("°c") ||
+          lowerName.includes("celsius") ||
+          lowerDesc.includes("temperature") ||
+          lowerDesc.includes("nhiệt độ")) &&
         !autoMapping.temperature
       ) {
         autoMapping.temperature = stream.id;
-      } else if (
-        (lowerName.includes("hum") || lowerName.includes("ẩm")) &&
+        console.log(
+          `EraConfigService: Auto-detected temperature sensor: ${stream.name} (ID: ${stream.id})`
+        );
+      }
+      // Enhanced humidity detection
+      else if (
+        (lowerName.includes("hum") ||
+          lowerName.includes("ẩm") ||
+          lowerName.includes("rh") ||
+          lowerName.includes("%") ||
+          lowerDesc.includes("humidity") ||
+          lowerDesc.includes("độ ẩm")) &&
         !autoMapping.humidity
       ) {
         autoMapping.humidity = stream.id;
-      } else if (
-        (lowerName.includes("pm2.5") || lowerName.includes("pm25")) &&
+        console.log(
+          `EraConfigService: Auto-detected humidity sensor: ${stream.name} (ID: ${stream.id})`
+        );
+      }
+      // Enhanced PM2.5 detection
+      else if (
+        (lowerName.includes("pm2.5") ||
+          lowerName.includes("pm25") ||
+          lowerName.includes("pm 2.5") ||
+          lowerDesc.includes("pm2.5") ||
+          lowerDesc.includes("pm 2.5")) &&
         !autoMapping.pm25
       ) {
         autoMapping.pm25 = stream.id;
-      } else if (lowerName.includes("pm10") && !autoMapping.pm10) {
+        console.log(
+          `EraConfigService: Auto-detected PM2.5 sensor: ${stream.name} (ID: ${stream.id})`
+        );
+      }
+      // Enhanced PM10 detection
+      else if (
+        (lowerName.includes("pm10") ||
+          lowerName.includes("pm 10") ||
+          lowerDesc.includes("pm10") ||
+          lowerDesc.includes("pm 10")) &&
+        !autoMapping.pm10
+      ) {
         autoMapping.pm10 = stream.id;
+        console.log(
+          `EraConfigService: Auto-detected PM10 sensor: ${stream.name} (ID: ${stream.id})`
+        );
       }
     });
 
-    console.log("EraConfigService: Auto-detected mapping:", autoMapping);
+    console.log(
+      "EraConfigService: Auto-detected mapping complete:",
+      autoMapping
+    );
+
+    // Apply the detected mapping immediately
+    Object.entries(autoMapping).forEach(([sensorType, datastreamId]) => {
+      if (datastreamId !== null) {
+        this.updateMapping(sensorType, datastreamId);
+      }
+    });
+
     return autoMapping;
   }
 

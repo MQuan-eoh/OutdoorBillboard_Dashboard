@@ -1959,11 +1959,26 @@ ipcMain.handle("update-auth-token", async (event, authToken) => {
       };
     }
 
-    // Update auth token
+    // FIXED: Do NOT extract gatewayToken from authToken
+    // authToken and gatewayToken are two separate values
+    // gatewayToken should be preserved from config or set manually
+
+    // Update only auth token, keep existing gatewayToken
     currentConfig.eraIot.authToken = authToken;
+
+    // Only set gatewayToken if it doesn't exist (preserve existing value)
+    if (!currentConfig.eraIot.gatewayToken) {
+      console.warn("gatewayToken not found in config - please set it manually");
+    }
 
     fs.writeFileSync(configPath, JSON.stringify(currentConfig, null, 2));
     console.log("Authentication token updated successfully");
+    console.log(
+      "Gateway token extracted:",
+      currentConfig.eraIot.gatewayToken
+        ? currentConfig.eraIot.gatewayToken.substring(0, 20) + "..."
+        : "null"
+    );
 
     // Broadcast config update to all windows
     broadcastConfigUpdate(currentConfig);

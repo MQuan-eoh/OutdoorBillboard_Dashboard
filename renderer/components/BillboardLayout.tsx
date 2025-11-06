@@ -314,6 +314,7 @@ const BillboardLayout: React.FC<BillboardLayoutProps> = ({
           return {
             enabled: config.eraIot.enabled,
             authToken: config.eraIot.authToken,
+            gatewayToken: config.eraIot.gatewayToken || "", // Add required gatewayToken field
             baseUrl: config.eraIot.baseUrl || "https://backend.eoh.io",
             sensorConfigs: config.eraIot.sensorConfigs || {
               temperature: null,

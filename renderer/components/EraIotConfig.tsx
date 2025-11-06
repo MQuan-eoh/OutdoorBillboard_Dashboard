@@ -11,13 +11,14 @@ const EraIotConfigComponent: React.FC<EraIotConfigProps> = ({
   onConfigUpdated,
 }) => {
   const [config, setConfig] = useState<EraIotConfig>({
-    authToken: "Token f7d2fe19-587d-471d-a7ff-273bb32c5d6a", // Real E-Ra AUTHTOKEN format
+    authToken: "", // Will be loaded from config.json
+    gatewayToken: "", // Will be loaded from config.json
     baseUrl: "https://backend.eoh.io",
     sensorConfigs: {
-      temperature: 138997,
-      humidity: 138998,
-      pm25: 138999,
-      pm10: 139000,
+      temperature: null, // FIXED: No hardcode - load from config.json
+      humidity: null,    // FIXED: No hardcode - load from config.json
+      pm25: null,        // FIXED: No hardcode - load from config.json
+      pm10: null,        // FIXED: No hardcode - load from config.json
     },
     updateInterval: 5,
     timeout: 15000,

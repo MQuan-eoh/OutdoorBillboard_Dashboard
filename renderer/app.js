@@ -3198,16 +3198,63 @@ function BillboardLayout() {
               baseUrl: config.eraIot.baseUrl || "https://backend.eoh.io",
               gatewayToken: config.eraIot.gatewayToken,
               sensorConfigs: config.eraIot.sensorConfigs || {
-                temperature: 138997,
-                humidity: 138998,
-                pm25: 138999,
-                pm10: 139000,
+                temperature: null,
+                humidity: null,
+                pm25: null,
+                pm10: null,
               },
               updateInterval: config.eraIot.updateInterval || 5,
               timeout: config.eraIot.timeout || 15000,
               retryAttempts: config.eraIot.retryAttempts || 3,
               retryDelay: config.eraIot.retryDelay || 2000,
             };
+
+            // Log sensor configs for debugging - CRITICAL for mapping verification
+            console.log(
+              "🔍 BillboardLayout: E-Ra sensor mapping verification:"
+            );
+            console.log(
+              "BillboardLayout: ===================================="
+            );
+            console.log(
+              "BillboardLayout: Temperature sensor ID:",
+              eraConfig.sensorConfigs.temperature
+            );
+            console.log(
+              "BillboardLayout: Humidity sensor ID:",
+              eraConfig.sensorConfigs.humidity
+            );
+            console.log(
+              "BillboardLayout: PM2.5 sensor ID:",
+              eraConfig.sensorConfigs.pm25
+            );
+            console.log(
+              "BillboardLayout: PM10 sensor ID:",
+              eraConfig.sensorConfigs.pm10
+            );
+            console.log(
+              "BillboardLayout: Mapping source:",
+              config.eraIot.sensorConfigs
+                ? "from_config_mapping"
+                : "default_null"
+            );
+            console.log(
+              "BillboardLayout: ===================================="
+            );
+
+            // Validate sensor mapping
+            const mappedSensors = Object.entries(
+              eraConfig.sensorConfigs
+            ).filter(([key, value]) => value !== null);
+            if (mappedSensors.length === 0) {
+              console.warn(
+                "⚠️ BillboardLayout: NO SENSOR MAPPINGS CONFIGURED! Please configure sensor mapping in F1 configuration."
+              );
+            } else {
+              console.log(
+                `✅ BillboardLayout: ${mappedSensors.length}/4 sensors mapped correctly.`
+              );
+            }
 
             const service = new EraIotService(eraConfig);
             await service.startPeriodicUpdates();

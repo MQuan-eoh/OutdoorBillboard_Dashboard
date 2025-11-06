@@ -715,11 +715,22 @@ class MainProcessMqttService {
 
     this.config = eraIotConfig;
 
-    // Use gatewayToken directly from config
-    const gatewayToken = eraIotConfig.gatewayToken;
+    // Prefer explicit gatewayToken from config. If missing, fall back to extracting
+    // from authToken (deprecated). Log clearly so maintainers can correct config.
+    let gatewayToken = eraIotConfig.gatewayToken;
+    if (!gatewayToken && eraIotConfig.authToken) {
+      const match = eraIotConfig.authToken.match(/Token\s+(.+)/);
+      gatewayToken = match ? match[1] : null;
+      if (gatewayToken) {
+        console.warn(
+          "MainProcessMqttService: gatewayToken not present in config — falling back to extracted token from authToken (this may fail authentication)."
+        );
+      }
+    }
+
     if (!gatewayToken) {
       console.error(
-        "MainProcessMqttService: Gateway token not found in config"
+        "MainProcessMqttService: Gateway token not found in config or authToken"
       );
       return false;
     }
@@ -727,7 +738,7 @@ class MainProcessMqttService {
     this.gatewayToken = gatewayToken;
     console.log(
       "MainProcessMqttService: Initializing with gateway token:",
-      gatewayToken.substring(0, 10) + "..."
+      gatewayToken.substring(0, 15) + "..."
     );
 
     // Connect to both brokers

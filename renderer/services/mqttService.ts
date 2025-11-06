@@ -84,13 +84,19 @@ class MqttService {
   }
 
   /**
-   * Extract gateway token from authToken if available
+   * FIXED: Do NOT extract gateway token from authToken
+   * Based on test results: gatewayToken works for authentication but extracted token fails
+   * Keep the original gatewayToken from config.json
    */
   private updateGatewayTokenFromAuth(): void {
-    if (this.config.authToken && this.config.authToken.startsWith("Token ")) {
-      this.config.gatewayToken = this.config.authToken.substring(6);
-      console.log("MqttService: Updated gateway token from auth token");
-    }
+    // DO NOT OVERRIDE gatewayToken - use the one from config.json
+    console.log(
+      "MqttService: Using gatewayToken from config (no extraction needed)"
+    );
+    console.log(
+      "MqttService: GatewayToken:",
+      this.config.gatewayToken.substring(0, 15) + "..."
+    );
   }
 
   /**

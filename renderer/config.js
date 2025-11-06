@@ -266,17 +266,44 @@ class BillboardConfigManager {
 
     // Show confirmation dialog
     const confirmLogout = confirm(
-      "Are you sure you want to logout?\n\nThis will clear your current authentication and allow you to login with a different E-Ra account."
+      "Are you sure you want to logout?\n\nThis will clear your current authentication and sensor mapping configuration, allowing you to login with a different E-Ra account."
     );
 
     if (!confirmLogout) {
       return;
     }
 
+    console.log("ConfigManager: Logging out and clearing E-Ra configuration");
+
     // Perform logout
     this.authService.logout();
+
+    // ✨ CRITICAL: Clear E-Ra IoT configuration when switching accounts
+    if (this.config.eraIot) {
+      console.log("ConfigManager: Clearing previous E-Ra IoT configuration");
+
+      // Clear auth token and sensor configs
+      this.config.eraIot.authToken = null;
+      this.config.eraIot.gatewayToken = null;
+      this.config.eraIot.sensorConfigs = {
+        temperature: null,
+        humidity: null,
+        pm25: null,
+        pm10: null,
+      };
+
+      // Save cleared config immediately
+      this.saveConfiguration()
+        .then(() => {
+          console.log("ConfigManager: ✅ Cleared E-Ra configuration saved");
+        })
+        .catch((error) => {
+          console.error("ConfigManager: Failed to save cleared config:", error);
+        });
+    }
+
     this.showNotification(
-      "Logged out successfully! You can now login with a different account.",
+      "✅ Logged out successfully! Previous sensor mapping cleared. You can now login with a different E-Ra account.",
       "success"
     );
 
@@ -314,7 +341,24 @@ class BillboardConfigManager {
     // Clear any cached config data
     if (this.eraConfigService) {
       this.eraConfigService.clearCache();
+
+      // Reset current mapping to null
+      this.eraConfigService.currentMapping = {
+        temperature: null,
+        humidity: null,
+        pm25: null,
+        pm10: null,
+      };
     }
+
+    // Reset mapping selectors to default state
+    const sensorTypes = ["temperature", "humidity", "pm25", "pm10"];
+    sensorTypes.forEach((sensor) => {
+      const selector = document.getElementById(`mapping-${sensor}`);
+      if (selector) {
+        selector.value = ""; // Reset to default "Choose datastream" option
+      }
+    });
 
     // Hide config sections that require authentication
     const sectionsToHide = [
@@ -336,6 +380,9 @@ class BillboardConfigManager {
     if (statusDiv) {
       statusDiv.style.display = "none";
     }
+
+    // Update current mapping display to show cleared state
+    this.updateCurrentMappingDisplay();
 
     // Force re-enable form and focus on username field
     setTimeout(() => {
@@ -434,12 +481,9 @@ class BillboardConfigManager {
 
   async updateEraIotConfig(token) {
     try {
-      const gatewayToken = this.authService.extractGatewayToken(token);
-
-      if (!gatewayToken) {
-        console.error("Failed to extract gateway token");
-        return;
-      }
+      // FIXED: Do NOT extract gatewayToken from authToken
+      // authToken and gatewayToken are separate values
+      // Only update authToken, keep existing gatewayToken from config
 
       // Update authentication token via IPC
       if (window.electronAPI) {
@@ -476,7 +520,11 @@ class BillboardConfigManager {
       }
 
       this.config.eraIot.authToken = token;
+      // FIXED: Do NOT overwrite gatewayToken - keep existing value
 
+      console.log("E-Ra IoT configuration updated:");
+      console.log("- Auth token:", token.substring(0, 20) + "...");
+      console.log("- Gateway token: (preserved existing value)");
       console.log(
         "E-Ra IoT configuration updated with new token - hot-reload active"
       );
@@ -647,6 +695,8 @@ class BillboardConfigManager {
       return;
     }
 
+    console.log("ConfigManager: Saving sensor mapping:", currentMapping);
+
     // Update system configuration with new mapping
     if (!this.config.eraIot) {
       this.config.eraIot = {
@@ -667,12 +717,41 @@ class BillboardConfigManager {
       pm10: currentMapping.pm10,
     };
 
-    // Save to storage with hot-reload
-    await this.saveConfiguration();
-    this.showNotification(
-      `Sensor mapping saved and applied instantly! (${mappedCount}/4 sensors mapped)`,
-      "success"
+    console.log(
+      "ConfigManager: Updated config.eraIot.sensorConfigs:",
+      this.config.eraIot.sensorConfigs
     );
+
+    try {
+      // Save to storage with hot-reload
+      await this.saveConfiguration();
+
+      // Force broadcast config update for immediate effect
+      if (window.electronAPI && window.electronAPI.forceConfigReload) {
+        await window.electronAPI.forceConfigReload(this.config);
+        console.log(
+          "ConfigManager: Forced config reload broadcasted to main process"
+        );
+      }
+
+      this.showNotification(
+        `✅ Sensor mapping saved and applied instantly! (${mappedCount}/4 sensors mapped)`,
+        "success"
+      );
+
+      // Log the successful mapping for debugging
+      Object.entries(currentMapping).forEach(([sensor, id]) => {
+        if (id !== null) {
+          console.log(`ConfigManager: ✅ ${sensor} → Config ID ${id}`);
+        }
+      });
+    } catch (error) {
+      console.error("ConfigManager: Failed to save sensor mapping:", error);
+      this.showNotification(
+        "Failed to save sensor mapping: " + error.message,
+        "error"
+      );
+    }
   }
 
   async handleTestMapping() {
