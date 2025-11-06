@@ -86,12 +86,20 @@ class UpdateService {
         throw new Error("MQTT not connected - Cannot send update command");
       }
 
+      // Generate unique message ID for tracking
+      const messageId = `update_${Date.now()}_${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
+
       // Send force_update command via MQTT
       await window.MqttClient.publish("its/billboard/commands", {
         action: "force_update",
         version: version,
+        targetVersion: version,
+        messageId: messageId,
         timestamp: Date.now(),
         source: "admin_web",
+        deviceTarget: "all",
       });
 
       console.log(`[UpdateService] force_update command sent for v${version}`);
@@ -187,6 +195,23 @@ class UpdateService {
           });
           this.updateInProgress = false;
         }, 2000);
+        break;
+
+      case "downgrade_requested":
+        this._emit("statusChange", {
+          status: "downgrade",
+          version: status.requestedVersion || this.currentUpdateVersion,
+          message: `Đang cài đặt phiên bản cũ hơn v${status.requestedVersion}...`,
+        });
+
+        setTimeout(() => {
+          this._emit("success", {
+            version: status.requestedVersion || this.currentUpdateVersion,
+            duration: "3.0",
+            type: "downgrade_complete",
+          });
+          this.updateInProgress = false;
+        }, 3000);
         break;
 
       case "download_complete":

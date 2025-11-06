@@ -1290,6 +1290,21 @@ class MainProcessMqttService {
     }
   }
 
+  // Version comparison helper function
+  compareVersions(version1, version2) {
+    const v1parts = version1.split(".").map(Number);
+    const v2parts = version2.split(".").map(Number);
+
+    for (let i = 0; i < Math.max(v1parts.length, v2parts.length); i++) {
+      const v1part = v1parts[i] || 0;
+      const v2part = v2parts[i] || 0;
+
+      if (v1part < v2part) return -1;
+      if (v1part > v2part) return 1;
+    }
+    return 0;
+  }
+
   async handleForceUpdateCommand(command) {
     try {
       const version = command.version || command.targetVersion;
@@ -1337,26 +1352,60 @@ class MainProcessMqttService {
         await new Promise((resolve) => setTimeout(resolve, 300));
       }
 
-      // Always complete successfully for same version or development mode
-      if (!app.isPackaged || version === app.getVersion()) {
-        // Treat as force reinstall success
-        console.log("[OTA] Treating as successful force reinstall");
+      // Improved version comparison logic
+      const currentVersion = app.getVersion();
+      const isForceReinstall = version === currentVersion;
+      const isDowngrade = this.compareVersions(version, currentVersion) < 0;
+      const isUpgrade = this.compareVersions(version, currentVersion) > 0;
 
+      console.log("[OTA] Version analysis:", {
+        current: currentVersion,
+        requested: version,
+        isForceReinstall,
+        isDowngrade,
+        isUpgrade,
+      });
+
+      if (isForceReinstall) {
+        // Same version - force reinstall
+        console.log("[OTA] Force reinstall of same version");
         this.sendUpdateStatus({
           status: "no_updates_but_force_requested",
-          currentVersion: app.getVersion(),
+          currentVersion: currentVersion,
           requestedVersion: version,
-          message: `Force reinstall requested for v${version}`,
+          message: `Force reinstall v${version} (same version)`,
+          timestamp: Date.now(),
+          messageId: messageId,
+        });
+      } else if (isDowngrade) {
+        // Downgrade requested
+        console.log("[OTA] Downgrade requested - treating as force install");
+        this.sendUpdateStatus({
+          status: "downgrade_requested",
+          currentVersion: currentVersion,
+          requestedVersion: version,
+          message: `Force downgrade from v${currentVersion} to v${version}`,
+          timestamp: Date.now(),
+          messageId: messageId,
+        });
+      } else if (isUpgrade) {
+        // Real upgrade
+        console.log("[OTA] Real upgrade available");
+        this.sendUpdateStatus({
+          status: "download_complete",
+          currentVersion: currentVersion,
+          requestedVersion: version,
+          message: `Upgrade from v${currentVersion} to v${version}`,
           timestamp: Date.now(),
           messageId: messageId,
         });
       } else {
-        // Simulate download complete for different versions
+        // Fallback
         this.sendUpdateStatus({
-          status: "download_complete",
-          currentVersion: app.getVersion(),
+          status: "update_complete",
+          currentVersion: currentVersion,
           requestedVersion: version,
-          message: `Download complete for v${version}`,
+          message: `Update process completed`,
           timestamp: Date.now(),
           messageId: messageId,
         });

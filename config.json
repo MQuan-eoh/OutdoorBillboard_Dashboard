@@ -2,27 +2,11 @@
   "logoMode": "loop",
   "logoImages": [
     {
-      "name": "background6",
-      "path": "downloads\\logos\\background6-1762337377093.png",
-      "size": 4092287,
+      "name": "tarotFrame",
+      "path": "downloads\\logos\\tarotframe-1762339961680.png",
+      "size": 19102,
       "type": "image/png",
-      "id": "background6-1762337377093",
-      "source": "github_cdn"
-    },
-    {
-      "name": "background2",
-      "path": "downloads\\logos\\background2-1762337381136.jpg",
-      "size": 732142,
-      "type": "image/jpeg",
-      "id": "background2-1762337381136",
-      "source": "github_cdn"
-    },
-    {
-      "name": "iphone-16-stock-wallpaper-bright-orange-default-best-high-resolution-iphone-16-pro-max-wallpaper-4k-hd-16pro-13-mini-17-air-27-10-2024-1730073680-hd-wallpaper (1)",
-      "path": "downloads\\logos\\iphone-16-stock-wallpaper-bright-orange-default-best-high-resolution-iphone-16-pro-max-wallpaper-4k-hd-16pro-13-mini-17-air-27-10-2024-1730073680-hd-wallpaper--1--1762337384328.png",
-      "size": 4095757,
-      "type": "image/png",
-      "id": "iphone-16-stock-wallpaper-bright-orange-default-best-high-resolution-iphone-16-pro-max-wallpaper-4k-hd-16pro-13-mini-17-air-27-10-2024-1730073680-hd-wallpaper-1-1762337384328",
+      "id": "tarotframe-1762339961680",
       "source": "github_cdn"
     }
   ],
@@ -85,10 +69,10 @@
     "gatewayToken": "f7d2fe19-587d-471d-a7ff-273bb32c5d6a",
     "baseUrl": "https://backend.eoh.io",
     "sensorConfigs": {
-      "temperature": 138997,
-      "humidity": 138998,
-      "pm25": 138999,
-      "pm10": 139000
+      "temperature": 145634,
+      "humidity": 145615,
+      "pm25": 145635,
+      "pm10": 145636
     },
     "updateInterval": 5,
     "timeout": 15000,
@@ -115,6 +99,6 @@
     "retryAttempts": 3,
     "retryDelay": 2000
   },
-  "_manifestVersion": "1.0.1762337389549",
-  "_manifestLastUpdated": "2025-11-05T10:09:49.549Z"
+  "_manifestVersion": "1.0.1762339964426",
+  "_manifestLastUpdated": "2025-11-05T10:52:44.426Z"
 }
