@@ -88,26 +88,13 @@ log(
   }`
 );
 
-// Extract token từ authToken (giống như trong eraIotService.ts)
-function extractGatewayToken(authToken) {
-  if (!authToken) return null;
 
-  // AuthToken format: "Token 78072b06a81e166b8b900d95f4c2ba1234272955"
-  const tokenMatch = authToken.match(/Token\s+(.+)/);
-  return tokenMatch ? tokenMatch[1] : null;
-}
 
-const extractedToken = extractGatewayToken(authToken);
 
 log("INFO", "Token Analysis:");
 log("INFO", `Original AuthToken: ${authToken}`);
 log("INFO", `Config GatewayToken: ${gatewayToken}`);
-log("INFO", `Extracted from AuthToken: ${extractedToken || "FAILED"}`);
 
-if (extractedToken !== gatewayToken) {
-  log("WARNING", "Extracted token differs from config gatewayToken!");
-  log("WARNING", "This might be the source of the authentication issue");
-}
 
 // Check MQTT library
 let mqtt = null;

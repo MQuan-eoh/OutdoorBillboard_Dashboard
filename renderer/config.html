@@ -1052,9 +1052,21 @@
 
             <p class="info-text" style="margin-bottom: 20px">
               Cấu hình luồng dữ liệu E-Ra của bạn đến các loại cảm biến ứng
-              dụng. Điều này thay thế các ID cảm biến cố định bằng cấu hình
-              động.
+              dụng.
             </p>
+
+            <div class="form-group">
+              <label class="form-label">Unit ID (Chất Lượng Không Khí):</label>
+              <select id="era-unit-id" class="form-control">
+                <option value="">
+                  Chọn Unit ID để lấy dữ liệu chất lượng không khí...
+                </option>
+              </select>
+              <small class="form-text">
+                Unit ID dùng để gọi API: GET
+                /property_manager/units/{unit_id}/summary/
+              </small>
+            </div>
 
             <div class="form-group">
               <label class="form-label">Cảm Biến Nhiệt Độ:</label>
@@ -1097,7 +1109,6 @@
                 class="form-label"
                 style="font-weight: 600; color: #ff6b35"
               >
-                <span class="card-icon">⚖️</span>
                 Cấu Hình Hệ Số
               </label>
               <p class="info-text" style="margin-bottom: 15px; font-size: 14px">

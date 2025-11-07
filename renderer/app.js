@@ -901,7 +901,11 @@ class GlobalWeatherServiceManager {
 }
 
 // WeatherPanel Component with Real API Integration
-function WeatherPanel({ className = "", eraIotService = null }) {
+function WeatherPanel({
+  className = "",
+  eraIotService = null,
+  airQualityService = null,
+}) {
   const [weatherData, setWeatherData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState("offline");
@@ -909,6 +913,8 @@ function WeatherPanel({ className = "", eraIotService = null }) {
 
   // E-Ra IoT data state
   const [eraIotData, setEraIotData] = useState(null);
+  // Air quality data state (for THIẾT BỊ ĐO panel only)
+  const [airQualityData, setAirQualityData] = useState(null);
 
   useEffect(() => {
     // Subscribe to global weather service
@@ -953,6 +959,26 @@ function WeatherPanel({ className = "", eraIotService = null }) {
       };
     }
   }, [eraIotService]);
+
+  // Subscribe to Air Quality data updates for THIẾT BỊ ĐO panel only
+  useEffect(() => {
+    if (airQualityService) {
+      console.log("WeatherPanel: Setting up Air Quality data subscription");
+
+      const handleAirQualityUpdate = (data) => {
+        console.log("WeatherPanel: Received Air Quality data:", data);
+        setAirQualityData(data);
+      };
+
+      // Subscribe to data updates
+      airQualityService.onDataUpdate(handleAirQualityUpdate);
+
+      return () => {
+        console.log("WeatherPanel: Cleaning up Air Quality subscription");
+        // Cleanup subscription if needed
+      };
+    }
+  }, [airQualityService]);
 
   // Handle manual refresh with intelligent caching and click throttling
   const handleRefresh = async () => {
@@ -1925,7 +1951,10 @@ function WeatherPanel({ className = "", eraIotService = null }) {
                     {
                       key: "air-quality-badge",
                       style: {
-                        background: "#4ade80",
+                        background:
+                          airQualityData?.status === "Bad"
+                            ? "#ef4444"
+                            : "#4ade80", // Red for Bad, Green for Good
                         color: "#ffffff",
                         fontSize: "12px",
                         fontWeight: "bold",
@@ -1934,10 +1963,13 @@ function WeatherPanel({ className = "", eraIotService = null }) {
                         borderRadius: "6px",
                         marginTop: "-4px", // Further reduced to negative margin to move even higher
                         textShadow: "0 1px 2px rgba(0, 0, 0, 0.5)",
-                        boxShadow: "0 2px 4px rgba(74, 222, 128, 0.3)",
+                        boxShadow:
+                          airQualityData?.status === "Bad"
+                            ? "0 2px 4px rgba(239, 68, 68, 0.3)"
+                            : "0 2px 4px rgba(74, 222, 128, 0.3)",
                       },
                     },
-                    "TỐT"
+                    airQualityData?.status === "Bad" ? "XẤU" : "TỐT"
                   ),
                 ]
               ),
@@ -3211,6 +3243,7 @@ function IoTPanel({ eraIotService, className = "" }) {
 // Updated BillboardLayout with E-Ra IoT integration and full-width Weather Alert Banner
 function BillboardLayout() {
   const [eraIotService, setEraIotService] = React.useState(null);
+  const [airQualityService, setAirQualityService] = React.useState(null);
   const [weatherData, setWeatherData] = React.useState(null);
   const [showWeatherAlert, setShowWeatherAlert] = React.useState(false);
   const [configReloadTrigger, setConfigReloadTrigger] = React.useState(0);
@@ -3330,6 +3363,31 @@ function BillboardLayout() {
             console.log(
               "BillboardLayout: E-Ra IoT service initialized successfully"
             );
+
+            // Initialize Air Quality Service if unitId is configured
+            if (config.eraIot.unitId && config.eraIot.unitId.trim() !== "") {
+              console.log("BillboardLayout: Initializing Air Quality service");
+
+              const airQualityConfig = {
+                authToken: config.eraIot.authToken,
+                baseUrl: config.eraIot.baseUrl || "https://backend.eoh.io",
+                unitId: config.eraIot.unitId,
+                timeout: config.eraIot.timeout || 15000,
+                maxRetries: config.eraIot.retryAttempts || 3,
+              };
+
+              const airService = new EraAirQualityService(airQualityConfig);
+              await airService.startPeriodicUpdates();
+              setAirQualityService(airService);
+              console.log(
+                "BillboardLayout: Air Quality service initialized successfully"
+              );
+            } else {
+              console.log(
+                "BillboardLayout: No Unit ID configured for Air Quality service"
+              );
+              setAirQualityService(null);
+            }
           } else {
             console.log(
               "BillboardLayout: No valid E-Ra IoT AUTHTOKEN found or empty token"
@@ -3352,6 +3410,9 @@ function BillboardLayout() {
     return () => {
       if (eraIotService) {
         eraIotService.destroy();
+      }
+      if (airQualityService) {
+        airQualityService.stopPeriodicUpdates();
       }
     };
   }, [configReloadTrigger]); // Re-run when config changes
@@ -3445,6 +3506,7 @@ function BillboardLayout() {
             key: "weather",
             className: "unified-weather",
             eraIotService: eraIotService,
+            airQualityService: airQualityService,
           }),
         ]
       ),

@@ -41,6 +41,7 @@ export interface EraIotConfig {
   authToken: string; // E-RA authentication token for API calls
   gatewayToken: string; // E-RA gateway token for MQTT authentication (separate from authToken)
   baseUrl: string; // E-RA API base URL (for config management only)
+  unitId?: string; // Unit ID for air quality API calls (/property_manager/units/{unit_id}/summary/)
   sensorConfigs: {
     temperature: number | null;
     humidity: number | null;
@@ -148,23 +149,6 @@ class EraIotService {
     } catch (error) {
       console.error("EraIotService: Failed to initialize MQTT service:", error);
     }
-  }
-
-  /**
-   * Extract GATEWAY_TOKEN from authToken
-   */
-  private extractGatewayToken(authToken: string): string | null {
-    // AuthToken format: "Token 78072b06a81e166b8b900d95f4c2ba1234272955"
-    const tokenMatch = authToken.match(/Token\s+(.+)/);
-    const extractedToken = tokenMatch ? tokenMatch[1] : null;
-    console.log("EraIotService: Token extraction", {
-      originalToken: authToken.substring(0, 20) + "...",
-      extractedToken: extractedToken
-        ? extractedToken.substring(0, 10) + "..."
-        : null,
-      success: !!extractedToken,
-    });
-    return extractedToken;
   }
 
   /**

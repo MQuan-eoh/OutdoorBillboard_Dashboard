@@ -747,11 +747,6 @@ class MainProcessMqttService {
     return true;
   }
 
-  extractGatewayToken(authToken) {
-    const tokenMatch = authToken.match(/Token\s+(.+)/);
-    return tokenMatch ? tokenMatch[1] : null;
-  }
-
   async connectMQTT() {
     if (this.client) {
       console.warn("MainProcessMqttService: Already connected or connecting");

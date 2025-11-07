@@ -28,16 +28,6 @@ console.log("🔧 TESTING FIX VERIFICATION");
 console.log("==========================");
 console.log(`Original AuthToken: ${authToken}`);
 console.log(`Config GatewayToken: ${gatewayToken}`);
-
-// Extract function (OLD way - should NOT be used)
-function extractGatewayToken(authToken) {
-  const tokenMatch = authToken.match(/Token\\s+(.+)/);
-  return tokenMatch ? tokenMatch[1] : null;
-}
-
-const extractedToken = extractGatewayToken(authToken);
-console.log(`Extracted Token (OLD WAY): ${extractedToken || "FAILED"}`);
-
 console.log("");
 console.log("🧪 TESTING AUTHENTICATION:");
 console.log("===========================");

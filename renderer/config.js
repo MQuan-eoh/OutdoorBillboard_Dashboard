@@ -51,7 +51,6 @@ class BillboardConfigManager {
           this.eraConfigService.setAuthService(this.authService);
         }
 
-        // 🚀 AUTO-LOAD CONFIG WHEN AUTHENTICATED
         if (authState.isAuthenticated) {
           console.log(
             "ConfigManager: User authenticated, preparing auto-load..."
@@ -235,6 +234,17 @@ class BillboardConfigManager {
         });
       }
     });
+
+    // Setup Unit ID select handler
+    const unitIdInput = document.getElementById("era-unit-id");
+    if (unitIdInput) {
+      unitIdInput.addEventListener("change", (e) => {
+        const unitId = e.target.value || null;
+        if (this.eraConfigService) {
+          this.eraConfigService.setUnitId(unitId);
+        }
+      });
+    }
 
     // Setup scale factor input handler
     const scaleFactorInput = document.getElementById("scale-factor-value");
@@ -707,9 +717,10 @@ class BillboardConfigManager {
         this.displayChips(result.chips);
         this.displayDatastreams(result.datastreams);
         this.populateMappingSelectors(result.datastreams);
+        this.populateUnitsSelector(result.units || []);
         this.loadScaleConfigFromSystem();
 
-        // 🚀 AUTO-DETECT MAPPING: Try to auto-detect sensor mappings for new users
+        //AUTO-DETECT MAPPING: Try to auto-detect sensor mappings for new users
         if (
           this.eraConfigService &&
           result.datastreams &&
@@ -1014,6 +1025,9 @@ class BillboardConfigManager {
       pm10: currentMapping.pm10,
     };
 
+    // Update Unit ID for air quality API
+    this.config.eraIot.unitId = this.eraConfigService.getUnitId();
+
     // Add scale configuration to config
     this.config.eraIot.scaleConfig = {
       scaleFactor: currentScaleConfig.scaleFactor,
@@ -1246,6 +1260,37 @@ class BillboardConfigManager {
     });
   }
 
+  populateUnitsSelector(units) {
+    console.log(
+      "ConfigManager: Populating Units selector with",
+      units.length,
+      "units"
+    );
+
+    const unitSelector = document.getElementById("era-unit-id");
+    if (!unitSelector) {
+      console.warn("ConfigManager: Unit selector not found");
+      return;
+    }
+
+    // Clear existing options except the first one
+    while (unitSelector.children.length > 1) {
+      unitSelector.removeChild(unitSelector.lastChild);
+    }
+
+    // Add unit options
+    units.forEach((unit) => {
+      const option = document.createElement("option");
+      option.value = unit.id.toString();
+      option.textContent = `${unit.name} (ID: ${unit.id})${
+        unit.type ? ` [${unit.type}]` : ""
+      }`;
+      unitSelector.appendChild(option);
+    });
+
+    console.log(`ConfigManager: Added ${units.length} units to dropdown`);
+  }
+
   loadCachedEraConfigIfAvailable() {
     console.log("ConfigManager: loadCachedEraConfigIfAvailable() called");
 
@@ -1461,6 +1506,11 @@ class BillboardConfigManager {
           `⚖️ Hệ số scale áp dụng cho ${appliedCount} cảm biến`
         );
       }
+    }
+
+    // Unit ID status
+    if (eraConfig.unitId) {
+      summaryItems.push(`🏢 Unit ID: ${eraConfig.unitId}`);
     }
 
     // Update summary display
@@ -1850,6 +1900,21 @@ class BillboardConfigManager {
       );
     }
 
+    // 4️⃣ RESTORE UNIT ID: Load Unit ID for air quality API
+    if (eraConfig.unitId && this.eraConfigService) {
+      console.log(
+        "ConfigManager: Restoring Unit ID from config:",
+        eraConfig.unitId
+      );
+      this.eraConfigService.setUnitId(eraConfig.unitId);
+
+      // Update UI input field
+      const unitIdInput = document.getElementById("era-unit-id");
+      if (unitIdInput) {
+        unitIdInput.value = eraConfig.unitId;
+      }
+    }
+
     console.log(
       "ConfigManager: ✅ E-Ra IoT config loaded from system successfully"
     );
@@ -1943,10 +2008,7 @@ class BillboardConfigManager {
                  if (!this.dataset.fallbackTried && '${fallbackSrc}' && this.src !== '${fallbackSrc}') {
                    this.dataset.fallbackTried = 'true';
                    this.src = '${fallbackSrc}';
-                 } else {
-                   this.style.opacity = '0.3'; 
-                   this.nextElementSibling.innerHTML = '${logo.name}<br><small style=\\"color: #dc3545;\\">(Failed to load)</small>';
-                 }
+                 } 
                "
                onload="
                  console.log('Config: Logo loaded successfully:', this.src);

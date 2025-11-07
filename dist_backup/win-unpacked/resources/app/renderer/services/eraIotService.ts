@@ -93,20 +93,9 @@ class EraIotService {
         this.config.authToken
       );
 
-      // Extract GATEWAY_TOKEN from authToken
-      const gatewayToken = this.extractGatewayToken(this.config.authToken);
-      if (!gatewayToken) {
-        console.error(
-          "EraIotService: Could not extract GATEWAY_TOKEN from authToken"
-        );
-        return;
-      }
-
-      console.log("EraIotService: Successfully extracted gateway token");
-
       const mqttConfig: MqttConfig = {
         enabled: this.config.enabled,
-        gatewayToken,
+        gatewayToken: this.config.gatewayToken,
         authToken: this.config.authToken, // Keep for compatibility
         sensorConfigs: this.config.sensorConfigs,
         options: {
@@ -138,23 +127,6 @@ class EraIotService {
     } catch (error) {
       console.error("EraIotService: Failed to initialize MQTT service:", error);
     }
-  }
-
-  /**
-   * Extract GATEWAY_TOKEN from authToken
-   */
-  private extractGatewayToken(authToken: string): string | null {
-    // AuthToken format: "Token 78072b06a81e166b8b900d95f4c2ba1234272955"
-    const tokenMatch = authToken.match(/Token\s+(.+)/);
-    const extractedToken = tokenMatch ? tokenMatch[1] : null;
-    console.log("EraIotService: Token extraction", {
-      originalToken: authToken.substring(0, 20) + "...",
-      extractedToken: extractedToken
-        ? extractedToken.substring(0, 10) + "..."
-        : null,
-      success: !!extractedToken,
-    });
-    return extractedToken;
   }
 
   /**

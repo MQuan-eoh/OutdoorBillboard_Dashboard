@@ -370,11 +370,7 @@ class BillboardConfigManager {
     }
     async updateEraIotConfig(token) {
         try {
-            const gatewayToken = this.authService.extractGatewayToken(token);
-            if (!gatewayToken) {
-                console.error("Failed to extract gateway token");
-                return;
-            }
+
             // Update authentication token via IPC
             if (window.electronAPI) {
                 const result = await window.electronAPI.updateAuthToken(token);

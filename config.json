@@ -68,6 +68,7 @@
     "authToken": "Token a159b7047b33aebfdb2e83f614c5049e5d760d6d",
     "gatewayToken": "1fb0dddf-8fd1-43f2-a229-32afeec4b0bf",
     "baseUrl": "https://backend.eoh.io",
+    "unitId": "",
     "sensorConfigs": {
       "temperature": 145634,
       "humidity": 145615,

@@ -9,16 +9,21 @@ class EraConfigService {
     this.baseUrl = "https://backend.eoh.io";
     this.chipsEndpoint = "/api/chip_manager/developer_mode_chips/";
     this.configsEndpoint = "/api/chip_manager/configs/";
+    this.unitsEndpoint = "/api/property_manager/units/";
 
     this.authService = authService || null;
     this.cachedChips = [];
     this.cachedDatastreams = [];
+    this.cachedUnits = [];
     this.currentMapping = {
       temperature: null,
       humidity: null,
       pm25: null,
       pm10: null,
     };
+
+    // Unit ID for air quality API
+    this.unitId = null;
 
     // Scale factor configuration
     this.scaleConfig = {
@@ -176,7 +181,64 @@ class EraConfigService {
   }
 
   /**
-   * Get complete configuration (chips + all datastreams)
+   * Get list of available units from E-Ra platform for air quality API
+   */
+  async getUnits() {
+    try {
+      console.log("EraConfigService: Fetching units from E-Ra platform");
+
+      if (!this.authService || !this.authService.getAuthToken()) {
+        return {
+          success: false,
+          error: "Authentication required",
+          message: "Please login to E-Ra platform first",
+        };
+      }
+
+      const response = await fetch(`${this.baseUrl}${this.unitsEndpoint}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.authService.getAuthToken()}`,
+        },
+      });
+
+      const responseData = await response.json();
+      console.log("EraConfigService: Units API response:", responseData);
+
+      if (response.ok && responseData.success) {
+        // Parse units data based on actual API response structure
+        const units = this.parseUnitsResponse(responseData);
+        this.cachedUnits = units;
+
+        return {
+          success: true,
+          units: units,
+          message: `Found ${units.length} units`,
+        };
+      } else {
+        console.error("EraConfigService: Failed to fetch units:", responseData);
+        return {
+          success: false,
+          error:
+            responseData.message ||
+            responseData.error ||
+            "Failed to fetch units",
+          message: "Could not retrieve units list from E-Ra platform",
+        };
+      }
+    } catch (error) {
+      console.error("EraConfigService: Error fetching units:", error);
+      return {
+        success: false,
+        error: error.message || "Network error",
+        message: "Failed to connect to E-Ra platform",
+      };
+    }
+  }
+
+  /**
+   * Get complete configuration (chips + all datastreams + units)
    */
   async getCompleteConfig() {
     try {
@@ -194,15 +256,27 @@ class EraConfigService {
         return datastreamsResult;
       }
 
+      // Finally get units for air quality API
+      const unitsResult = await this.getUnits();
+      if (!unitsResult.success) {
+        console.warn(
+          "EraConfigService: Failed to fetch units, continuing without units"
+        );
+      }
+
       // Return combined results
       return {
         success: true,
         chips: chipsResult.chips,
         datastreams: datastreamsResult.datastreams,
+        units: unitsResult.success ? unitsResult.units : [],
         mapping: this.currentMapping,
-        message: `Found ${chipsResult.chips?.length || 0} chips and ${
+        unitId: this.unitId,
+        message: `Found ${chipsResult.chips?.length || 0} chips, ${
           datastreamsResult.datastreams?.length || 0
-        } datastreams`,
+        } datastreams, and ${
+          unitsResult.success ? unitsResult.units?.length || 0 : 0
+        } units`,
       };
     } catch (error) {
       console.error("EraConfigService: Error fetching complete config:", error);
@@ -326,6 +400,56 @@ class EraConfigService {
   }
 
   /**
+   * Parse units response from E-Ra API
+   */
+  parseUnitsResponse(responseData) {
+    const units = [];
+
+    try {
+      let unitData = null;
+
+      // Handle different response structures
+      if (responseData.units && Array.isArray(responseData.units)) {
+        unitData = responseData.units;
+      }
+      // If response has results property
+      else if (responseData.results && Array.isArray(responseData.results)) {
+        unitData = responseData.results;
+      }
+      // If response is directly an array
+      else if (Array.isArray(responseData)) {
+        unitData = responseData;
+      }
+      // If response has data property
+      else if (responseData.data && Array.isArray(responseData.data)) {
+        unitData = responseData.data;
+      }
+
+      if (Array.isArray(unitData)) {
+        unitData.forEach((unit) => {
+          units.push({
+            id: unit.id || unit.unit_id || unit.unitId || 0,
+            name:
+              unit.name || unit.unit_name || unit.unitName || `Unit ${unit.id}`,
+            description: unit.description || unit.desc || undefined,
+            address: unit.address || undefined,
+            type: unit.type || unit.unit_type || undefined,
+            status: unit.status || unit.is_active ? "active" : "inactive",
+          });
+        });
+      }
+
+      console.log(
+        `EraConfigService: Parsed ${units.length} units from response`
+      );
+    } catch (error) {
+      console.error("EraConfigService: Error parsing units response:", error);
+    }
+
+    return units;
+  }
+
+  /**
    * Infer unit from datastream name
    */
   inferUnit(name) {
@@ -367,6 +491,21 @@ class EraConfigService {
    */
   getCurrentMapping() {
     return { ...this.currentMapping };
+  }
+
+  /**
+   * Set Unit ID for air quality API
+   */
+  setUnitId(unitId) {
+    this.unitId = unitId;
+    console.log(`EraConfigService: Updated Unit ID to: ${unitId}`);
+  }
+
+  /**
+   * Get current Unit ID
+   */
+  getUnitId() {
+    return this.unitId;
   }
 
   /**

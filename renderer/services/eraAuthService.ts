@@ -285,20 +285,6 @@ class EraAuthService {
   }
 
   /**
-   * Extract gateway token from full auth token
-   * Removes "Token " prefix to get the raw token
-   */
-  public extractGatewayToken(authToken?: string): string | null {
-    const token = authToken || this.authState.token;
-    if (!token) {
-      return null;
-    }
-
-    // Remove "Token " prefix if present
-    return token.startsWith("Token ") ? token.substring(6) : token;
-  }
-
-  /**
    * Get authentication headers for API requests
    */
   public getAuthHeaders(): Record<string, string> {

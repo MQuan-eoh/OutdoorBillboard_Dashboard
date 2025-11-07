@@ -14,6 +14,7 @@ const EraIotConfigComponent: React.FC<EraIotConfigProps> = ({
     authToken: "", // Will be loaded from config.json
     gatewayToken: "", // Will be loaded from config.json
     baseUrl: "https://backend.eoh.io",
+    unitId: "", // Unit ID for air quality API calls
     sensorConfigs: {
       temperature: null, // FIXED: No hardcode - load from config.json
       humidity: null, // FIXED: No hardcode - load from config.json
@@ -245,6 +246,24 @@ const EraIotConfigComponent: React.FC<EraIotConfigProps> = ({
           </div>
 
           <div className="era-config-section">
+            <label>Cấu hình cảm biến</label>
+
+            {/* Unit ID field - đặt ở đầu section */}
+            <div className="era-config-section">
+              <label>Unit ID *</label>
+              <input
+                type="text"
+                value={config.unitId || ""}
+                onChange={(e) => handleInputChange("unitId", e.target.value)}
+                className="era-config-input"
+                title="Unit ID cho API air quality (/property_manager/units/{unit_id}/summary/)"
+                placeholder="Nhập Unit ID để lấy dữ liệu chất lượng không khí"
+              />
+              <small>
+                Unit ID để gọi API chất lượng không khí từ E-Ra platform
+              </small>
+            </div>
+
             <label>Sensor Config IDs</label>
             <div className="era-config-grid">
               <div>
