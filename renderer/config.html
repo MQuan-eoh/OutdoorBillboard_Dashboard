@@ -551,6 +551,43 @@
         }
       }
 
+      /* Expandable Section Styles */
+      .expandable-title {
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: color 0.3s ease;
+      }
+
+      .expandable-title:hover {
+        color: #ff6b35;
+      }
+
+      .expand-indicator {
+        font-size: 20px;
+        font-weight: bold;
+        transition: transform 0.3s ease;
+        color: #6c757d;
+      }
+
+      .expand-indicator.expanded {
+        transform: rotate(90deg);
+        color: #ff6b35;
+      }
+
+      .collapsible-content {
+        max-height: 500px;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+      }
+
+      .collapsible-content.collapsed {
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+      }
+
       /* Responsive */
       @media (max-width: 768px) {
         .config-container {
@@ -722,7 +759,7 @@
           <div class="content-header">
             <h2 class="content-title">Cấu Hình E-Ra IoT</h2>
             <p class="content-subtitle">
-              Quản lý chip E-Ra và ánh xạ luồng dữ liệu cảm biến của bạn
+              Quản lý chip E-Ra và cấu hình luồng dữ liệu cảm biến của bạn
             </p>
           </div>
 
@@ -739,7 +776,7 @@
                 class="btn btn-outline"
                 style="margin-left: 10px; display: none"
               >
-                Tự Động Phát Hiện Ánh Xạ
+                Tự Động Phát Hiện Cấu Hình
               </button>
             </div>
 
@@ -819,11 +856,12 @@
             id="era-mapping-section"
             style="display: none"
           >
-            <h3 class="card-title">Cấu Hình Ánh Xạ Cảm Biến</h3>
+            <h3 class="card-title">Cấu Hình Cảm Biến</h3>
 
             <p class="info-text" style="margin-bottom: 20px">
-              Ánh xạ luồng dữ liệu E-Ra của bạn đến các loại cảm biến ứng dụng.
-              Điều này thay thế các ID cảm biến cố định bằng cấu hình động.
+              Cấu hình luồng dữ liệu E-Ra của bạn đến các loại cảm biến ứng
+              dụng. Điều này thay thế các ID cảm biến cố định bằng cấu hình
+              động.
             </p>
 
             <div class="form-group">
@@ -868,7 +906,7 @@
                 style="font-weight: 600; color: #ff6b35"
               >
                 <span class="card-icon">⚖️</span>
-                Cấu Hình Hệ Số Scale
+                Cấu Hình Hệ Số
               </label>
               <p class="info-text" style="margin-bottom: 15px; font-size: 14px">
                 Một số cảm biến cần nhân với hệ số scale (ví dụ: 0.1) để có giá
@@ -899,6 +937,33 @@
                 />
                 <small style="color: #6c757d"
                   >Giá trị sensor sẽ được nhân với hệ số này</small
+                >
+              </div>
+
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 15px;
+                  margin-bottom: 15px;
+                "
+              >
+                <label class="form-label" style="margin: 0; font-weight: 500"
+                  >Số chữ số thập phân:</label
+                >
+                <input
+                  type="number"
+                  id="decimal-places-value"
+                  class="form-control"
+                  value="1"
+                  step="1"
+                  min="0"
+                  max="5"
+                  style="width: 80px; text-align: center"
+                  placeholder="1"
+                />
+                <small style="color: #6c757d"
+                  >Số chữ số thập phân hiển thị (0-5)</small
                 >
               </div>
 
@@ -1027,7 +1092,7 @@
                 "
               >
                 💡 <strong>Lưu ý:</strong> Sử dụng nút "Lưu & Áp Dụng" ở cuối
-                trang để lưu tất cả cấu hình ánh xạ cảm biến và scale factor.
+                trang để lưu tất cả cấu hình cảm biến và hệ số scale.
               </p>
             </div>
           </div>
@@ -1037,8 +1102,17 @@
             id="era-datastreams-section"
             style="display: none"
           >
-            <h3 class="card-title">Luồng Dữ Liệu Khả Dụng</h3>
-            <div id="era-datastreams-list">
+            <h3
+              class="card-title expandable-title"
+              onclick="toggleDatastreamsSection()"
+            >
+              Luồng Dữ Liệu Khả Dụng
+              <span class="expand-indicator" id="datastreams-indicator">►</span>
+            </h3>
+            <div
+              id="era-datastreams-list"
+              class="collapsible-content collapsed"
+            >
               <!-- Datastreams will be populated here -->
             </div>
           </div>
@@ -1048,7 +1122,7 @@
             id="era-current-mapping"
             style="display: none"
           >
-            <h3 class="card-title">Ánh Xạ Hệ Thống Hiện Tại</h3>
+            <h3 class="card-title">Cấu Hình Hệ Thống Hiện Tại</h3>
             <div id="current-mapping-display">
               <!-- Current mapping will be displayed here -->
             </div>

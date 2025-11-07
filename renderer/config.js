@@ -243,6 +243,17 @@ class BillboardConfigManager {
       });
     }
 
+    // Setup decimal places input handler
+    const decimalPlacesInput = document.getElementById("decimal-places-value");
+    if (decimalPlacesInput) {
+      decimalPlacesInput.addEventListener("input", (e) => {
+        const decimalPlaces = parseInt(e.target.value) || 1;
+        if (this.eraConfigService) {
+          this.eraConfigService.updateDecimalPlaces(decimalPlaces);
+        }
+      });
+    }
+
     // Setup scale sensor checkboxes
     const scaleSensors = ["temperature", "humidity", "pm25", "pm10"];
     scaleSensors.forEach((sensor) => {
@@ -681,7 +692,9 @@ class BillboardConfigManager {
         if (!silent) this.showNotification(result.message, "success");
 
         // Hide saved config info card (we have fresh data now)
-        const savedConfigInfo = document.getElementById("era-saved-config-info");
+        const savedConfigInfo = document.getElementById(
+          "era-saved-config-info"
+        );
         if (savedConfigInfo) {
           savedConfigInfo.style.display = "none";
         }
@@ -876,6 +889,7 @@ class BillboardConfigManager {
     // Add scale configuration to config
     this.config.eraIot.scaleConfig = {
       scaleFactor: currentScaleConfig.scaleFactor,
+      decimalPlaces: currentScaleConfig.decimalPlaces,
       appliedSensors: currentScaleConfig.appliedSensors,
     };
 
@@ -1024,6 +1038,14 @@ class BillboardConfigManager {
 
     datastreamsList.innerHTML = "";
 
+    // Initialize collapsed state for Luồng Dữ Liệu Khả Dụng section
+    const indicator = document.getElementById("datastreams-indicator");
+    if (indicator && !datastreamsList.classList.contains("collapsed")) {
+      datastreamsList.classList.add("collapsed");
+      indicator.classList.remove("expanded");
+      indicator.textContent = "►";
+    }
+
     if (datastreams.length === 0) {
       datastreamsList.innerHTML =
         '<p class="info-text">No datastreams found.</p>';
@@ -1110,30 +1132,34 @@ class BillboardConfigManager {
     this.loadSensorMappingFromSystem();
 
     // 2️⃣ CHECK IF WE HAVE PREVIOUS CONFIG: Check if user has E-Ra config in system
-    const hasSystemEraConfig = !!(this.config.eraIot && 
-      (this.config.eraIot.authToken || 
-       (this.config.eraIot.sensorConfigs && 
-        Object.values(this.config.eraIot.sensorConfigs).some(id => id !== null))));
+    const hasSystemEraConfig = !!(
+      this.config.eraIot &&
+      (this.config.eraIot.authToken ||
+        (this.config.eraIot.sensorConfigs &&
+          Object.values(this.config.eraIot.sensorConfigs).some(
+            (id) => id !== null
+          )))
+    );
 
     console.log("ConfigManager: System E-Ra config status:", {
       hasEraIot: !!this.config.eraIot,
-      hasAuthToken: !!(this.config.eraIot?.authToken),
-      hasSensorConfigs: !!(this.config.eraIot?.sensorConfigs),
-      mappedSensors: this.config.eraIot?.sensorConfigs ? 
-        Object.values(this.config.eraIot.sensorConfigs).filter(id => id !== null).length : 0
+      hasAuthToken: !!this.config.eraIot?.authToken,
+      hasSensorConfigs: !!this.config.eraIot?.sensorConfigs,
+      mappedSensors: this.config.eraIot?.sensorConfigs
+        ? Object.values(this.config.eraIot.sensorConfigs).filter(
+            (id) => id !== null
+          ).length
+        : 0,
     });
 
     // 3️⃣ TRY TO SHOW PREVIOUS CONFIG FROM CACHE OR FRESH FETCH
     const cachedChips = this.eraConfigService.getCachedChips();
     const cachedDatastreams = this.eraConfigService.getCachedDatastreams();
 
-    console.log(
-      "ConfigManager: Cached data status:",
-      {
-        chips: cachedChips ? cachedChips.length : 0,
-        datastreams: cachedDatastreams ? cachedDatastreams.length : 0
-      }
-    );
+    console.log("ConfigManager: Cached data status:", {
+      chips: cachedChips ? cachedChips.length : 0,
+      datastreams: cachedDatastreams ? cachedDatastreams.length : 0,
+    });
 
     if (
       cachedChips &&
@@ -1160,21 +1186,31 @@ class BillboardConfigManager {
       this.showEraConfigSections();
 
       // Update status to show data is loaded
-      this.updateEraConfigStatus("online", `Đã tải: ${cachedChips.length} chips, ${cachedDatastreams.length} datastreams`);
-      
+      this.updateEraConfigStatus(
+        "online",
+        `Đã tải: ${cachedChips.length} chips, ${cachedDatastreams.length} datastreams`
+      );
+
       this.showNotification("✅ Cấu hình E-Ra đã sẵn sàng!", "success");
-      
     } else if (hasSystemEraConfig) {
       // 4️⃣ HAS SYSTEM CONFIG BUT NO CACHE: Show saved mapping and try to fetch fresh data
-      console.log("ConfigManager: 📋 Has system config but no cache - showing saved mapping");
-      
+      console.log(
+        "ConfigManager: 📋 Has system config but no cache - showing saved mapping"
+      );
+
       this.showSavedConfigInfo(); // Show saved config info card
       this.updateCurrentMappingDisplay();
       this.showEraConfigSections(true); // true = show mapping section only
-      this.updateEraConfigStatus("connecting", "Có cấu hình đã lưu - nhấn 'Lấy Cấu hình E-Ra' để cập nhật");
-      
-      this.showNotification("📋 Đã tải cấu hình đã lưu - bạn có thể cập nhật bằng 'Lấy Cấu hình E-Ra'", "info");
-      
+      this.updateEraConfigStatus(
+        "connecting",
+        "Có cấu hình đã lưu - nhấn 'Lấy Cấu hình E-Ra' để cập nhật"
+      );
+
+      this.showNotification(
+        "📋 Đã tải cấu hình đã lưu - bạn có thể cập nhật bằng 'Lấy Cấu hình E-Ra'",
+        "info"
+      );
+
       // Auto-fetch if authenticated
       if (this.authService && this.authService.isAuthenticated()) {
         console.log("ConfigManager: Auto-fetching fresh data to update cache");
@@ -1182,16 +1218,22 @@ class BillboardConfigManager {
           this.handleGetEraConfig(true); // Silent mode - don't interrupt user
         }, 1000);
       }
-      
     } else {
       // 5️⃣ NO CONFIG AT ALL: Prompt user to login and fetch
-      console.log("ConfigManager: ❌ No E-Ra config found - user needs to setup");
-      
+      console.log(
+        "ConfigManager: ❌ No E-Ra config found - user needs to setup"
+      );
+
       if (this.authService && this.authService.isAuthenticated()) {
-        console.log("ConfigManager: User authenticated but no config - auto-fetching");
+        console.log(
+          "ConfigManager: User authenticated but no config - auto-fetching"
+        );
         this.handleGetEraConfig(true); // Silent mode
       } else {
-        this.updateEraConfigStatus("offline", "Chưa có cấu hình - hãy đăng nhập và lấy cấu hình E-Ra");
+        this.updateEraConfigStatus(
+          "offline",
+          "Chưa có cấu hình - hãy đăng nhập và lấy cấu hình E-Ra"
+        );
       }
     }
   }
@@ -1200,16 +1242,33 @@ class BillboardConfigManager {
    * Show E-Ra config sections
    */
   showEraConfigSections(mappingOnly = false) {
-    const sectionsToShow = mappingOnly ? 
-      ["era-mapping-section", "era-current-mapping"] : 
-      ["era-chips-section", "era-datastreams-section", "era-mapping-section", "era-current-mapping"];
+    const sectionsToShow = mappingOnly
+      ? ["era-mapping-section", "era-current-mapping"]
+      : [
+          "era-chips-section",
+          "era-datastreams-section",
+          "era-mapping-section",
+          "era-current-mapping",
+        ];
 
-    sectionsToShow.forEach(sectionId => {
+    sectionsToShow.forEach((sectionId) => {
       const section = document.getElementById(sectionId);
       if (section) {
         section.style.display = "block";
       }
     });
+
+    // Initialize collapsed state for datastreams section when showing it
+    if (!mappingOnly && sectionsToShow.includes("era-datastreams-section")) {
+      const datastreamsList = document.getElementById("era-datastreams-list");
+      const indicator = document.getElementById("datastreams-indicator");
+
+      if (datastreamsList && indicator) {
+        datastreamsList.classList.add("collapsed");
+        indicator.classList.remove("expanded");
+        indicator.textContent = "►";
+      }
+    }
 
     const autoDetectBtn = document.getElementById("auto-detect-mapping-btn");
     if (autoDetectBtn) {
@@ -1222,7 +1281,9 @@ class BillboardConfigManager {
    */
   updateEraConfigStatus(status, message) {
     const statusDiv = document.getElementById("era-config-status");
-    const statusIndicator = document.getElementById("era-config-status-indicator");
+    const statusIndicator = document.getElementById(
+      "era-config-status-indicator"
+    );
     const statusText = statusIndicator?.querySelector(".status-text");
 
     if (statusDiv && statusIndicator && statusText) {
@@ -1238,7 +1299,7 @@ class BillboardConfigManager {
   showSavedConfigInfo() {
     const infoCard = document.getElementById("era-saved-config-info");
     const summaryDiv = document.getElementById("saved-config-summary");
-    
+
     if (!infoCard || !summaryDiv || !this.config.eraIot) {
       return;
     }
@@ -1254,24 +1315,31 @@ class BillboardConfigManager {
 
     // Sensor mapping count
     if (eraConfig.sensorConfigs) {
-      const mappedCount = Object.values(eraConfig.sensorConfigs).filter(id => id !== null).length;
+      const mappedCount = Object.values(eraConfig.sensorConfigs).filter(
+        (id) => id !== null
+      ).length;
       if (mappedCount > 0) {
-        summaryItems.push(`🎯 ${mappedCount}/4 cảm biến đã ánh xạ`);
+        summaryItems.push(`🎯 ${mappedCount}/4 cảm biến đã cấu hình`);
       }
     }
 
     // Scale config status
     if (eraConfig.scaleConfig) {
-      const appliedCount = Object.values(eraConfig.scaleConfig.appliedSensors || {}).filter(Boolean).length;
+      const appliedCount = Object.values(
+        eraConfig.scaleConfig.appliedSensors || {}
+      ).filter(Boolean).length;
       if (appliedCount > 0) {
-        summaryItems.push(`⚖️ Hệ số scale áp dụng cho ${appliedCount} cảm biến`);
+        summaryItems.push(
+          `⚖️ Hệ số scale áp dụng cho ${appliedCount} cảm biến`
+        );
       }
     }
 
     // Update summary display
-    summaryDiv.innerHTML = summaryItems.length > 0 ? 
-      summaryItems.join('<br>') : 
-      '📋 Có cấu hình cơ bản - hãy hoàn thiện thêm';
+    summaryDiv.innerHTML =
+      summaryItems.length > 0
+        ? summaryItems.join("<br>")
+        : "📋 Có cấu hình cơ bản - hãy hoàn thiện thêm";
 
     // Show the card
     infoCard.style.display = "block";
@@ -1331,6 +1399,14 @@ class BillboardConfigManager {
         scaleFactorInput.value = scaleConfig.scaleFactor || 0.1;
       }
 
+      // Update decimal places input
+      const decimalPlacesInput = document.getElementById(
+        "decimal-places-value"
+      );
+      if (decimalPlacesInput) {
+        decimalPlacesInput.value = scaleConfig.decimalPlaces || 1;
+      }
+
       // Update scale checkboxes
       const sensors = ["temperature", "humidity", "pm25", "pm10"];
       sensors.forEach((sensor) => {
@@ -1343,6 +1419,9 @@ class BillboardConfigManager {
       // Update service with loaded config
       if (this.eraConfigService) {
         this.eraConfigService.updateScaleFactor(scaleConfig.scaleFactor || 0.1);
+        this.eraConfigService.updateDecimalPlaces(
+          scaleConfig.decimalPlaces || 1
+        );
         Object.entries(scaleConfig.appliedSensors || {}).forEach(
           ([sensor, isApplied]) => {
             this.eraConfigService.updateScaleAppliedSensors(sensor, isApplied);
@@ -1474,7 +1553,7 @@ class BillboardConfigManager {
       "era-mapping-section",
       "era-current-mapping",
       "era-config-status",
-      "era-saved-config-info" // Also hide saved config info
+      "era-saved-config-info", // Also hide saved config info
     ];
 
     sectionsToHide.forEach((sectionId) => {
@@ -1498,6 +1577,15 @@ class BillboardConfigManager {
         selector.value = ""; // Reset to default option
       }
     });
+
+    // Reset datastreams section to collapsed state
+    const datastreamsList = document.getElementById("era-datastreams-list");
+    const indicator = document.getElementById("datastreams-indicator");
+    if (datastreamsList && indicator) {
+      datastreamsList.classList.add("collapsed");
+      indicator.classList.remove("expanded");
+      indicator.textContent = "►";
+    }
 
     console.log("ConfigManager: E-Ra config UI cleared");
   }
@@ -1541,18 +1629,17 @@ class BillboardConfigManager {
       if (window.electronAPI) {
         const savedConfig = await window.electronAPI.getConfig();
         this.config = { ...this.config, ...savedConfig };
-        
+
         console.log("ConfigManager: Loaded configuration from config.json:", {
           logoMode: this.config.logoMode,
           logoCount: this.config.logoImages?.length || 0,
           eraIotEnabled: !!this.config.eraIot?.enabled,
           hasSensorConfigs: !!this.config.eraIot?.sensorConfigs,
-          hasAuthToken: !!this.config.eraIot?.authToken
+          hasAuthToken: !!this.config.eraIot?.authToken,
         });
 
-
         this.loadEraConfigFromSystem();
-        
+
         this.updateUI();
       }
     } catch (error) {
@@ -1577,51 +1664,67 @@ class BillboardConfigManager {
       hasAuthToken: !!eraConfig.authToken,
       hasGatewayToken: !!eraConfig.gatewayToken,
       hasSensorConfigs: !!eraConfig.sensorConfigs,
-      hasScaleConfig: !!eraConfig.scaleConfig
+      hasScaleConfig: !!eraConfig.scaleConfig,
     });
 
     // 1️⃣ RESTORE AUTH TOKEN: If we have an auth token, try to restore auth state
     if (eraConfig.authToken && this.authService) {
       console.log("ConfigManager: Restoring authentication from config");
-      
+
       // Extract username from token or use a placeholder
       const user = eraConfig.user || { username: "Restored User" };
-      
+
       // Update auth service state (this simulates a successful login)
       this.authService.updateAuthState({
         isAuthenticated: true,
         token: eraConfig.authToken,
         user: user,
-        lastLogin: new Date()
+        lastLogin: new Date(),
       });
-      
+
       console.log("ConfigManager: ✅ Authentication restored from config");
     }
 
     // 2️⃣ RESTORE SENSOR MAPPING: Load sensor mappings to E-Ra config service
     if (eraConfig.sensorConfigs && this.eraConfigService) {
-      console.log("ConfigManager: Restoring sensor mappings from config:", eraConfig.sensorConfigs);
-      
-      Object.entries(eraConfig.sensorConfigs).forEach(([sensorType, datastreamId]) => {
-        if (datastreamId !== null) {
-          this.eraConfigService.updateMapping(sensorType, datastreamId);
-          console.log(`ConfigManager: Restored mapping ${sensorType} → ${datastreamId}`);
+      console.log(
+        "ConfigManager: Restoring sensor mappings from config:",
+        eraConfig.sensorConfigs
+      );
+
+      Object.entries(eraConfig.sensorConfigs).forEach(
+        ([sensorType, datastreamId]) => {
+          if (datastreamId !== null) {
+            this.eraConfigService.updateMapping(sensorType, datastreamId);
+            console.log(
+              `ConfigManager: Restored mapping ${sensorType} → ${datastreamId}`
+            );
+          }
         }
-      });
+      );
     }
 
     // 3️⃣ RESTORE SCALE CONFIG: Load scale factor configuration
     if (eraConfig.scaleConfig && this.eraConfigService) {
-      console.log("ConfigManager: Restoring scale config from system:", eraConfig.scaleConfig);
-      
-      this.eraConfigService.updateScaleFactor(eraConfig.scaleConfig.scaleFactor || 0.1);
-      
-      Object.entries(eraConfig.scaleConfig.appliedSensors || {}).forEach(([sensor, isApplied]) => {
-        this.eraConfigService.updateScaleAppliedSensors(sensor, isApplied);
-      });
+      console.log(
+        "ConfigManager: Restoring scale config from system:",
+        eraConfig.scaleConfig
+      );
+
+      this.eraConfigService.updateScaleFactor(
+        eraConfig.scaleConfig.scaleFactor || 0.1
+      );
+
+      Object.entries(eraConfig.scaleConfig.appliedSensors || {}).forEach(
+        ([sensor, isApplied]) => {
+          this.eraConfigService.updateScaleAppliedSensors(sensor, isApplied);
+        }
+      );
     }
 
-    console.log("ConfigManager: ✅ E-Ra IoT config loaded from system successfully");
+    console.log(
+      "ConfigManager: ✅ E-Ra IoT config loaded from system successfully"
+    );
   }
 
   updateUI() {
@@ -1930,6 +2033,25 @@ function addScheduleRule() {
   configManager.addScheduleRule();
 }
 
+function toggleDatastreamsSection() {
+  const content = document.getElementById("era-datastreams-list");
+  const indicator = document.getElementById("datastreams-indicator");
+
+  if (content && indicator) {
+    const isCollapsed = content.classList.contains("collapsed");
+
+    if (isCollapsed) {
+      content.classList.remove("collapsed");
+      indicator.classList.add("expanded");
+      indicator.textContent = "▼";
+    } else {
+      content.classList.add("collapsed");
+      indicator.classList.remove("expanded");
+      indicator.textContent = "►";
+    }
+  }
+}
+
 async function saveAndApply() {
   console.log("Saving all configuration including sensor mapping...");
 
@@ -1970,7 +2092,7 @@ async function saveAndApply() {
       configManager.authService &&
       configManager.authService.isAuthenticated()
     ) {
-      savedItems.push("Ánh xạ cảm biến E-Ra");
+      savedItems.push("Cấu hình cảm biến E-Ra");
       savedItems.push("Hệ số scale");
     }
     savedItems.push("Cấu hình logo");

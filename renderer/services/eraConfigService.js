@@ -23,6 +23,7 @@ class EraConfigService {
     // Scale factor configuration
     this.scaleConfig = {
       scaleFactor: 0.1,
+      decimalPlaces: 1,
       appliedSensors: {
         temperature: false,
         humidity: false,
@@ -377,6 +378,16 @@ class EraConfigService {
   }
 
   /**
+   * Update decimal places configuration
+   */
+  updateDecimalPlaces(decimalPlaces) {
+    this.scaleConfig.decimalPlaces = decimalPlaces;
+    console.log(
+      `EraConfigService: Updated decimal places to: ${decimalPlaces}`
+    );
+  }
+
+  /**
    * Update scale factor applied sensors
    */
   updateScaleAppliedSensors(sensorType, isApplied) {
@@ -521,6 +532,7 @@ class EraConfigService {
     // Reset scale config to default
     this.scaleConfig = {
       scaleFactor: 0.1,
+      decimalPlaces: 1,
       appliedSensors: {
         temperature: false,
         humidity: false,

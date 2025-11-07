@@ -76,6 +76,7 @@
     },
     "scaleConfig": {
       "scaleFactor": 0.1,
+      "decimalPlaces": 2,
       "appliedSensors": {
         "temperature": true,
         "humidity": true,

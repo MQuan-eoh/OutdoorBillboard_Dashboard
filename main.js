@@ -1127,8 +1127,13 @@ class MainProcessMqttService {
       ) {
         const scaleFactor = this.config.scaleConfig.scaleFactor || 0.1;
         processedValue = value * scaleFactor;
+
+        // Apply decimal places formatting
+        const decimalPlaces = this.config.scaleConfig.decimalPlaces || 1;
+        processedValue = parseFloat(processedValue.toFixed(decimalPlaces));
+
         console.log(
-          `MainProcessMqttService: Applied scale factor ${scaleFactor} to ${sensorType}: ${value} → ${processedValue}`
+          `MainProcessMqttService: Applied scale factor ${scaleFactor} to ${sensorType}: ${value} → ${processedValue} (${decimalPlaces} decimal places)`
         );
       }
 
