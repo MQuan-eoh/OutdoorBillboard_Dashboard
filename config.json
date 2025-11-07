@@ -2,11 +2,27 @@
   "logoMode": "loop",
   "logoImages": [
     {
-      "name": "tarotFrame",
-      "path": "downloads\\logos\\tarotframe-1762339961680.png",
-      "size": 19102,
-      "type": "image/png",
-      "id": "tarotframe-1762339961680",
+      "name": "z6612387851461_59dc3c7418e0a5aee57245b1937dc3b1",
+      "path": "downloads\\logos\\z6612387851461-59dc3c7418e0a5aee57245b1937dc3b1-1762540916864.jpg",
+      "size": 1082185,
+      "type": "image/jpeg",
+      "id": "z6612387851461-59dc3c7418e0a5aee57245b1937dc3b1-1762540916864",
+      "source": "github_cdn"
+    },
+    {
+      "name": "z6612387866233_0176a248f8ca75ca8b558ed87314b3af",
+      "path": "downloads\\logos\\z6612387866233-0176a248f8ca75ca8b558ed87314b3af-1762540920125.jpg",
+      "size": 1090632,
+      "type": "image/jpeg",
+      "id": "z6612387866233-0176a248f8ca75ca8b558ed87314b3af-1762540920125",
+      "source": "github_cdn"
+    },
+    {
+      "name": "z6609299543817_0f36ebae5e9a91cc7c2dada22cc71b38",
+      "path": "downloads\\logos\\z6609299543817-0f36ebae5e9a91cc7c2dada22cc71b38-1762540923408.jpg",
+      "size": 1732206,
+      "type": "image/jpeg",
+      "id": "z6609299543817-0f36ebae5e9a91cc7c2dada22cc71b38-1762540923408",
       "source": "github_cdn"
     }
   ],
@@ -110,6 +126,6 @@
     "retryAttempts": 3,
     "retryDelay": 2000
   },
-  "_manifestVersion": "1.0.1762339964426",
-  "_manifestLastUpdated": "2025-11-05T10:52:44.426Z"
+  "_manifestVersion": "1.0.1762540928373",
+  "_manifestLastUpdated": "2025-11-07T18:42:08.373Z"
 }

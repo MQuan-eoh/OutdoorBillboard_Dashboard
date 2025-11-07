@@ -31,6 +31,7 @@ let currentSensorData = {
 /**
  * Logo Manifest Service - GitHub CDN Integration
  * Polls manifest.json from GitHub CDN and syncs logos
+ * ENHANCED: Now uses userData path for packaged apps to ensure persistence
  */
 class LogoManifestService {
   constructor(config) {
@@ -40,12 +41,22 @@ class LogoManifestService {
     this.maxRetries = config.retryAttempts || 3;
     this.pollInterval = config.pollInterval * 1000; // Convert to milliseconds
     this.manifestUrl = config.manifestUrl;
-    this.downloadPath = config.downloadPath;
+
+    // CRITICAL FIX: Use appropriate download path based on packaging
+    if (app.isPackaged) {
+      // Production: Use userData directory for persistence across updates
+      this.downloadPath = app.getPath("userData");
+    } else {
+      // Development: Use original config path
+      this.downloadPath = config.downloadPath;
+    }
 
     console.log("LogoManifestService: Initialized with config", {
       enabled: config.enabled,
       manifestUrl: config.manifestUrl,
       pollInterval: config.pollInterval,
+      downloadPath: this.downloadPath,
+      isPackaged: app.isPackaged,
     });
   }
 
@@ -317,7 +328,20 @@ class LogoManifestService {
 
   getLocalLogoPath(logo) {
     const path = require("path");
-    return path.join(this.downloadPath, "logos", logo.filename);
+
+    // ENHANCED: Return normalized path for config.json with FIXED path handling for packaged apps
+    // This should always use forward slashes for consistency with renderer
+    const fullPath = path.join(this.downloadPath, "logos", logo.filename);
+
+    // CRITICAL FIX: For config.json, we need relative path from app directory
+    if (app.isPackaged) {
+      // PACKAGED APP: Return path relative to userData for correct file:// construction
+      // Since downloadPath is already userData, return relative path
+      return path.join("downloads", "logos", logo.filename).replace(/\\/g, "/");
+    } else {
+      // DEVELOPMENT: Return relative path from project root
+      return path.join("downloads", "logos", logo.filename).replace(/\\/g, "/");
+    }
   }
 
   async ensureDownloadDirectory() {
@@ -340,7 +364,7 @@ class LogoManifestService {
       // Load current config
       const config = await loadConfig();
 
-      // Convert manifest logos to config format
+      // Convert manifest logos to config format with ENHANCED metadata
       const logoImages = manifest.logos
         .filter((logo) => logo.active)
         .sort((a, b) => a.priority - b.priority)
@@ -352,11 +376,39 @@ class LogoManifestService {
           id: logo.id,
           source: "github_cdn",
           checksum: logo.checksum,
+          // CRITICAL: Add essential metadata for packaged app compatibility
+          url: logo.url, // Keep CDN URL for fallback
+          filename: logo.filename, // Explicit filename for path resolution
+          priority: logo.priority,
+          uploadedAt: logo.uploadedAt,
         }))
         .filter((logo) => {
-          // Only include logos that were successfully downloaded
+          // ENHANCED: Check both absolute and relative paths for file existence
           const fs = require("fs");
-          return fs.existsSync(logo.path);
+          const path = require("path");
+
+          // Check relative path first
+          if (fs.existsSync(logo.path)) {
+            return true;
+          }
+
+          // Check absolute path in downloads directory
+          const absolutePath = path.join(
+            this.downloadPath,
+            "logos",
+            logo.filename
+          );
+          if (fs.existsSync(absolutePath)) {
+            console.log(
+              `LogoManifestService: Found logo at absolute path: ${absolutePath}`
+            );
+            return true;
+          }
+
+          console.warn(
+            `LogoManifestService: Logo file not found: ${logo.filename}`
+          );
+          return false;
         });
 
       // Update config with new logo settings
@@ -369,6 +421,7 @@ class LogoManifestService {
         // Add manifest metadata
         _manifestVersion: manifest.version,
         _manifestLastUpdated: manifest.lastUpdated,
+        _lastSyncTime: new Date().toISOString(),
       };
 
       // Save updated config
@@ -445,6 +498,7 @@ class LogoManifestService {
 
   /**
    * Download a single banner by URL and filename (for renderer process requests)
+   * ENHANCED: Better file handling for packaged apps with cache invalidation
    */
   async downloadSingleBanner(url, filename) {
     try {
@@ -456,35 +510,101 @@ class LogoManifestService {
         `LogoManifestService: Downloading banner from ${url} as ${filename}`
       );
 
+      // Use proper downloadPath based on app packaging status
+      let logoDir;
+      if (require("electron").app.isPackaged) {
+        logoDir = path.join(
+          require("electron").app.getPath("userData"),
+          "downloads",
+          "logos"
+        );
+      } else {
+        logoDir = path.join(this.downloadPath, "logos");
+      }
+
       // Ensure download directory exists
-      const logoDir = path.join(this.downloadPath, "logos");
       if (!fs.existsSync(logoDir)) {
         fs.mkdirSync(logoDir, { recursive: true });
       }
 
       const localPath = path.join(logoDir, filename);
 
-      // Download file
+      // ENHANCED: If file already exists, remove it first to avoid conflicts
+      if (fs.existsSync(localPath)) {
+        try {
+          fs.unlinkSync(localPath);
+          console.log(
+            `LogoManifestService: Removed existing file: ${filename}`
+          );
+        } catch (unlinkError) {
+          console.warn(
+            `LogoManifestService: Could not remove existing file ${filename}:`,
+            unlinkError.message
+          );
+        }
+      }
+
+      // Download file with enhanced error handling
       const response = await axios({
         method: "GET",
         url: url,
         responseType: "stream",
         timeout: 30000,
+        maxRedirects: 5,
       });
 
       // Save to local file
-      const writer = fs.createWriteStream(localPath);
+      const writer = fs.createWriteStream(localPath, { flags: "w" });
       response.data.pipe(writer);
 
       return new Promise((resolve, reject) => {
         writer.on("finish", () => {
-          console.log(
-            `LogoManifestService: Banner downloaded successfully: ${localPath}`
-          );
-          resolve(localPath);
+          // ENHANCED: Verify file was written correctly
+          try {
+            const stats = fs.statSync(localPath);
+            if (stats.size > 0) {
+              // Set proper file permissions for packaged apps
+              try {
+                fs.chmodSync(localPath, 0o644);
+              } catch (chmodError) {
+                console.warn(
+                  `LogoManifestService: Could not set permissions for ${filename}:`,
+                  chmodError.message
+                );
+              }
+
+              console.log(
+                `LogoManifestService: Banner downloaded successfully: ${localPath} (${stats.size} bytes)`
+              );
+              resolve(localPath);
+            } else {
+              throw new Error("Downloaded file is empty");
+            }
+          } catch (verifyError) {
+            console.error(
+              `LogoManifestService: File verification failed for ${filename}:`,
+              verifyError
+            );
+            reject(verifyError);
+          }
         });
+
         writer.on("error", (error) => {
-          console.error("LogoManifestService: Banner download error:", error);
+          console.error(
+            "LogoManifestService: Banner download write error:",
+            error
+          );
+          // Clean up failed download
+          try {
+            if (fs.existsSync(localPath)) {
+              fs.unlinkSync(localPath);
+            }
+          } catch (cleanupError) {
+            console.warn(
+              "LogoManifestService: Could not cleanup failed download:",
+              cleanupError.message
+            );
+          }
           reject(error);
         });
       });
@@ -735,8 +855,6 @@ class MainProcessMqttService {
     await this.connectCommandBroker();
     return true;
   }
-
-
 
   async connectMQTT() {
     if (this.client) {
@@ -2581,4 +2699,138 @@ ipcMain.handle("download-banner", async (event, bannerData) => {
     }
   }
   return { success: false, error: "Logo manifest service not available" };
+});
+
+// CRITICAL FIX: Enhanced path resolution for banner logo company display
+// CRITICAL FIX: Enhanced get-app-path to return BOTH app path and logo path for packaged apps
+ipcMain.handle("get-app-path", async () => {
+  try {
+    const fs = require("fs");
+    const path = require("path");
+
+    let appPath;
+    let logoDownloadPath;
+    let logoBasePath; // NEW: Base path for logo access
+
+    if (app.isPackaged) {
+      // PRODUCTION FIX: Use userData directory for persistent logo storage
+      // This ensures logos survive app updates and are accessible from exe
+      appPath = app.getPath("userData");
+      logoDownloadPath = path.join(appPath, "downloads", "logos");
+      logoBasePath = appPath; // For packaged apps, logos are in userData
+
+      console.log("IPC: Packaged app detected, using userData:", appPath);
+
+      // Ensure downloads/logos directory exists in userData
+      if (!fs.existsSync(logoDownloadPath)) {
+        fs.mkdirSync(logoDownloadPath, { recursive: true });
+        console.log(
+          "IPC: Created logo directory in userData:",
+          logoDownloadPath
+        );
+      }
+
+      // ENHANCED MIGRATION FIX: Copy existing logos from development path if they exist
+      // Also handles multiple source locations for migration
+      const possibleSourcePaths = [
+        path.join(__dirname, "downloads", "logos"),
+        path.join(process.cwd(), "downloads", "logos"),
+        path.join(path.dirname(process.execPath), "downloads", "logos"),
+      ];
+
+      for (const sourcePath of possibleSourcePaths) {
+        if (fs.existsSync(sourcePath)) {
+          try {
+            const files = fs.readdirSync(sourcePath);
+            files.forEach((file) => {
+              const srcFile = path.join(sourcePath, file);
+              const destFile = path.join(logoDownloadPath, file);
+
+              if (fs.statSync(srcFile).isFile() && !fs.existsSync(destFile)) {
+                fs.copyFileSync(srcFile, destFile);
+                console.log(
+                  `IPC: Migrated logo to userData: ${file} from ${sourcePath}`
+                );
+              }
+            });
+          } catch (migrationError) {
+            console.warn(
+              `IPC: Logo migration warning from ${sourcePath} (non-critical):`,
+              migrationError.message
+            );
+          }
+        }
+      }
+
+      // CRITICAL: Force refresh file permissions and clear any file locks
+      try {
+        const files = fs.readdirSync(logoDownloadPath);
+        files.forEach((file) => {
+          const filePath = path.join(logoDownloadPath, file);
+          if (fs.statSync(filePath).isFile()) {
+            // Check if file is readable and accessible
+            try {
+              fs.accessSync(filePath, fs.constants.R_OK);
+            } catch (accessError) {
+              console.warn(
+                `IPC: File access issue for ${file}, attempting to fix...`
+              );
+              try {
+                // Try to fix permissions
+                fs.chmodSync(filePath, 0o644);
+              } catch (chmodError) {
+                console.warn(
+                  `IPC: Could not fix permissions for ${file}:`,
+                  chmodError.message
+                );
+              }
+            }
+          }
+        });
+      } catch (permissionError) {
+        console.warn(
+          "IPC: Permission check warning (non-critical):",
+          permissionError.message
+        );
+      }
+    } else {
+      // DEVELOPMENT: Use current directory as before
+      appPath = __dirname;
+      logoDownloadPath = path.join(appPath, "downloads", "logos");
+      logoBasePath = appPath; // For dev, logos are relative to app dir
+
+      // Ensure development downloads directory exists
+      if (!fs.existsSync(logoDownloadPath)) {
+        fs.mkdirSync(logoDownloadPath, { recursive: true });
+      }
+    }
+
+    console.log("IPC: get-app-path requested, returning:", {
+      appPath,
+      logoDownloadPath,
+      logoBasePath,
+      isPackaged: app.isPackaged,
+      logoFilesCount: fs.existsSync(logoDownloadPath)
+        ? fs.readdirSync(logoDownloadPath).length
+        : 0,
+    });
+
+    // CRITICAL: Return comprehensive path info for renderer
+    return {
+      appPath,
+      logoBasePath,
+      logoDownloadPath,
+      isPackaged: app.isPackaged,
+    };
+  } catch (error) {
+    console.error("IPC: Failed to get app path:", error);
+    // FALLBACK: Return __dirname as last resort
+    console.log("IPC: Using fallback path:", __dirname);
+    return {
+      appPath: __dirname,
+      logoBasePath: __dirname,
+      logoDownloadPath: path.join(__dirname, "downloads", "logos"),
+      isPackaged: false,
+    };
+  }
 });

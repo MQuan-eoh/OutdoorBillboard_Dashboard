@@ -1041,6 +1041,9 @@ class BillboardConfigManager {
       appliedSensors: currentScaleConfig.appliedSensors,
     };
 
+    // Save unit filters for persistence
+    this.config.eraIot.unitFilters = [...this.currentUnitFilters];
+
     console.log(
       "ConfigManager: Updated config.eraIot.sensorConfigs:",
       this.config.eraIot.sensorConfigs
@@ -1332,8 +1335,15 @@ class BillboardConfigManager {
     filterInput.addEventListener("input", this.handleUnitsFilter);
     filterInput.addEventListener("keydown", this.handleUnitsFilterKeydown);
 
-    // Initialize default filters based on common building types
-    this.initializeDefaultUnitFilters();
+    // Initialize default filters only if no saved filters exist
+    // This prevents overwriting saved unit filters when loading config
+    if (!this.currentUnitFilters || this.currentUnitFilters.length === 0) {
+      this.initializeDefaultUnitFilters();
+    } else {
+      // Re-render existing filters to ensure they're displayed
+      this.renderUnitFilterChips();
+      this.applyUnitsFilter();
+    }
   }
 
   /**
@@ -1505,10 +1515,10 @@ class BillboardConfigManager {
       return;
     }
 
-    // 1️⃣ ALWAYS LOAD SYSTEM CONFIG: Load sensor mapping and scale config from config.json
+    //ALWAYS LOAD SYSTEM CONFIG: Load sensor mapping and scale config from config.json
     this.loadSensorMappingFromSystem();
 
-    // 2️⃣ CHECK IF WE HAVE PREVIOUS CONFIG: Check if user has E-Ra config in system
+    //ECK IF WE HAVE PREVIOUS CONFIG: Check if user has E-Ra config in system
     const hasSystemEraConfig = !!(
       this.config.eraIot &&
       (this.config.eraIot.authToken ||
@@ -1687,7 +1697,7 @@ class BillboardConfigManager {
 
     // Auth status
     if (eraConfig.authToken) {
-      summaryItems.push("✅ Đã xác thực E-Ra");
+      summaryItems.push("Đã xác thực E-Ra");
     }
 
     // Sensor mapping count
@@ -1696,7 +1706,7 @@ class BillboardConfigManager {
         (id) => id !== null
       ).length;
       if (mappedCount > 0) {
-        summaryItems.push(`🎯 ${mappedCount}/4 cảm biến đã cấu hình`);
+        summaryItems.push(`${mappedCount}/4 cảm biến đã cấu hình`);
       }
     }
 
@@ -1706,22 +1716,20 @@ class BillboardConfigManager {
         eraConfig.scaleConfig.appliedSensors || {}
       ).filter(Boolean).length;
       if (appliedCount > 0) {
-        summaryItems.push(
-          `⚖️ Hệ số scale áp dụng cho ${appliedCount} cảm biến`
-        );
+        summaryItems.push(`Hệ số scale áp dụng cho ${appliedCount} cảm biến`);
       }
     }
 
     // Unit ID status
     if (eraConfig.unitId) {
-      summaryItems.push(`🏢 Unit ID: ${eraConfig.unitId}`);
+      summaryItems.push(`Unit ID: ${eraConfig.unitId}`);
     }
 
     // Update summary display
     summaryDiv.innerHTML =
       summaryItems.length > 0
         ? summaryItems.join("<br>")
-        : "📋 Có cấu hình cơ bản - hãy hoàn thiện thêm";
+        : "Có cấu hình cơ bản - hãy hoàn thiện thêm";
 
     // Show the card
     infoCard.style.display = "block";
@@ -1734,7 +1742,7 @@ class BillboardConfigManager {
   loadSensorMappingFromSystem() {
     console.log("ConfigManager: Loading sensor mapping from system config");
 
-    // 1️⃣ LOAD SENSOR MAPPINGS
+    // 1LOAD SENSOR MAPPINGS
     if (this.config.eraIot && this.config.eraIot.sensorConfigs) {
       const systemMapping = this.config.eraIot.sensorConfigs;
       console.log("ConfigManager: Found system sensor mapping:", systemMapping);
@@ -1766,7 +1774,23 @@ class BillboardConfigManager {
       console.log("ConfigManager: No existing sensor mapping in system config");
     }
 
-    // 2️⃣ LOAD SCALE CONFIG (always do this to restore UI state)
+    // LOAD UNIT FILTERS: Restore saved unit filters for persistence
+    if (
+      this.config.eraIot &&
+      this.config.eraIot.unitFilters &&
+      Array.isArray(this.config.eraIot.unitFilters)
+    ) {
+      console.log(
+        "ConfigManager: Restoring unit filters from system config:",
+        this.config.eraIot.unitFilters
+      );
+      this.currentUnitFilters = [...this.config.eraIot.unitFilters];
+      this.renderUnitFilterChips();
+    } else {
+      console.log("ConfigManager: No unit filters found in system config");
+    }
+
+    //LOAD SCALE CONFIG (always do this to restore UI state)
     this.loadScaleConfigFromSystem();
   }
 
@@ -2119,6 +2143,16 @@ class BillboardConfigManager {
       }
     }
 
+    // 5️⃣ RESTORE UNIT FILTERS: Load saved unit filters for persistence
+    if (eraConfig.unitFilters && Array.isArray(eraConfig.unitFilters)) {
+      console.log(
+        "ConfigManager: Restoring unit filters from config:",
+        eraConfig.unitFilters
+      );
+      this.currentUnitFilters = [...eraConfig.unitFilters];
+      this.renderUnitFilterChips();
+    }
+
     console.log(
       "ConfigManager: ✅ E-Ra IoT config loaded from system successfully"
     );
@@ -2155,12 +2189,12 @@ class BillboardConfigManager {
     let newContent = "";
 
     this.config.logoImages.forEach((logo, index) => {
-      // Enhanced path resolution with stable fallback strategy
+      // CRITICAL FIX: Enhanced path resolution with dynamic app path for packaged apps
       let logoSrc = logo.path;
       let fallbackSrc = null;
 
       console.log(
-        `Config: Processing logo ${logo.name}, source: ${logo.source}`
+        `Config: Processing logo ${logo.name}, source: ${logo.source}, isPackaged: ${window.electronAPI?.isPackaged}`
       );
 
       if (logo.source === "github_cdn") {
@@ -2168,15 +2202,21 @@ class BillboardConfigManager {
         if (logo.url) {
           logoSrc = logo.url;
         } else if (logo.path) {
-          // Secondary: Use local downloaded file
-          const normalizedPath = logo.path.replace(/\\/g, "/");
-          if (
-            !normalizedPath.startsWith("/") &&
-            !normalizedPath.match(/^[A-Za-z]:/)
-          ) {
-            logoSrc = `file:///f:/EoH Company/ITS_OurdoorScreen/${normalizedPath}`;
+          // Use synchronous fallback for immediate render
+          if (window.electronAPI?.isPackaged) {
+            // For packaged apps, use relative path - will be corrected by image onload
+            logoSrc = logo.path;
           } else {
-            logoSrc = `file:///${normalizedPath}`;
+            // Development mode
+            const normalizedPath = logo.path.replace(/\\/g, "/");
+            if (
+              !normalizedPath.startsWith("/") &&
+              !normalizedPath.match(/^[A-Za-z]:/)
+            ) {
+              logoSrc = `file:///f:/EoH Company/ITS_OurdoorScreen/${normalizedPath}`;
+            } else {
+              logoSrc = `file:///${normalizedPath}`;
+            }
           }
         }
 
@@ -2190,35 +2230,39 @@ class BillboardConfigManager {
         !logo.path.startsWith("data:") &&
         !logo.path.startsWith("http")
       ) {
-        // For local files, ensure proper file:// protocol
-        const normalizedPath = logo.path.replace(/\\/g, "/");
-        if (
-          !normalizedPath.startsWith("/") &&
-          !normalizedPath.match(/^[A-Za-z]:/)
-        ) {
-          logoSrc = `file:///f:/EoH Company/ITS_OurdoorScreen/${normalizedPath}`;
+        // For local files, use synchronous fallback
+        if (window.electronAPI?.isPackaged) {
+          logoSrc = logo.path; // Will be corrected by image onload
         } else {
-          logoSrc = `file:///${normalizedPath}`;
+          // Development mode
+          const normalizedPath = logo.path.replace(/\\/g, "/");
+          if (
+            !normalizedPath.startsWith("/") &&
+            !normalizedPath.match(/^[A-Za-z]:/)
+          ) {
+            logoSrc = `file:///f:/EoH Company/ITS_OurdoorScreen/${normalizedPath}`;
+          } else {
+            logoSrc = `file:///${normalizedPath}`;
+          }
         }
-        console.log(`Config: Local logo converted to: ${logoSrc}`);
+        console.log(`Config: Local logo path: ${logoSrc}`);
       }
 
       newContent += `
-        <div class="logo-item">
+        <div class="logo-item" data-logo-index="${index}">
           <img src="${logoSrc}" alt="${logo.name}" 
                style="max-width: 80px; max-height: 60px; object-fit: contain; transition: opacity 0.2s ease;"
-               onerror="
-                 console.error('Config: Failed to load:', this.src); 
-                 if (!this.dataset.fallbackTried && '${fallbackSrc}' && this.src !== '${fallbackSrc}') {
-                   this.dataset.fallbackTried = 'true';
-                   this.src = '${fallbackSrc}';
-                 } 
-               "
+               data-original-path="${logo.path}"
+               data-logo-source="${logo.source}"
+               data-logo-filename="${logo.filename || ""}"
+               onerror="configManager.handleLogoError(this, ${index})"
                onload="
                  console.log('Config: Logo loaded successfully:', this.src);
                  this.style.opacity = '1';
                " />
-          <p style="font-size: 12px; margin-top: 5px; word-break: break-all; text-align: center;">${logo.name}</p>
+          <p style="font-size: 12px; margin-top: 5px; word-break: break-all; text-align: center;">${
+            logo.name
+          }</p>
           <button class="remove-btn" onclick="configManager.removeLogo(${index})" style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; background: #dc3545; color: white; border: none; border-radius: 50%; cursor: pointer; font-size: 12px;">×</button>
         </div>
       `;
@@ -2256,6 +2300,98 @@ class BillboardConfigManager {
   removeLogo(index) {
     this.config.logoImages.splice(index, 1);
     this.renderLogoGrid();
+  }
+
+  // CRITICAL FIX: Handle logo loading errors with dynamic path resolution
+  async handleLogoError(imgElement, logoIndex) {
+    console.error("Config: Failed to load logo:", imgElement.src);
+
+    const logo = this.config.logoImages[logoIndex];
+    if (!logo) return;
+
+    // Check if we've already tried fallbacks
+    const attemptCount = parseInt(imgElement.dataset.attemptCount || "0");
+    imgElement.dataset.attemptCount = (attemptCount + 1).toString();
+
+    if (attemptCount === 0) {
+      // First attempt: Try resolved path
+      try {
+        const resolvedPath = await this.resolveLogoPath(logo);
+        if (resolvedPath !== imgElement.src) {
+          console.log(
+            `Config: Trying resolved path for ${logo.name}: ${resolvedPath}`
+          );
+          imgElement.src = resolvedPath;
+          return;
+        }
+      } catch (error) {
+        console.error("Config: Error resolving path:", error);
+      }
+    }
+
+    if (attemptCount === 1 && logo.url) {
+      // Second attempt: Try CDN URL if available
+      console.log(`Config: Trying CDN URL for ${logo.name}: ${logo.url}`);
+      imgElement.src = logo.url;
+      return;
+    }
+
+    // Final fallback: Hide the image gracefully
+    console.warn(
+      `Config: All fallbacks failed for ${logo.name}, hiding element`
+    );
+    imgElement.style.opacity = "0.3";
+    imgElement.style.filter = "grayscale(100%)";
+    imgElement.title = "Image could not be loaded";
+  }
+
+  // CRITICAL FIX: Dynamic logo path resolution for packaged apps
+  async resolveLogoPath(logo) {
+    try {
+      if (!window.electronAPI?.getAppPath) {
+        // Fallback for non-electron environment
+        return logo.path;
+      }
+
+      const pathInfo = await window.electronAPI.getAppPath();
+      let basePath;
+
+      if (typeof pathInfo === "string") {
+        basePath = pathInfo;
+      } else {
+        basePath = pathInfo.logoBasePath || pathInfo.appPath;
+      }
+
+      if (logo.source === "github_cdn") {
+        // For CDN logos, try URL first, then local file
+        if (logo.url) {
+          return logo.url;
+        }
+        // Use local downloaded file with proper base path
+        const configPath = logo.path || `downloads/logos/${logo.filename}`;
+        let cleanPath = configPath.replace(/^\.[\\/]/, "");
+        cleanPath = cleanPath.replace(/\\/g, "/");
+
+        let cleanBasePath = basePath.replace(/\\/g, "/");
+        cleanBasePath = cleanBasePath.replace(/\/+/g, "/");
+
+        return `file:///${cleanBasePath}/${cleanPath}`;
+      } else {
+        // For local files, use base path resolution
+        let cleanPath = logo.path.replace(/\\/g, "/");
+        let cleanBasePath = basePath.replace(/\\/g, "/");
+
+        if (cleanPath.startsWith("./") || !cleanPath.match(/^[A-Za-z]:/)) {
+          cleanPath = cleanPath.replace(/^\.[\\/]/, "");
+          return `file:///${cleanBasePath}/${cleanPath}`;
+        } else {
+          return `file:///${cleanPath}`;
+        }
+      }
+    } catch (error) {
+      console.error("Config: Error resolving logo path:", error);
+      return logo.path; // Fallback to original path
+    }
   }
 
   setupDragAndDrop() {

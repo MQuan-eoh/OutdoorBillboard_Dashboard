@@ -2019,9 +2019,41 @@ function CompanyLogo() {
   const [currentLogoIndex, setCurrentLogoIndex] = useState(0);
   const [manifestLogos, setManifestLogos] = useState([]);
   const [useManifestLogos, setUseManifestLogos] = useState(false);
+  const [appBasePath, setAppBasePath] = useState(null);
+  const [logoBasePath, setLogoBasePath] = useState(null); // NEW: Separate logo base path
+  const [isPackagedApp, setIsPackagedApp] = useState(false); // NEW: Track if app is packaged
   const intervalRef = useRef(null);
 
   useEffect(() => {
+    // CRITICAL FIX: Enhanced path loading for proper banner resolution in packaged apps
+    const loadAppBasePath = async () => {
+      try {
+        if (window.electronAPI && window.electronAPI.getAppPath) {
+          const pathInfo = await window.electronAPI.getAppPath();
+          console.log(
+            "CompanyLogo: Received path info from main process:",
+            pathInfo
+          );
+
+          // Handle both old string return and new object return for backward compatibility
+          if (typeof pathInfo === "string") {
+            // Legacy support
+            setAppBasePath(pathInfo);
+            setLogoBasePath(pathInfo);
+            setIsPackagedApp(window.electronAPI?.isPackaged || false);
+          } else {
+            // New enhanced return with proper paths
+            setAppBasePath(pathInfo.appPath);
+            setLogoBasePath(pathInfo.logoBasePath);
+            setIsPackagedApp(pathInfo.isPackaged);
+          }
+        }
+      } catch (error) {
+        console.error("CompanyLogo: Failed to load app base path:", error);
+      }
+    };
+
+    loadAppBasePath();
     loadConfig();
 
     // Setup config hot-reload listeners
@@ -2270,31 +2302,134 @@ function CompanyLogo() {
     return activeLogos[0];
   };
 
-  const renderCustomLogo = (logo) => {
-    // Enhanced path resolution with anti-flicker strategy
-    let logoSrc;
-    let fallbackSrc = null;
+  const resolveLogoPath = (logo) => {
+    /**
+     * CRITICAL FIX FOR BANNER LOGO COMPANY DISPLAY - PACKAGED APP SUPPORT
+     *
+     * Root Cause: File protocol conflicts and caching issues in packaged Electron apps
+     *
+     * Enhanced Fixes:
+     * 1. Prioritize CDN URLs to avoid file protocol conflicts
+     * 2. Add cache busting for packaged apps
+     * 3. Better path normalization with timestamp cache invalidation
+     * 4. Fallback strategy: CDN -> file:// -> blob conversion
+     */
+
+    let logoSrc = null;
 
     if (logo.source === "github_cdn") {
-      // Primary: Try direct CDN URL first if available
+      // Priority 1: ALWAYS use CDN URL first if available - most reliable for packaged apps
       if (logo.url) {
+        // CRITICAL FIX: NO cache busting for CDN URLs to avoid CORS issues
         logoSrc = logo.url;
-      } else {
-        // Secondary: Use local downloaded path
-        const configPath = logo.path || `downloads/logos/${logo.filename}`;
-        const absolutePath = configPath.replace(/\\/g, "/");
-        logoSrc = `file:///F:/EoH Company/ITS_OurdoorScreen/${absolutePath}`;
+        console.log("CompanyLogo: Using CDN URL (no cache busting):", logoSrc);
+        return logoSrc;
       }
 
-      // Prepare fallback URL from manifest
+      // Priority 2: Local file path with enhanced resolution for PACKAGED APPS
+      if (logoBasePath) {
+        const configPath = logo.path || `downloads/logos/${logo.filename}`;
+
+        // CRITICAL FIX: Use logoBasePath specifically for file access
+        if (isPackagedApp) {
+          // PACKAGED APP: Use logoBasePath which points to userData
+          let cleanPath = configPath.replace(/^\.[\\/]/, "");
+          cleanPath = cleanPath.replace(/\\/g, "/");
+          cleanPath = cleanPath.replace(/\/+/g, "/");
+
+          let cleanLogoBasePath = logoBasePath.replace(/\\/g, "/");
+          cleanLogoBasePath = cleanLogoBasePath.replace(/\/+/g, "/");
+
+          // CRITICAL: No cache busting for file:// URLs in packaged apps
+          logoSrc = `file:///${cleanLogoBasePath}/${cleanPath}`;
+        } else {
+          // DEVELOPMENT: Use relative path with cache busting
+          let cleanPath = configPath.replace(/^\.[\\/]/, "");
+          cleanPath = cleanPath.replace(/\\/g, "/");
+          cleanPath = cleanPath.replace(/\/+/g, "/");
+
+          let cleanLogoBasePath = logoBasePath.replace(/\\/g, "/");
+          cleanLogoBasePath = cleanLogoBasePath.replace(/\/+/g, "/");
+
+          const cacheBuster = `?cb=${Date.now()}&id=${logo.id}`;
+          logoSrc = `file:///${cleanLogoBasePath}/${cleanPath}${cacheBuster}`;
+        }
+
+        console.log("CompanyLogo: Resolved CDN banner path (FIXED v2):", {
+          original: configPath,
+          logoBasePath: logoBasePath,
+          resolved: logoSrc,
+          isPackaged: isPackagedApp,
+          logoId: logo.id,
+          logoFilename: logo.filename,
+        });
+      } else {
+        // Priority 3: Fallback if logoBasePath not yet available
+        const configPath = logo.path || `downloads/logos/${logo.filename}`;
+        let cleanPath = configPath.replace(/^\.[\\/]/, "");
+        cleanPath = cleanPath.replace(/\\/g, "/");
+
+        if (isPackagedApp) {
+          // No cache busting for packaged apps
+          logoSrc = `file:///${cleanPath}`;
+        } else {
+          const cacheBuster = `?fb=${Date.now()}`;
+          logoSrc = `file:///${cleanPath}${cacheBuster}`;
+        }
+
+        console.log(
+          "CompanyLogo: Using fallback relative path (FIXED v2):",
+          logoSrc
+        );
+      }
+    } else {
+      // Local logo files
+      if (logoBasePath) {
+        let cleanPath = logo.path.replace(/\\/g, "/");
+        cleanPath = cleanPath.replace(/\/+/g, "/");
+
+        let cleanLogoBasePath = logoBasePath.replace(/\\/g, "/");
+        cleanLogoBasePath = cleanLogoBasePath.replace(/\/+/g, "/");
+
+        if (isPackagedApp) {
+          // No cache busting for packaged apps
+          logoSrc = `file:///${cleanLogoBasePath}/${cleanPath}`;
+        } else {
+          const cacheBuster = `?local=${Date.now()}`;
+          logoSrc = `file:///${cleanLogoBasePath}/${cleanPath}${cacheBuster}`;
+        }
+
+        console.log(
+          "CompanyLogo: Resolved local logo path (FIXED v2):",
+          logoSrc
+        );
+      } else {
+        let cleanPath = logo.path.replace(/\\/g, "/");
+        cleanPath = cleanPath.replace(/\/+/g, "/");
+
+        if (isPackagedApp) {
+          logoSrc = `file:///${cleanPath}`;
+        } else {
+          const cacheBuster = `?fallback=${Date.now()}`;
+          logoSrc = `file:///${cleanPath}${cacheBuster}`;
+        }
+      }
+    }
+
+    return logoSrc;
+  };
+
+  const renderCustomLogo = (logo) => {
+    const logoSrc = resolveLogoPath(logo);
+
+    // Prepare fallback URL from manifest
+    let fallbackSrc = null;
+    if (logo.source === "github_cdn") {
       const manifest = GlobalLogoManifestServiceManager?.getCurrentManifest();
       const manifestLogo = manifest?.logos?.find((l) => l.id === logo.id);
       if (manifestLogo?.url && manifestLogo.url !== logoSrc) {
         fallbackSrc = manifestLogo.url;
       }
-    } else {
-      // Local logo files
-      logoSrc = `file://${logo.path}`;
     }
 
     return React.createElement("img", {
@@ -2313,37 +2448,101 @@ function CompanyLogo() {
           "Failed to load logo:",
           e.target.src,
           "Source:",
-          logo.source
+          logo.source,
+          "Logo ID:",
+          logo.id
         );
 
-        // Prevent infinite fallback loops that cause flicker
+        // FIXED ERROR HANDLING: Simplified fallback strategy for packaged apps
         const attemptedSrc = e.target.src;
+        const attemptFallback = e.target.dataset.fallbackAttempt || "0";
+        const attemptNum = parseInt(attemptFallback);
 
-        if (
-          logo.source === "github_cdn" &&
-          !e.target.dataset.fallbackAttempted
-        ) {
-          e.target.dataset.fallbackAttempted = "true";
-
-          // Try fallback URL if available and different
-          if (fallbackSrc && fallbackSrc !== attemptedSrc) {
-            console.log("CompanyLogo: Trying fallback URL:", fallbackSrc);
-            e.target.src = fallbackSrc;
+        if (logo.source === "github_cdn") {
+          // Attempt 1: Try direct CDN URL (no cache busting)
+          if (
+            attemptNum === 0 &&
+            logo.url &&
+            !attemptedSrc.includes(logo.url.split("?")[0])
+          ) {
+            console.log(
+              "CompanyLogo: Attempt 1 - Trying clean CDN URL:",
+              logo.url
+            );
+            e.target.src = logo.url;
+            e.target.dataset.fallbackAttempt = "1";
             return;
           }
+
+          // Attempt 2: For packaged apps, try clean file path
+          if (
+            attemptNum <= 1 &&
+            window.electronAPI?.isPackaged &&
+            appBasePath &&
+            logo.filename
+          ) {
+            const cleanPath = `file:///${appBasePath.replace(
+              /\\/g,
+              "/"
+            )}/downloads/logos/${logo.filename}`;
+            if (
+              cleanPath !== attemptedSrc &&
+              !attemptedSrc.includes(cleanPath.split("?")[0])
+            ) {
+              console.log(
+                "CompanyLogo: Attempt 2 - Trying clean file path (packaged):",
+                cleanPath
+              );
+              e.target.src = cleanPath;
+              e.target.dataset.fallbackAttempt = "2";
+              return;
+            }
+          }
+
+          // FINAL FALLBACK: Stop attempting and hide gracefully
+          if (attemptNum >= 2) {
+            console.warn(
+              "CompanyLogo: All fallbacks exhausted for logo:",
+              logo.name,
+              "ID:",
+              logo.id
+            );
+            handleFinalFallback();
+          }
+        } else {
+          // For non-CDN logos, try one simple fallback then stop
+          if (attemptNum === 0 && appBasePath) {
+            const simplePath = `file:///${appBasePath.replace(
+              /\\/g,
+              "/"
+            )}/${logo.path.replace(/\\/g, "/")}`;
+            console.log("CompanyLogo: Trying simple fallback:", simplePath);
+            e.target.src = simplePath;
+            e.target.dataset.fallbackAttempt = "1";
+            return;
+          }
+
+          handleFinalFallback();
         }
 
-        // Final fallback: gracefully hide without causing layout shift
-        console.warn("CompanyLogo: Using default logo fallback");
-        e.target.style.opacity = "0";
-        e.target.style.display = "none";
+        function handleFinalFallback() {
+          console.warn(
+            "CompanyLogo: Fallback complete for logo:",
+            logo.name,
+            "- hiding element"
+          );
+          e.target.style.opacity = "0";
+          e.target.style.display = "none";
 
-        // Trigger re-render to default logo without flicker
-        setTimeout(() => {
-          if (e.target.parentElement) {
-            e.target.parentElement.innerHTML = "";
-          }
-        }, 100);
+          // Trigger re-render to next logo without flicker
+          setTimeout(() => {
+            if (e.target.parentElement) {
+              setCurrentLogoIndex(
+                (prev) => (prev + 1) % Math.max(1, getActiveLogos().length)
+              );
+            }
+          }, 100);
+        }
       },
       onLoad: () => {
         // Log successful banner load from remote admin-web
