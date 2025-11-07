@@ -1057,6 +1057,45 @@
 
             <div class="form-group">
               <label class="form-label">Unit ID (Chất Lượng Không Khí):</label>
+
+              <!-- Filter input -->
+              <div style="margin-bottom: 12px">
+                <label
+                  class="form-label"
+                  style="font-size: 14px; color: #6c757d"
+                  >Lọc Units:</label
+                >
+
+                <!-- Filter chips container -->
+                <div
+                  id="unitFilterChips"
+                  class="keyword-chips-container"
+                  style="min-height: 30px; margin-bottom: 8px"
+                >
+                  <!-- Filter chips will be populated here -->
+                </div>
+
+                <!-- Filter input container -->
+                <div class="keyword-input-container">
+                  <input
+                    type="text"
+                    id="units-filter"
+                    class="keyword-input"
+                    placeholder="Nhập tên unit... và nhấn Enter"
+                    style="font-size: 13px"
+                  />
+                  <button
+                    type="button"
+                    id="addUnitFilterBtn"
+                    class="add-keyword-btn"
+                    onclick="configManager.addUnitFilterFromInput()"
+                  >
+                    Thêm
+                  </button>
+                </div>
+              </div>
+
+              <!-- Unit selector -->
               <select id="era-unit-id" class="form-control">
                 <option value="">
                   Chọn Unit ID để lấy dữ liệu chất lượng không khí...
@@ -1065,6 +1104,8 @@
               <small class="form-text">
                 Unit ID dùng để gọi API: GET
                 /property_manager/units/{unit_id}/summary/
+                <br />
+                <span id="units-count-info" style="color: #6c757d"></span>
               </small>
             </div>
 

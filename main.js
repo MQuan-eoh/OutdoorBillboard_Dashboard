@@ -790,7 +790,7 @@ class MainProcessMqttService {
       this.client.on("connect", () => {
         clearTimeout(this.connectionTimer);
         console.log(
-          "MainProcessMqttService: ✅ Successfully connected to E-Ra MQTT broker!"
+          "MainProcessMqttService: Successfully connected to E-Ra MQTT broker!"
         );
         this.isConnected = true;
         this.subscribeToTopics();
@@ -857,7 +857,7 @@ class MainProcessMqttService {
       this.commandClient.on("connect", () => {
         clearTimeout(this.commandConnectionTimer);
         console.log(
-          "MainProcessMqttService: ✅ Successfully connected to Command Broker!"
+          "MainProcessMqttService: Successfully connected to Command Broker!"
         );
         this.isCommandConnected = true;
         this.subscribeToCommandTopics();

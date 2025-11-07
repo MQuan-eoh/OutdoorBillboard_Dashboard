@@ -9,7 +9,7 @@ class EraConfigService {
     this.baseUrl = "https://backend.eoh.io";
     this.chipsEndpoint = "/api/chip_manager/developer_mode_chips/";
     this.configsEndpoint = "/api/chip_manager/configs/";
-    this.unitsEndpoint = "/api/property_manager/units/";
+    this.unitsEndpoint = "/api/property_manager/iot_dashboard/dev_mode/units/";
 
     this.authService = authService || null;
     this.cachedChips = [];
@@ -182,39 +182,110 @@ class EraConfigService {
 
   /**
    * Get list of available units from E-Ra platform for air quality API
-   * Uses chips as units since each chip can represent a building unit/location
+   * Uses direct units API with pagination support
    */
   async getUnits() {
     try {
-      console.log("EraConfigService: Getting units from cached chips");
+      console.log("EraConfigService: Fetching units from IoT dashboard API");
 
-      // Get chips first (units are based on chips)
-      const chipsResult = await this.getChips();
-      if (!chipsResult.success) {
+      if (!this.authService || !this.authService.isAuthenticated()) {
         return {
           success: false,
-          error: chipsResult.error,
-          message: "Failed to get chips data to extract units",
+          error: "Not authenticated",
+          message: "Please login to E-Ra platform first",
         };
       }
 
-      // Convert chips to units format
-      const units = this.convertChipsToUnits(chipsResult.chips);
-      this.cachedUnits = units;
+      // Get all units with pagination
+      const allUnits = await this.getAllUnitsPaginated();
+      this.cachedUnits = allUnits;
 
       return {
         success: true,
-        units: units,
-        message: `Found ${units.length} units from chips`,
+        units: allUnits,
+        message: `Found ${allUnits.length} units from IoT dashboard API`,
       };
     } catch (error) {
       console.error("EraConfigService: Error getting units:", error);
       return {
         success: false,
         error: error.message || "Network error",
-        message: "Failed to get units from chips data",
+        message: "Failed to get units from IoT dashboard API",
       };
     }
+  }
+
+  /**
+   * Get all units with pagination support
+   */
+  async getAllUnitsPaginated() {
+    const allUnits = [];
+    let nextUrl = `${this.baseUrl}${this.unitsEndpoint}`;
+    let pageCount = 0;
+    const maxPages = 50; // Safety limit to prevent infinite loops
+
+    while (nextUrl && pageCount < maxPages) {
+      pageCount++;
+      console.log(
+        `EraConfigService: Fetching units page ${pageCount}: ${nextUrl}`
+      );
+
+      try {
+        const response = await fetch(nextUrl, {
+          method: "GET",
+          headers: this.authService.getAuthHeaders(),
+        });
+
+        const responseData = await response.json();
+        console.log(
+          `EraConfigService: Units page ${pageCount} response:`,
+          response.status,
+          {
+            count: responseData.count,
+            next: !!responseData.next,
+            resultsLength: responseData.results
+              ? responseData.results.length
+              : 0,
+          }
+        );
+
+        if (!response.ok || !responseData) {
+          console.error(
+            `EraConfigService: Failed to fetch units page ${pageCount}:`,
+            responseData
+          );
+          break;
+        }
+
+        // Parse units from this page
+        const pageUnits = this.parseUnitsResponse(responseData);
+        allUnits.push(...pageUnits);
+
+        // Check for next page
+        nextUrl = responseData.next;
+
+        console.log(
+          `EraConfigService: Page ${pageCount} added ${pageUnits.length} units. Total: ${allUnits.length}`
+        );
+      } catch (error) {
+        console.error(
+          `EraConfigService: Error fetching units page ${pageCount}:`,
+          error
+        );
+        break;
+      }
+    }
+
+    if (pageCount >= maxPages) {
+      console.warn(
+        `EraConfigService: Reached maximum page limit (${maxPages})`
+      );
+    }
+
+    console.log(
+      `EraConfigService: ✅ Fetched ${allUnits.length} total units across ${pageCount} pages`
+    );
+    return allUnits;
   }
 
   /**
@@ -420,7 +491,7 @@ class EraConfigService {
   }
 
   /**
-   * Parse units response from E-Ra API (legacy method, now uses extractUnitsFromDatastreams)
+   * Parse units response from E-Ra IoT Dashboard API
    */
   parseUnitsResponse(responseData) {
     const units = [];
@@ -432,7 +503,7 @@ class EraConfigService {
       if (responseData.units && Array.isArray(responseData.units)) {
         unitData = responseData.units;
       }
-      // If response has results property
+      // If response has results property (pagination format)
       else if (responseData.results && Array.isArray(responseData.results)) {
         unitData = responseData.results;
       }
@@ -454,13 +525,20 @@ class EraConfigService {
             description: unit.description || unit.desc || undefined,
             address: unit.address || undefined,
             type: unit.type || unit.unit_type || undefined,
-            status: unit.status || unit.is_active ? "active" : "inactive",
+            status: unit.status || (unit.is_active ? "active" : "inactive"),
+            // Additional IoT dashboard specific fields
+            location: unit.location || undefined,
+            building: unit.building || unit.building_name || undefined,
+            floor: unit.floor || unit.floor_name || undefined,
+            room: unit.room || unit.room_name || undefined,
+            category: unit.category || undefined,
+            tags: unit.tags || [],
           });
         });
       }
 
       console.log(
-        `EraConfigService: Parsed ${units.length} units from response`
+        `EraConfigService: Parsed ${units.length} units from IoT dashboard response`
       );
     } catch (error) {
       console.error("EraConfigService: Error parsing units response:", error);

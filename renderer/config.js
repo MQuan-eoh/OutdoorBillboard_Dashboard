@@ -24,6 +24,11 @@ class BillboardConfigManager {
     // Initialize keyword array for auto-detect modal
     this.currentKeywords = [];
 
+    // Initialize units filter properties
+    this.allUnits = []; // Store all units for filtering
+    this.handleUnitsFilter = null; // Store filter handler reference
+    this.currentUnitFilters = []; // Store current filter chips (similar to keywords)
+
     this.init();
   }
 
@@ -1277,27 +1282,217 @@ class BillboardConfigManager {
     );
 
     const unitSelector = document.getElementById("era-unit-id");
+    const unitsCountInfo = document.getElementById("units-count-info");
+
     if (!unitSelector) {
       console.warn("ConfigManager: Unit selector not found");
       return;
     }
+
+    // Store all units for filtering
+    this.allUnits = units;
+
+    // Update count info
+    if (unitsCountInfo) {
+      unitsCountInfo.textContent = `📊 Tổng ${units.length} units khả dụng`;
+    }
+
+    // Setup filter functionality with chips
+    this.setupUnitsFilter();
+
+    console.log(
+      `ConfigManager: Added ${units.length} units to dropdown with enhanced filter support`
+    );
+  }
+
+  /**
+   * Setup units filter functionality
+   */
+  setupUnitsFilter() {
+    const filterInput = document.getElementById("units-filter");
+    if (!filterInput) return;
+
+    // Remove existing event listener if any
+    filterInput.removeEventListener("input", this.handleUnitsFilter);
+    filterInput.removeEventListener("keydown", this.handleUnitsFilterKeydown);
+
+    // Add new event listeners
+    this.handleUnitsFilter = (e) => {
+      // Real-time filter as user types (optional, can be disabled for performance)
+      // this.applyUnitsFilter();
+    };
+
+    this.handleUnitsFilterKeydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.addUnitFilterFromInput();
+      }
+    };
+
+    filterInput.addEventListener("input", this.handleUnitsFilter);
+    filterInput.addEventListener("keydown", this.handleUnitsFilterKeydown);
+
+    // Initialize default filters based on common building types
+    this.initializeDefaultUnitFilters();
+  }
+
+  /**
+   * Initialize default unit filters
+   */
+  initializeDefaultUnitFilters() {
+    // You can customize these default filters based on common building types
+    const defaultFilters = [];
+
+    this.currentUnitFilters = [...defaultFilters];
+    this.renderUnitFilterChips();
+    this.applyUnitsFilter();
+  }
+
+  /**
+   * Render unit filter chips similar to keyword chips
+   */
+  renderUnitFilterChips() {
+    const container = document.getElementById("unitFilterChips");
+    if (!container) return;
+
+    container.innerHTML = "";
+
+    this.currentUnitFilters.forEach((filter, index) => {
+      const chip = document.createElement("div");
+      chip.className = "keyword-chip";
+      chip.innerHTML = `
+        <span>${filter}</span>
+        <button class="keyword-chip-remove" onclick="configManager.removeUnitFilter(${index})" type="button">×</button>
+      `;
+      container.appendChild(chip);
+    });
+  }
+
+  /**
+   * Add unit filter from input
+   */
+  addUnitFilterFromInput() {
+    const input = document.getElementById("units-filter");
+    if (!input) return;
+
+    const newFilter = input.value.trim();
+    if (newFilter && !this.currentUnitFilters.includes(newFilter)) {
+      this.currentUnitFilters.push(newFilter);
+      this.renderUnitFilterChips();
+      this.applyUnitsFilter();
+      input.value = "";
+    } else if (this.currentUnitFilters.includes(newFilter)) {
+      this.showNotification("Filter đã tồn tại", "warning");
+    }
+  }
+
+  /**
+   * Remove unit filter
+   */
+  removeUnitFilter(index) {
+    if (index >= 0 && index < this.currentUnitFilters.length) {
+      this.currentUnitFilters.splice(index, 1);
+      this.renderUnitFilterChips();
+      this.applyUnitsFilter();
+    }
+  }
+
+  /**
+   * Apply units filter based on current filter chips
+   */
+  applyUnitsFilter() {
+    if (!this.allUnits) return;
+
+    let filteredUnits = this.allUnits;
+
+    if (this.currentUnitFilters.length > 0) {
+      filteredUnits = this.allUnits.filter((unit) => {
+        const searchText = [
+          unit.name,
+          unit.description,
+          unit.address,
+          unit.building,
+          unit.floor,
+          unit.room,
+          unit.type,
+          unit.category,
+          unit.id.toString(),
+        ]
+          .filter((text) => text)
+          .join(" ")
+          .toLowerCase();
+
+        // Check if unit matches ANY of the filter chips
+        return this.currentUnitFilters.some((filter) =>
+          searchText.includes(filter.toLowerCase())
+        );
+      });
+    }
+
+    this.updateUnitsDropdown(filteredUnits);
+
+    // Update count info
+    const unitsCountInfo = document.getElementById("units-count-info");
+    if (unitsCountInfo) {
+      const totalText = `📊 ${filteredUnits.length}/${this.allUnits.length} units`;
+      const filterText =
+        this.currentUnitFilters.length > 0
+          ? ` (lọc: ${this.currentUnitFilters.length} filter)`
+          : "";
+      unitsCountInfo.textContent = totalText + filterText;
+    }
+  }
+
+  /**
+   * Update units dropdown with filtered units
+   */
+  updateUnitsDropdown(units) {
+    const unitSelector = document.getElementById("era-unit-id");
+    if (!unitSelector) return;
+
+    // Store current selection
+    const currentValue = unitSelector.value;
 
     // Clear existing options except the first one
     while (unitSelector.children.length > 1) {
       unitSelector.removeChild(unitSelector.lastChild);
     }
 
-    // Add unit options (based on chips format)
+    // Add unit options
     units.forEach((unit) => {
       const option = document.createElement("option");
       option.value = unit.id.toString();
-      option.textContent = `${unit.name} (ID: ${unit.id})${
-        unit.description ? ` | ${unit.description}` : ""
-      }`;
+
+      // Build descriptive text
+      let optionText = `${unit.name} (ID: ${unit.id})`;
+
+      // Add location info if available
+      const locationParts = [unit.building, unit.floor, unit.room].filter(
+        (part) => part
+      );
+      if (locationParts.length > 0) {
+        optionText += ` | ${locationParts.join(" - ")}`;
+      } else if (unit.address) {
+        optionText += ` | ${unit.address}`;
+      }
+
+      // Add type/category if available
+      if (unit.type || unit.category) {
+        const typeInfo = [unit.type, unit.category].filter((info) => info);
+        optionText += ` [${typeInfo.join(", ")}]`;
+      }
+
+      option.textContent = optionText;
       unitSelector.appendChild(option);
     });
 
-    console.log(`ConfigManager: Added ${units.length} units to dropdown`);
+    // Restore previous selection if it still exists
+    if (
+      currentValue &&
+      units.find((unit) => unit.id.toString() === currentValue)
+    ) {
+      unitSelector.value = currentValue;
+    }
   }
 
   loadCachedEraConfigIfAvailable() {
