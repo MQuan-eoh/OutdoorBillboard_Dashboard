@@ -1816,25 +1816,30 @@ function broadcastConfigUpdate(config) {
         logoImages: config.logoImages,
       });
 
-      // Send with delay to ensure delivery
-      setTimeout(() => {
+      // Debounced config updates to prevent flicker from rapid changes
+      // Clear any existing timeout to prevent multiple rapid updates
+      if (broadcastConfigUpdate.debounceTimer) {
+        clearTimeout(broadcastConfigUpdate.debounceTimer);
+      }
+
+      broadcastConfigUpdate.debounceTimer = setTimeout(() => {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send("logo-config-updated", {
             logoMode: config.logoMode,
             logoLoopDuration: config.logoLoopDuration,
             logoImages: config.logoImages,
           });
-          console.log("DELAYED logo-config-updated event sent");
-        }
-      }, 100);
+          console.log("DEBOUNCED logo-config-updated event sent");
 
-      // Send another one with longer delay
-      setTimeout(() => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send("config-updated", config);
-          console.log("FINAL config-updated event sent");
+          // Final config update after logo-specific update
+          setTimeout(() => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send("config-updated", config);
+              console.log("FINAL config-updated event sent");
+            }
+          }, 50);
         }
-      }, 200);
+      }, 150); // 150ms debounce
     }
   } else {
     console.log(

@@ -86,6 +86,11 @@ class RendererLogoManifestService {
     this.downloadQueue = [];
     this.isDownloading = false;
 
+    // Debounce and timing controls to prevent flicker
+    this.bannerUpdateDebounce = null;
+    this.lastSyncTime = null;
+    this.autoSyncInterval = null;
+
     console.log(
       "RendererLogoManifestService: Initialized with remote sync support"
     );
@@ -250,23 +255,34 @@ class RendererLogoManifestService {
       command
     );
 
-    // Force sync to get latest manifest with new banner
-    await this.forceSync();
-
-    // Send confirmation back to admin-web
-    try {
-      await window.electronAPI.sendMqttMessage({
-        topic: "its/billboard/banner/sync",
-        message: {
-          action: "banner-received",
-          bannerId: command.id,
-          timestamp: Date.now(),
-          source: "desktop-app",
-        },
-      });
-    } catch (error) {
-      console.error("Failed to send banner update confirmation:", error);
+    // Debounce banner updates to prevent rapid sync calls
+    if (this.bannerUpdateDebounce) {
+      clearTimeout(this.bannerUpdateDebounce);
     }
+
+    this.bannerUpdateDebounce = setTimeout(async () => {
+      try {
+        // Force sync to get latest manifest with new banner
+        await this.forceSync();
+
+        // Send confirmation back to admin-web
+        await window.electronAPI.sendMqttMessage({
+          topic: "its/billboard/banner/sync",
+          message: {
+            action: "banner-received",
+            bannerId: command.id,
+            timestamp: Date.now(),
+            source: "desktop-app",
+          },
+        });
+
+        console.log(
+          "RendererLogoManifestService: Banner update completed successfully"
+        );
+      } catch (error) {
+        console.error("Failed to handle banner update:", error);
+      }
+    }, 200); // 200ms debounce
   }
 
   async handleBannerDelete(command) {
@@ -305,13 +321,23 @@ class RendererLogoManifestService {
   }
 
   startAutoSync() {
-    // Sync manifest every 30 seconds
-    setInterval(async () => {
+    // More conservative auto-sync to reduce flicker - sync every 60 seconds instead of 30
+    this.autoSyncInterval = setInterval(async () => {
       if (this.isInitialized) {
         console.log("RendererLogoManifestService: Auto-sync check...");
-        await this.forceSync();
+
+        // Only sync if no recent manual sync to avoid conflicts
+        const now = Date.now();
+        if (!this.lastSyncTime || now - this.lastSyncTime > 55000) {
+          await this.forceSync();
+          this.lastSyncTime = now;
+        } else {
+          console.log(
+            "RendererLogoManifestService: Skipping auto-sync, recent manual sync detected"
+          );
+        }
       }
-    }, 30000);
+    }, 60000); // 60 second intervals
 
     console.log(
       "RendererLogoManifestService: Auto-sync started (30s interval)"
@@ -2046,14 +2072,26 @@ function CompanyLogo() {
       }
     };
 
-    // Enhanced real-time event handlers for admin-web sync
+    // Debounced handlers to prevent rapid flicker during admin-web sync
+    let manifestRefreshDebounce = null;
+    let bannerUpdateDebounce = null;
+
     function handleManifestRefresh() {
       console.log(
         "CompanyLogo: Admin triggered manifest refresh, reloading..."
       );
-      if (GlobalLogoManifestServiceManager) {
-        GlobalLogoManifestServiceManager.forceRefresh();
+
+      // Clear any existing debounce
+      if (manifestRefreshDebounce) {
+        clearTimeout(manifestRefreshDebounce);
       }
+
+      // Debounce to prevent rapid refresh calls
+      manifestRefreshDebounce = setTimeout(() => {
+        if (GlobalLogoManifestServiceManager) {
+          GlobalLogoManifestServiceManager.forceRefresh();
+        }
+      }, 200);
     }
 
     function handleAdminBannerUpdate(event) {
@@ -2061,9 +2099,17 @@ function CompanyLogo() {
         "CompanyLogo: Admin banner update event received:",
         event.detail
       );
-      // Force immediate re-render with new banners
-      setCurrentLogoIndex(0);
-      handleManifestRefresh();
+
+      // Clear any existing debounce
+      if (bannerUpdateDebounce) {
+        clearTimeout(bannerUpdateDebounce);
+      }
+
+      // Debounce banner updates to prevent flicker
+      bannerUpdateDebounce = setTimeout(() => {
+        setCurrentLogoIndex(0);
+        handleManifestRefresh();
+      }, 150);
     }
 
     // Listen for admin-web remote sync events
@@ -2074,9 +2120,14 @@ function CompanyLogo() {
     }
   }, []);
 
+  // Debounced effect to prevent rapid re-renders causing flicker
   useEffect(() => {
-    clearLogoInterval();
-    startLogoRotation();
+    const debounceTimer = setTimeout(() => {
+      clearLogoInterval();
+      startLogoRotation();
+    }, 100); // 100ms debounce to batch multiple rapid updates
+
+    return () => clearTimeout(debounceTimer);
   }, [config, manifestLogos, useManifestLogos]);
 
   const clearLogoInterval = () => {
@@ -2188,14 +2239,27 @@ function CompanyLogo() {
   };
 
   const renderCustomLogo = (logo) => {
-    // Enhanced path resolution with multiple fallbacks for remote sync
+    // Enhanced path resolution with anti-flicker strategy
     let logoSrc;
+    let fallbackSrc = null;
 
     if (logo.source === "github_cdn") {
-      // Use path from config with proper Windows path conversion
-      const configPath = logo.path || `downloads/logos/${logo.filename}`;
-      const absolutePath = configPath.replace(/\\/g, "/");
-      logoSrc = `file:///F:/EoH Company/ITS_OurdoorScreen/${absolutePath}`;
+      // Primary: Try direct CDN URL first if available
+      if (logo.url) {
+        logoSrc = logo.url;
+      } else {
+        // Secondary: Use local downloaded path
+        const configPath = logo.path || `downloads/logos/${logo.filename}`;
+        const absolutePath = configPath.replace(/\\/g, "/");
+        logoSrc = `file:///F:/EoH Company/ITS_OurdoorScreen/${absolutePath}`;
+      }
+
+      // Prepare fallback URL from manifest
+      const manifest = GlobalLogoManifestServiceManager?.getCurrentManifest();
+      const manifestLogo = manifest?.logos?.find((l) => l.id === logo.id);
+      if (manifestLogo?.url && manifestLogo.url !== logoSrc) {
+        fallbackSrc = manifestLogo.url;
+      }
     } else {
       // Local logo files
       logoSrc = `file://${logo.path}`;
@@ -2215,44 +2279,39 @@ function CompanyLogo() {
       onError: (e) => {
         console.error(
           "Failed to load logo:",
-          logo.path,
+          e.target.src,
           "Source:",
           logo.source
         );
 
-        // Enhanced fallback strategy for GitHub CDN logos
-        if (logo.source === "github_cdn") {
-          if (logo.url && !e.target.src.includes("http")) {
-            // First fallback: try direct HTTP URL from GitHub CDN
-            console.log(
-              "CompanyLogo: Trying direct CDN URL fallback:",
-              logo.url
-            );
-            e.target.src = logo.url;
+        // Prevent infinite fallback loops that cause flicker
+        const attemptedSrc = e.target.src;
+
+        if (
+          logo.source === "github_cdn" &&
+          !e.target.dataset.fallbackAttempted
+        ) {
+          e.target.dataset.fallbackAttempted = "true";
+
+          // Try fallback URL if available and different
+          if (fallbackSrc && fallbackSrc !== attemptedSrc) {
+            console.log("CompanyLogo: Trying fallback URL:", fallbackSrc);
+            e.target.src = fallbackSrc;
             return;
-          } else {
-            // Second fallback: try to find URL from current manifest
-            const manifest =
-              GlobalLogoManifestServiceManager.getCurrentManifest();
-            const manifestLogo = manifest?.logos.find((l) => l.id === logo.id);
-            if (
-              manifestLogo &&
-              manifestLogo.url &&
-              !e.target.src.includes(manifestLogo.url)
-            ) {
-              console.log(
-                "CompanyLogo: Trying manifest URL fallback:",
-                manifestLogo.url
-              );
-              e.target.src = manifestLogo.url;
-              return;
-            }
           }
         }
 
-        // Final fallback: hide image and show default logo
-        console.warn("CompanyLogo: All fallbacks failed, hiding banner");
+        // Final fallback: gracefully hide without causing layout shift
+        console.warn("CompanyLogo: Using default logo fallback");
+        e.target.style.opacity = "0";
         e.target.style.display = "none";
+
+        // Trigger re-render to default logo without flicker
+        setTimeout(() => {
+          if (e.target.parentElement) {
+            e.target.parentElement.innerHTML = "";
+          }
+        }, 100);
       },
       onLoad: () => {
         // Log successful banner load from remote admin-web

@@ -849,14 +849,14 @@ class BillboardConfigManager {
   initializeDefaultKeywords() {
     const defaultKeywords = [
       "Billboard",
-      "ITS", 
+      "ITS",
       "Nhiệt độ",
       "Độ ẩm",
       "Pm2.5",
       "PM10",
-      "Quảng cáo"
+      "Quảng cáo",
     ];
-    
+
     this.currentKeywords = [...defaultKeywords];
     this.renderKeywordChips();
   }
@@ -866,7 +866,7 @@ class BillboardConfigManager {
     if (!container) return;
 
     container.innerHTML = "";
-    
+
     this.currentKeywords.forEach((keyword, index) => {
       const chip = document.createElement("div");
       chip.className = "keyword-chip";
@@ -1880,31 +1880,42 @@ class BillboardConfigManager {
 
   renderLogoGrid() {
     const logoGrid = document.getElementById("logo-grid");
-    logoGrid.innerHTML = "";
+
+    // Prevent flicker by only updating if content actually changed
+    const currentContent = logoGrid.innerHTML;
+    let newContent = "";
 
     this.config.logoImages.forEach((logo, index) => {
-      const logoItem = document.createElement("div");
-      logoItem.className = "logo-item";
-
-      // Fix path resolution for downloaded files
+      // Enhanced path resolution with stable fallback strategy
       let logoSrc = logo.path;
+      let fallbackSrc = null;
+
       console.log(
-        `Config: Processing logo ${logo.name}, original path: ${logo.path}, source: ${logo.source}`
+        `Config: Processing logo ${logo.name}, source: ${logo.source}`
       );
 
-      if (logo.source === "github_cdn" && logo.path) {
-        // Convert Windows backslash to forward slash, then create absolute path
-        const normalizedPath = logo.path.replace(/\\/g, "/");
-        // Check if it's a relative path and make it absolute
-        if (
-          !normalizedPath.startsWith("/") &&
-          !normalizedPath.match(/^[A-Za-z]:/)
-        ) {
-          logoSrc = `file:///f:/EoH Company/ITS_OurdoorScreen/${normalizedPath}`;
-        } else {
-          logoSrc = `file:///${normalizedPath}`;
+      if (logo.source === "github_cdn") {
+        // Primary: Try GitHub CDN URL if available
+        if (logo.url) {
+          logoSrc = logo.url;
+        } else if (logo.path) {
+          // Secondary: Use local downloaded file
+          const normalizedPath = logo.path.replace(/\\/g, "/");
+          if (
+            !normalizedPath.startsWith("/") &&
+            !normalizedPath.match(/^[A-Za-z]:/)
+          ) {
+            logoSrc = `file:///f:/EoH Company/ITS_OurdoorScreen/${normalizedPath}`;
+          } else {
+            logoSrc = `file:///${normalizedPath}`;
+          }
         }
-        console.log(`Config: GitHub CDN logo converted to: ${logoSrc}`);
+
+        // Prepare fallback
+        fallbackSrc = `./assets/imgs/${logo.name}`;
+        console.log(
+          `Config: GitHub CDN logo - primary: ${logoSrc}, fallback: ${fallbackSrc}`
+        );
       } else if (
         logo.path &&
         !logo.path.startsWith("data:") &&
@@ -1923,24 +1934,41 @@ class BillboardConfigManager {
         console.log(`Config: Local logo converted to: ${logoSrc}`);
       }
 
-      logoItem.innerHTML = `
-                <img src="${logoSrc}" alt="${logo.name}" 
-                     onerror="
-                       console.error('Config: Failed to load logo:', '${logoSrc}'); 
-                       if (this.src !== './assets/imgs/${logo.name}') {
-                         console.log('Config: Trying assets fallback for:', '${logo.name}');
-                         this.src = './assets/imgs/${logo.name}';
-                       } else {
-                         this.style.display='none'; 
-                         this.nextElementSibling.textContent='${logo.name} (Load Failed)';
-                       }
-                     "
-                     onload="console.log('Config: Logo loaded successfully:', '${logoSrc}')" />
-                <p style="font-size: 12px; margin-top: 5px; word-break: break-all;">${logo.name}</p>
-                <button class="remove-btn" onclick="configManager.removeLogo(${index})">×</button>
-            `;
-      logoGrid.appendChild(logoItem);
+      newContent += `
+        <div class="logo-item">
+          <img src="${logoSrc}" alt="${logo.name}" 
+               style="max-width: 80px; max-height: 60px; object-fit: contain; transition: opacity 0.2s ease;"
+               onerror="
+                 console.error('Config: Failed to load:', this.src); 
+                 if (!this.dataset.fallbackTried && '${fallbackSrc}' && this.src !== '${fallbackSrc}') {
+                   this.dataset.fallbackTried = 'true';
+                   this.src = '${fallbackSrc}';
+                 } else {
+                   this.style.opacity = '0.3'; 
+                   this.nextElementSibling.innerHTML = '${logo.name}<br><small style=\\"color: #dc3545;\\">(Failed to load)</small>';
+                 }
+               "
+               onload="
+                 console.log('Config: Logo loaded successfully:', this.src);
+                 this.style.opacity = '1';
+               " />
+          <p style="font-size: 12px; margin-top: 5px; word-break: break-all; text-align: center;">${logo.name}</p>
+          <button class="remove-btn" onclick="configManager.removeLogo(${index})" style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; background: #dc3545; color: white; border: none; border-radius: 50%; cursor: pointer; font-size: 12px;">×</button>
+        </div>
+      `;
     });
+
+    // Only update DOM if content changed to prevent flicker
+    if (currentContent !== newContent) {
+      logoGrid.innerHTML = newContent;
+      console.log(
+        "Config: Logo grid updated with",
+        this.config.logoImages.length,
+        "logos"
+      );
+    } else {
+      console.log("Config: Logo grid content unchanged, skipping update");
+    }
   }
 
   addLogo(file) {
