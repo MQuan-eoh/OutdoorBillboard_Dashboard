@@ -755,6 +755,58 @@
             </div>
           </div>
 
+          <!-- 📋 SAVED CONFIG INFO: Show info about previously saved config -->
+          <div
+            class="config-card"
+            id="era-saved-config-info"
+            style="display: none"
+          >
+            <h3 class="card-title">📋 Cấu Hình Đã Lưu</h3>
+            <div
+              style="
+                padding: 15px;
+                background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
+                border: 2px solid #c3e6c3;
+                border-radius: 8px;
+                margin-bottom: 15px;
+              "
+            >
+              <div
+                style="display: flex; align-items: center; margin-bottom: 10px"
+              >
+                <span
+                  style="
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 24px;
+                    height: 24px;
+                    background: #28a745;
+                    color: white;
+                    border-radius: 50%;
+                    font-size: 14px;
+                    font-weight: bold;
+                    margin-right: 8px;
+                  "
+                  >✓</span
+                >
+                <strong style="color: #155724"
+                  >Đã có cấu hình E-Ra từ lần trước</strong
+                >
+              </div>
+              <div
+                id="saved-config-summary"
+                style="color: #155724; font-size: 14px"
+              >
+                <!-- Will be populated with config summary -->
+              </div>
+            </div>
+            <p style="color: #6c757d; font-size: 14px; margin-bottom: 0">
+              💡 <strong>Mẹo:</strong> Nhấn "Lấy Cấu Hình E-Ra" để cập nhật danh
+              sách chip và datastream mới nhất từ server.
+            </p>
+          </div>
+
           <div class="config-card" id="era-chips-section" style="display: none">
             <h3 class="card-title">Chip Khả Dụng</h3>
             <div id="era-chips-list">
