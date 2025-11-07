@@ -716,6 +716,7 @@ class BillboardConfigManager {
         // Update UI with results
         this.displayChips(result.chips);
         this.displayDatastreams(result.datastreams);
+        this.displayUnits(result.units || []);
         this.populateMappingSelectors(result.datastreams);
         this.populateUnitsSelector(result.units || []);
         this.loadScaleConfigFromSystem();
@@ -1174,6 +1175,14 @@ class BillboardConfigManager {
     });
   }
 
+  displayUnits(units) {
+    // Units are displayed in dropdown, not in a separate list
+    // This method is kept for consistency but units are handled by populateUnitsSelector
+    console.log(
+      `ConfigManager: Units available for dropdown: ${units?.length || 0}`
+    );
+  }
+
   displayDatastreams(datastreams) {
     const datastreamsList = document.getElementById("era-datastreams-list");
     if (!datastreamsList || !datastreams) return;
@@ -1278,12 +1287,12 @@ class BillboardConfigManager {
       unitSelector.removeChild(unitSelector.lastChild);
     }
 
-    // Add unit options
+    // Add unit options (based on chips format)
     units.forEach((unit) => {
       const option = document.createElement("option");
       option.value = unit.id.toString();
       option.textContent = `${unit.name} (ID: ${unit.id})${
-        unit.type ? ` [${unit.type}]` : ""
+        unit.description ? ` | ${unit.description}` : ""
       }`;
       unitSelector.appendChild(option);
     });

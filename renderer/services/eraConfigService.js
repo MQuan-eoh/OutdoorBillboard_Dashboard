@@ -182,57 +182,37 @@ class EraConfigService {
 
   /**
    * Get list of available units from E-Ra platform for air quality API
+   * Uses chips as units since each chip can represent a building unit/location
    */
   async getUnits() {
     try {
-      console.log("EraConfigService: Fetching units from E-Ra platform");
+      console.log("EraConfigService: Getting units from cached chips");
 
-      if (!this.authService || !this.authService.getAuthToken()) {
+      // Get chips first (units are based on chips)
+      const chipsResult = await this.getChips();
+      if (!chipsResult.success) {
         return {
           success: false,
-          error: "Authentication required",
-          message: "Please login to E-Ra platform first",
+          error: chipsResult.error,
+          message: "Failed to get chips data to extract units",
         };
       }
 
-      const response = await fetch(`${this.baseUrl}${this.unitsEndpoint}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.authService.getAuthToken()}`,
-        },
-      });
+      // Convert chips to units format
+      const units = this.convertChipsToUnits(chipsResult.chips);
+      this.cachedUnits = units;
 
-      const responseData = await response.json();
-      console.log("EraConfigService: Units API response:", responseData);
-
-      if (response.ok && responseData.success) {
-        // Parse units data based on actual API response structure
-        const units = this.parseUnitsResponse(responseData);
-        this.cachedUnits = units;
-
-        return {
-          success: true,
-          units: units,
-          message: `Found ${units.length} units`,
-        };
-      } else {
-        console.error("EraConfigService: Failed to fetch units:", responseData);
-        return {
-          success: false,
-          error:
-            responseData.message ||
-            responseData.error ||
-            "Failed to fetch units",
-          message: "Could not retrieve units list from E-Ra platform",
-        };
-      }
+      return {
+        success: true,
+        units: units,
+        message: `Found ${units.length} units from chips`,
+      };
     } catch (error) {
-      console.error("EraConfigService: Error fetching units:", error);
+      console.error("EraConfigService: Error getting units:", error);
       return {
         success: false,
         error: error.message || "Network error",
-        message: "Failed to connect to E-Ra platform",
+        message: "Failed to get units from chips data",
       };
     }
   }
@@ -400,7 +380,47 @@ class EraConfigService {
   }
 
   /**
-   * Parse units response from E-Ra API
+   * Extract unique units from datastreams configs data
+   */
+  /**
+   * Convert chips to units format for dropdown selection
+   * Each chip represents a potential unit/location for air quality monitoring
+   */
+  convertChipsToUnits(chips) {
+    const units = [];
+
+    try {
+      chips.forEach((chip) => {
+        units.push({
+          id: chip.id.toString(), // Use chip ID as unit ID
+          name: chip.name, // Chip name as display name
+          description: chip.description || `Chip ${chip.id}`,
+          isOnline: chip.isOnline,
+          lastSeen: chip.lastSeen,
+          deviceType: chip.deviceType,
+        });
+      });
+
+      // Sort units by name
+      units.sort((a, b) => a.name.localeCompare(b.name));
+
+      console.log(
+        `EraConfigService: Converted ${units.length} chips to units:`,
+        units.map((u) => `${u.name} (ID: ${u.id})`)
+      );
+
+      return units;
+    } catch (error) {
+      console.error(
+        "EraConfigService: Error converting chips to units:",
+        error
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Parse units response from E-Ra API (legacy method, now uses extractUnitsFromDatastreams)
    */
   parseUnitsResponse(responseData) {
     const units = [];
