@@ -18,7 +18,9 @@ console.log("🔍 TESTING SPECIFIC CONFIG ID");
 console.log("==============================");
 console.log(`Gateway Token: ${gatewayToken}`);
 console.log(`Target Config ID: ${targetConfigId}`);
-console.log(`Expected Topic: eoh/chip/${gatewayToken}/config/${targetConfigId}/value`);
+console.log(
+  `Expected Topic: eoh/chip/${gatewayToken}/config/${targetConfigId}/value`
+);
 
 const client = mqtt.connect("mqtt://mqtt1.eoh.io:1883", {
   username: gatewayToken,
@@ -32,10 +34,10 @@ let messageReceived = false;
 
 client.on("connect", () => {
   console.log("✅ Connected to E-RA MQTT broker");
-  
+
   // Subscribe to specific config ID
   const topic = `eoh/chip/${gatewayToken}/config/${targetConfigId}/value`;
-  
+
   client.subscribe(topic, { qos: 1 }, (err) => {
     if (err) {
       console.error("❌ Subscription failed:", err);
@@ -53,7 +55,7 @@ client.on("message", (topic, message) => {
   console.log(`📨 [${new Date().toLocaleTimeString()}] Message received!`);
   console.log(`   Topic: ${topic}`);
   console.log(`   Message: ${message.toString()}`);
-  
+
   try {
     const data = JSON.parse(message.toString());
     console.log(`   Parsed data:`, data);
@@ -70,7 +72,7 @@ client.on("error", (error) => {
 setTimeout(() => {
   const allTopic = `eoh/chip/${gatewayToken}/config/+/value`;
   console.log(`\n🔍 Also subscribing to all configs: ${allTopic}`);
-  
+
   client.subscribe(allTopic, { qos: 1 }, (err) => {
     if (!err) {
       console.log("✅ Subscribed to all config topics");
@@ -83,7 +85,7 @@ setTimeout(() => {
 setTimeout(() => {
   console.log("\n📊 TEST RESULTS:");
   console.log("================");
-  
+
   if (messageReceived) {
     console.log("✅ Config ID 145634 is ACTIVE and sending data");
   } else {
@@ -93,7 +95,7 @@ setTimeout(() => {
     console.log("   2. Config ID 145634 is configured properly");
     console.log("   3. Sensor is connected and working");
   }
-  
+
   client.end();
   process.exit(0);
 }, 30000);

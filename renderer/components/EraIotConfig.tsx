@@ -16,9 +16,9 @@ const EraIotConfigComponent: React.FC<EraIotConfigProps> = ({
     baseUrl: "https://backend.eoh.io",
     sensorConfigs: {
       temperature: null, // FIXED: No hardcode - load from config.json
-      humidity: null,    // FIXED: No hardcode - load from config.json
-      pm25: null,        // FIXED: No hardcode - load from config.json
-      pm10: null,        // FIXED: No hardcode - load from config.json
+      humidity: null, // FIXED: No hardcode - load from config.json
+      pm25: null, // FIXED: No hardcode - load from config.json
+      pm10: null, // FIXED: No hardcode - load from config.json
     },
     updateInterval: 5,
     timeout: 15000,

@@ -2526,6 +2526,15 @@ function BillboardLayout() {
                 pm25: null,
                 pm10: null,
               },
+              scaleConfig: config.eraIot.scaleConfig || {
+                scaleFactor: 0.1,
+                appliedSensors: {
+                  temperature: false,
+                  humidity: false,
+                  pm25: false,
+                  pm10: false,
+                },
+              },
               updateInterval: config.eraIot.updateInterval || 5,
               timeout: config.eraIot.timeout || 15000,
               retryAttempts: config.eraIot.retryAttempts || 3,

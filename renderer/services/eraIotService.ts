@@ -47,6 +47,15 @@ export interface EraIotConfig {
     pm25: number | null;
     pm10: number | null;
   };
+  scaleConfig?: {
+    scaleFactor: number;
+    appliedSensors: {
+      temperature: boolean;
+      humidity: boolean;
+      pm25: boolean;
+      pm10: boolean;
+    };
+  };
   updateInterval: number; // minutes (for compatibility, not used in MQTT)
   timeout: number; // milliseconds (connection timeout)
   retryAttempts: number;
@@ -109,6 +118,7 @@ class EraIotService {
         gatewayToken,
         authToken: this.config.authToken, // Keep for compatibility
         sensorConfigs: this.config.sensorConfigs,
+        scaleConfig: this.config.scaleConfig, // Pass scale configuration to MQTT service
         options: {
           keepalive: 60,
           connectTimeout: this.config.timeout,

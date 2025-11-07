@@ -20,6 +20,17 @@ class EraConfigService {
       pm10: null,
     };
 
+    // Scale factor configuration
+    this.scaleConfig = {
+      scaleFactor: 0.1,
+      appliedSensors: {
+        temperature: false,
+        humidity: false,
+        pm25: false,
+        pm10: false,
+      },
+    };
+
     console.log("EraConfigService: Initialized");
   }
 
@@ -358,6 +369,33 @@ class EraConfigService {
   }
 
   /**
+   * Update scale factor configuration
+   */
+  updateScaleFactor(scaleFactor) {
+    this.scaleConfig.scaleFactor = scaleFactor;
+    console.log(`EraConfigService: Updated scale factor to: ${scaleFactor}`);
+  }
+
+  /**
+   * Update scale factor applied sensors
+   */
+  updateScaleAppliedSensors(sensorType, isApplied) {
+    this.scaleConfig.appliedSensors[sensorType] = isApplied;
+    console.log(
+      `EraConfigService: Scale factor ${
+        isApplied ? "applied" : "removed"
+      } for ${sensorType}`
+    );
+  }
+
+  /**
+   * Get current scale configuration
+   */
+  getCurrentScaleConfig() {
+    return { ...this.scaleConfig };
+  }
+
+  /**
    * Auto-detect sensor mappings based on datastream names
    */
   autoDetectMapping() {
@@ -469,21 +507,45 @@ class EraConfigService {
   }
 
   /**
-   * Clear cached data
+   * Clear cached data (only use when user logs out)
    */
   clearCache() {
     this.cachedChips = [];
     this.cachedDatastreams = [];
+    this.currentMapping = {
+      temperature: null,
+      humidity: null,
+      pm25: null,
+      pm10: null,
+    };
+    // Reset scale config to default
+    this.scaleConfig = {
+      scaleFactor: 0.1,
+      appliedSensors: {
+        temperature: false,
+        humidity: false,
+        pm25: false,
+        pm10: false,
+      },
+    };
     console.log("EraConfigService: Cache cleared");
   }
 
   /**
-   * Destroy service and cleanup
+   * Clear cache for logout - public method to be called explicitly on logout
+   */
+  clearCacheOnLogout() {
+    this.clearCache();
+    console.log("EraConfigService: Cache cleared due to user logout");
+  }
+
+  /**
+   * Destroy service and cleanup (does NOT clear cache automatically)
    */
   destroy() {
-    this.clearCache();
+    // DO NOT auto-clear cache on destroy - preserve for tab switching
     this.authService = null;
-    console.log("EraConfigService: Destroyed");
+    console.log("EraConfigService: Destroyed (cache preserved)");
   }
 }
 

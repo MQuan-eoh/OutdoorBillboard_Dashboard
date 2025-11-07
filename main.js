@@ -1019,10 +1019,9 @@ class MainProcessMqttService {
 
         // Extract value from various possible formats
         if (typeof data === "object" && data !== null) {
-          const keys = Object.keys(data);
-          if (keys.length === 1) {
-            const key = keys[0];
-            const potentialValue = data[key];
+          // Priority 1: Look for 'v' key (E-Ra IoT standard format)
+          if (data.hasOwnProperty("v")) {
+            const potentialValue = data.v;
             if (typeof potentialValue === "string") {
               value = this.parseEraValue(potentialValue);
             } else if (
@@ -1030,6 +1029,22 @@ class MainProcessMqttService {
               !isNaN(potentialValue)
             ) {
               value = potentialValue;
+            }
+          }
+          // Priority 2: Single key object (fallback)
+          else {
+            const keys = Object.keys(data);
+            if (keys.length === 1) {
+              const key = keys[0];
+              const potentialValue = data[key];
+              if (typeof potentialValue === "string") {
+                value = this.parseEraValue(potentialValue);
+              } else if (
+                typeof potentialValue === "number" &&
+                !isNaN(potentialValue)
+              ) {
+                value = potentialValue;
+              }
             }
           }
         }
@@ -1047,8 +1062,21 @@ class MainProcessMqttService {
         const configIdMatch = topic.match(/\/config\/(\d+)\/value$/);
         if (configIdMatch) {
           const configId = parseInt(configIdMatch[1]);
+          console.log(
+            `MainProcessMqttService: Extracted configId: ${configId}, value: ${value}`
+          );
           this.updateSensorData(configId, value);
+        } else {
+          console.warn(
+            `MainProcessMqttService: Failed to extract config ID from topic: ${topic}`
+          );
         }
+      } else {
+        console.warn(
+          `MainProcessMqttService: Invalid value extracted: ${value}, isNaN: ${isNaN(
+            value
+          )}`
+        );
       }
     } catch (error) {
       console.error("MainProcessMqttService: Error processing message:", error);
@@ -1082,20 +1110,47 @@ class MainProcessMqttService {
   }
 
   updateSensorData(configId, value) {
+    console.log(
+      `MainProcessMqttService: updateSensorData called with configId: ${configId}, value: ${value}`
+    );
     const sensorType = this.mapConfigIdToSensorType(configId);
+    console.log(
+      `MainProcessMqttService: Mapped sensor type: ${sensorType} for configId: ${configId}`
+    );
     if (sensorType) {
+      // Apply scale factor if configured
+      let processedValue = value;
+      if (
+        this.config.scaleConfig &&
+        this.config.scaleConfig.appliedSensors &&
+        this.config.scaleConfig.appliedSensors[sensorType]
+      ) {
+        const scaleFactor = this.config.scaleConfig.scaleFactor || 0.1;
+        processedValue = value * scaleFactor;
+        console.log(
+          `MainProcessMqttService: Applied scale factor ${scaleFactor} to ${sensorType}: ${value} → ${processedValue}`
+        );
+      }
+
       console.log(
-        `MainProcessMqttService: Updating ${sensorType} (ID: ${configId}) = ${value}`
+        `MainProcessMqttService: Updating ${sensorType} (ID: ${configId}) = ${processedValue}`
       );
 
-      currentSensorData[sensorType] = value;
+      currentSensorData[sensorType] = processedValue;
       currentSensorData.lastUpdated = new Date();
       currentSensorData.status = "connected";
 
       // Send data to renderer process
       this.broadcastSensorData();
+      console.log(
+        `MainProcessMqttService: Broadcasted sensor data:`,
+        currentSensorData
+      );
     } else {
-      console.warn(`MainProcessMqttService: Unknown config ID: ${configId}`);
+      console.warn(
+        `MainProcessMqttService: Unknown config ID: ${configId}. Available configs:`,
+        this.config.sensorConfigs
+      );
     }
   }
 

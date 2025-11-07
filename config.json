@@ -70,9 +70,18 @@
     "baseUrl": "https://backend.eoh.io",
     "sensorConfigs": {
       "temperature": 145634,
-      "humidity": null,
-      "pm25": null,
-      "pm10": null
+      "humidity": 145615,
+      "pm25": 145635,
+      "pm10": 145636
+    },
+    "scaleConfig": {
+      "scaleFactor": 0.1,
+      "appliedSensors": {
+        "temperature": true,
+        "humidity": true,
+        "pm25": false,
+        "pm10": false
+      }
     },
     "updateInterval": 5,
     "timeout": 15000,

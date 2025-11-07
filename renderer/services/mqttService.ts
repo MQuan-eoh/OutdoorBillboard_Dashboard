@@ -32,6 +32,15 @@ export interface MqttConfig {
     pm25: number | null;
     pm10: number | null;
   };
+  scaleConfig?: {
+    scaleFactor: number;
+    appliedSensors: {
+      temperature: boolean;
+      humidity: boolean;
+      pm25: boolean;
+      pm10: boolean;
+    };
+  };
   options: {
     keepalive: number;
     connectTimeout: number;
@@ -386,10 +395,23 @@ class MqttService {
     // Map config ID to sensor type
     const sensorType = this.mapConfigIdToSensorType(configId);
     if (sensorType) {
+      // Apply scale factor if configured
+      let processedValue = value;
+      if (
+        this.config.scaleConfig &&
+        this.config.scaleConfig.appliedSensors[sensorType]
+      ) {
+        const scaleFactor = this.config.scaleConfig.scaleFactor;
+        processedValue = value * scaleFactor;
+        console.log(
+          `MqttService: Applied scale factor ${scaleFactor} to ${sensorType}: ${value} → ${processedValue}`
+        );
+      }
+
       console.log(
-        `MqttService: Updating ${sensorType} (ID: ${configId}) = ${value}`
+        `MqttService: Updating ${sensorType} (ID: ${configId}) = ${processedValue}`
       );
-      this.currentData[sensorType] = value;
+      this.currentData[sensorType] = processedValue;
       this.currentData.timestamp = new Date();
     } else {
       console.warn(`MqttService: Unknown config ID: ${configId}`);
