@@ -21,6 +21,9 @@ class BillboardConfigManager {
     this.eraConfigService = null;
     this.initEraConfigService();
 
+    // Initialize keyword array for auto-detect modal
+    this.currentKeywords = [];
+
     this.init();
   }
 
@@ -124,6 +127,7 @@ class BillboardConfigManager {
     this.setupLogoModeHandlers();
     this.setupLoginHandlers();
     this.setupEraConfigHandlers();
+    this.setupModalHandlers();
     this.loadConfiguration();
     this.setupDragAndDrop();
   }
@@ -817,7 +821,123 @@ class BillboardConfigManager {
       return;
     }
 
-    const autoMapping = this.eraConfigService.autoDetectMapping();
+    // Show modal for keywords input
+    this.showAutoDetectModal();
+  }
+
+  showAutoDetectModal() {
+    const modal = document.getElementById("autoDetectModal");
+    const keywordInput = document.getElementById("keywordInput");
+
+    if (modal) {
+      // Initialize default keywords
+      this.initializeDefaultKeywords();
+      modal.classList.remove("modal-hidden");
+      if (keywordInput) {
+        keywordInput.focus();
+      }
+    }
+  }
+
+  closeAutoDetectModal() {
+    const modal = document.getElementById("autoDetectModal");
+    if (modal) {
+      modal.classList.add("modal-hidden");
+    }
+  }
+
+  initializeDefaultKeywords() {
+    const defaultKeywords = [
+      "Billboard",
+      "ITS", 
+      "Nhiệt độ",
+      "Độ ẩm",
+      "Pm2.5",
+      "PM10",
+      "Quảng cáo"
+    ];
+    
+    this.currentKeywords = [...defaultKeywords];
+    this.renderKeywordChips();
+  }
+
+  renderKeywordChips() {
+    const container = document.getElementById("keywordChips");
+    if (!container) return;
+
+    container.innerHTML = "";
+    
+    this.currentKeywords.forEach((keyword, index) => {
+      const chip = document.createElement("div");
+      chip.className = "keyword-chip";
+      chip.innerHTML = `
+        <span>${keyword}</span>
+        <button class="keyword-chip-remove" onclick="configManager.removeKeyword(${index})" type="button">×</button>
+      `;
+      container.appendChild(chip);
+    });
+  }
+
+  removeKeyword(index) {
+    if (index >= 0 && index < this.currentKeywords.length) {
+      this.currentKeywords.splice(index, 1);
+      this.renderKeywordChips();
+    }
+  }
+
+  addKeywordFromInput() {
+    const input = document.getElementById("keywordInput");
+    if (!input) return;
+
+    const newKeyword = input.value.trim();
+    if (newKeyword && !this.currentKeywords.includes(newKeyword)) {
+      this.currentKeywords.push(newKeyword);
+      this.renderKeywordChips();
+      input.value = "";
+    } else if (this.currentKeywords.includes(newKeyword)) {
+      this.showNotification("Từ khóa đã tồn tại", "warning");
+    }
+  }
+
+  setupModalHandlers() {
+    const modal = document.getElementById("autoDetectModal");
+    const keywordInput = document.getElementById("keywordInput");
+
+    if (modal) {
+      // Close modal when clicking outside content
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
+          this.closeAutoDetectModal();
+        }
+      });
+
+      // Handle Enter key in input to add keywords
+      if (keywordInput) {
+        keywordInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            this.addKeywordFromInput();
+          }
+        });
+      }
+    }
+  }
+
+  executeAutoDetectWithKeywords() {
+    if (!this.currentKeywords || this.currentKeywords.length === 0) {
+      this.showNotification("Vui lòng thêm ít nhất một từ khóa", "error");
+      return;
+    }
+
+    // Close modal
+    this.closeAutoDetectModal();
+
+    // Convert array to string format for compatibility with existing function
+    const keywordsString = this.currentKeywords.join(" - ");
+
+    // Execute auto-detect with keywords
+    const autoMapping =
+      this.eraConfigService.autoDetectMappingWithKeywords(keywordsString);
 
     // Update selectors with auto-detected mapping
     Object.entries(autoMapping).forEach(([sensor, datastreamId]) => {
@@ -834,10 +954,18 @@ class BillboardConfigManager {
     const mappedCount = Object.values(autoMapping).filter(
       (id) => id !== null
     ).length;
-    this.showNotification(
-      `Auto-detected ${mappedCount}/4 sensor mappings`,
-      "success"
-    );
+
+    if (mappedCount > 0) {
+      this.showNotification(
+        `Tự động phát hiện thành công ${mappedCount}/4 cảm biến với từ khóa: ${keywordsString}`,
+        "success"
+      );
+    } else {
+      this.showNotification(
+        "Không tìm thấy cảm biến nào phù hợp với từ khóa đã nhập",
+        "warning"
+      );
+    }
   }
 
   async handleSaveMapping(silent = false) {
@@ -2133,6 +2261,25 @@ async function saveAndApply() {
 async function exitConfig() {
   if (window.electronAPI) {
     await window.electronAPI.exitConfig();
+  }
+}
+
+// Global functions for modal handling (called from HTML)
+function closeAutoDetectModal() {
+  if (configManager) {
+    configManager.closeAutoDetectModal();
+  }
+}
+
+function executeAutoDetectWithKeywords() {
+  if (configManager) {
+    configManager.executeAutoDetectWithKeywords();
+  }
+}
+
+function addKeywordFromInput() {
+  if (configManager) {
+    configManager.addKeywordFromInput();
   }
 }
 

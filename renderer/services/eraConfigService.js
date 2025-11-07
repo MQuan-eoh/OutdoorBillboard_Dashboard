@@ -496,6 +496,116 @@ class EraConfigService {
   }
 
   /**
+   * Auto-detect sensor mappings based on custom keywords
+   */
+  autoDetectMappingWithKeywords(keywordsString) {
+    const autoMapping = {
+      temperature: null,
+      humidity: null,
+      pm25: null,
+      pm10: null,
+    };
+
+    // Parse keywords from input string (separated by dash)
+    const keywords = keywordsString
+      .split("-")
+      .map((k) => k.trim().toLowerCase())
+      .filter((k) => k.length > 0);
+
+    console.log(`EraConfigService: Using keywords for detection:`, keywords);
+
+    this.cachedDatastreams.forEach((stream) => {
+      const lowerName = stream.name.toLowerCase();
+      const lowerDesc = (stream.description || "").toLowerCase();
+
+      // Check if stream name or description contains any of the keywords
+      const nameContainsKeyword = keywords.some(
+        (keyword) => lowerName.includes(keyword) || lowerDesc.includes(keyword)
+      );
+
+      if (!nameContainsKeyword) {
+        return; // Skip if no keywords match
+      }
+
+      // Enhanced temperature detection with keywords
+      if (
+        (lowerName.includes("temp") ||
+          lowerName.includes("nhiệt") ||
+          lowerName.includes("°c") ||
+          lowerName.includes("celsius") ||
+          lowerDesc.includes("temperature") ||
+          lowerDesc.includes("nhiệt độ") ||
+          keywords.some((k) => k.includes("nhiệt") || k.includes("temp"))) &&
+        !autoMapping.temperature
+      ) {
+        autoMapping.temperature = stream.id;
+        console.log(
+          `EraConfigService: Auto-detected temperature sensor with keywords: ${stream.name} (ID: ${stream.id})`
+        );
+      }
+      // Enhanced humidity detection with keywords
+      else if (
+        (lowerName.includes("hum") ||
+          lowerName.includes("ẩm") ||
+          lowerName.includes("rh") ||
+          lowerName.includes("%") ||
+          lowerDesc.includes("humidity") ||
+          lowerDesc.includes("độ ẩm") ||
+          keywords.some((k) => k.includes("ẩm") || k.includes("hum"))) &&
+        !autoMapping.humidity
+      ) {
+        autoMapping.humidity = stream.id;
+        console.log(
+          `EraConfigService: Auto-detected humidity sensor with keywords: ${stream.name} (ID: ${stream.id})`
+        );
+      }
+      // Enhanced PM2.5 detection with keywords
+      else if (
+        (lowerName.includes("pm2.5") ||
+          lowerName.includes("pm25") ||
+          lowerName.includes("pm 2.5") ||
+          lowerDesc.includes("pm2.5") ||
+          lowerDesc.includes("pm 2.5") ||
+          keywords.some((k) => k.includes("pm2.5") || k.includes("pm25"))) &&
+        !autoMapping.pm25
+      ) {
+        autoMapping.pm25 = stream.id;
+        console.log(
+          `EraConfigService: Auto-detected PM2.5 sensor with keywords: ${stream.name} (ID: ${stream.id})`
+        );
+      }
+      // Enhanced PM10 detection with keywords
+      else if (
+        (lowerName.includes("pm10") ||
+          lowerName.includes("pm 10") ||
+          lowerDesc.includes("pm10") ||
+          lowerDesc.includes("pm 10") ||
+          keywords.some((k) => k.includes("pm10"))) &&
+        !autoMapping.pm10
+      ) {
+        autoMapping.pm10 = stream.id;
+        console.log(
+          `EraConfigService: Auto-detected PM10 sensor with keywords: ${stream.name} (ID: ${stream.id})`
+        );
+      }
+    });
+
+    console.log(
+      "EraConfigService: Auto-detected mapping with keywords complete:",
+      autoMapping
+    );
+
+    // Apply the detected mapping immediately
+    Object.entries(autoMapping).forEach(([sensorType, datastreamId]) => {
+      if (datastreamId !== null) {
+        this.updateMapping(sensorType, datastreamId);
+      }
+    });
+
+    return autoMapping;
+  }
+
+  /**
    * Apply mapping to system configuration
    */
   applyMapping(mapping) {

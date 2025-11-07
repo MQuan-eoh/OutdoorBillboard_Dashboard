@@ -608,6 +608,198 @@
           align-items: stretch;
         }
       }
+
+      /* Modal Styles */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .modal-content {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow: hidden;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        border-bottom: 1px solid #e9ecef;
+        background: #f8f9fa;
+      }
+
+      .modal-header h3 {
+        margin: 0;
+        color: #333;
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .modal-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: #6c757d;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+      }
+
+      .modal-close:hover {
+        background: #e9ecef;
+        color: #333;
+      }
+
+      .modal-body {
+        padding: 20px;
+      }
+
+      .modal-description {
+        margin-bottom: 20px;
+        color: #6c757d;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .form-label {
+        display: block;
+        margin-bottom: 8px;
+        color: #333;
+        font-weight: 500;
+        font-size: 14px;
+      }
+
+      .form-input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        box-sizing: border-box;
+      }
+
+      .form-input:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+      }
+
+      .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 20px;
+        border-top: 1px solid #e9ecef;
+        background: #f8f9fa;
+      }
+
+      .modal-hidden {
+        display: none;
+      }
+
+      /* Keyword Chips Styles */
+      .keyword-chips-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 15px;
+        min-height: 40px;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: #f8f9fa;
+      }
+
+      .keyword-chip {
+        display: inline-flex;
+        align-items: center;
+        background-color: rgb(255, 107, 53);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 16px;
+        font-size: 13px;
+        font-weight: 500;
+        gap: 6px;
+      }
+
+      .keyword-chip-remove {
+        background: rgba(255, 255, 255, 0.3);
+        border: none;
+        color: white;
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 50%;
+        font-size: 12px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+      }
+
+      .keyword-chip-remove:hover {
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      .keyword-input-container {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .keyword-input {
+        flex: 1;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      .keyword-input:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+      }
+
+      .add-keyword-btn {
+        padding: 8px 16px;
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .add-keyword-btn:hover {
+        background: #218838;
+      }
+
+      .add-keyword-btn:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+      }
     </style>
   </head>
   <body>
@@ -1397,6 +1589,66 @@
         </button>
       </div>
     </div>
+
+    <!-- Auto Detect Keywords Modal -->
+    <div id="autoDetectModal" class="modal-overlay modal-hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Tự Động Phát Hiện Cấu Hình</h3>
+          <button
+            class="modal-close"
+            onclick="closeAutoDetectModal()"
+            type="button"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-description">
+            Chọn hoặc thêm từ khóa để tự động phát hiện cấu hình cảm biến.
+          </p>
+          <div class="form-group">
+            <label class="form-label">Từ khóa tìm kiếm:</label>
+            <div id="keywordChips" class="keyword-chips-container">
+              <!-- Keywords will be populated here as chips -->
+            </div>
+            <div class="keyword-input-container">
+              <input
+                type="text"
+                id="keywordInput"
+                class="keyword-input"
+                placeholder="Nhập từ khóa và nhấn Enter để thêm..."
+              />
+              <button
+                type="button"
+                id="addKeywordBtn"
+                class="add-keyword-btn"
+                onclick="addKeywordFromInput()"
+              >
+                Thêm
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            class="btn btn-secondary"
+            onclick="closeAutoDetectModal()"
+            type="button"
+          >
+            Hủy
+          </button>
+          <button
+            class="btn btn-primary"
+            onclick="executeAutoDetectWithKeywords()"
+            type="button"
+          >
+            Phát Hiện Cấu Hình
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script src="services/eraAuthService.js"></script>
     <script src="services/eraConfigService.js"></script>
     <script src="config.js"></script>
