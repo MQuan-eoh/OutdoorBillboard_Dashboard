@@ -1502,100 +1502,160 @@ class MainProcessMqttService {
         });
       }
 
-      // **SIMPLIFIED LOGIC: Always simulate successful update for development**
-      console.log("[OTA] Using simplified update simulation...");
-
-      // Send downloading status
-      this.sendUpdateStatus({
-        status: "downloading",
-        timestamp: Date.now(),
-        version: version,
-        messageId: messageId,
-      });
-
-      // Simulate download progress
-      console.log("[OTA] Simulating download progress...");
-      for (let i = 0; i <= 100; i += 25) {
-        this.sendUpdateStatus({
-          status: "downloading",
-          percent: i,
-          timestamp: Date.now(),
-          version: version,
-          messageId: messageId,
-          message: `Downloading... ${i}%`,
-        });
-        await new Promise((resolve) => setTimeout(resolve, 300));
-      }
-
-      // Improved version comparison logic
+      // **REAL UPDATE IMPLEMENTATION**
       const currentVersion = app.getVersion();
-      const isForceReinstall = version === currentVersion;
-      const isDowngrade = this.compareVersions(version, currentVersion) < 0;
       const isUpgrade = this.compareVersions(version, currentVersion) > 0;
+      const isDowngrade = this.compareVersions(version, currentVersion) < 0;
+      const isSameVersion = version === currentVersion;
 
       console.log("[OTA] Version analysis:", {
         current: currentVersion,
         requested: version,
-        isForceReinstall,
-        isDowngrade,
         isUpgrade,
+        isDowngrade,
+        isSameVersion,
       });
 
-      if (isForceReinstall) {
-        // Same version - force reinstall
-        console.log("[OTA] Force reinstall of same version");
-        this.sendUpdateStatus({
-          status: "no_updates_but_force_requested",
-          currentVersion: currentVersion,
-          requestedVersion: version,
-          message: `Force reinstall v${version} (same version)`,
-          timestamp: Date.now(),
-          messageId: messageId,
-        });
-      } else if (isDowngrade) {
-        // Downgrade requested
-        console.log("[OTA] Downgrade requested - treating as force install");
-        this.sendUpdateStatus({
-          status: "downgrade_requested",
-          currentVersion: currentVersion,
-          requestedVersion: version,
-          message: `Force downgrade from v${currentVersion} to v${version}`,
-          timestamp: Date.now(),
-          messageId: messageId,
-        });
-      } else if (isUpgrade) {
-        // Real upgrade
-        console.log("[OTA] Real upgrade available");
-        this.sendUpdateStatus({
-          status: "download_complete",
-          currentVersion: currentVersion,
-          requestedVersion: version,
-          message: `Upgrade from v${currentVersion} to v${version}`,
-          timestamp: Date.now(),
-          messageId: messageId,
-        });
-      } else {
-        // Fallback
-        this.sendUpdateStatus({
-          status: "update_complete",
-          currentVersion: currentVersion,
-          requestedVersion: version,
-          message: `Update process completed`,
-          timestamp: Date.now(),
-          messageId: messageId,
-        });
-      }
+      if (isUpgrade) {
+        // Real upgrade - use electron-updater
+        console.log("[OTA] Performing real upgrade using electron-updater...");
 
-      console.log("[OTA] Update process completed successfully");
+        this.sendUpdateStatus({
+          status: "checking",
+          timestamp: Date.now(),
+          version: version,
+          messageId: messageId,
+        });
+
+        try {
+          // Check for real updates
+          const updateCheckResult = await autoUpdater.checkForUpdates();
+
+          if (updateCheckResult && updateCheckResult.updateInfo) {
+            const availableVersion = updateCheckResult.updateInfo.version;
+
+            if (this.compareVersions(availableVersion, currentVersion) > 0) {
+              console.log("[OTA] Real update available:", availableVersion);
+
+              this.sendUpdateStatus({
+                status: "downloading",
+                timestamp: Date.now(),
+                version: availableVersion,
+                messageId: messageId,
+                message: "Downloading real update from GitHub...",
+              });
+
+              // Start real download
+              await autoUpdater.downloadUpdate();
+              console.log("[OTA] Real update download initiated");
+
+              // electron-updater events will handle progress and completion
+              return;
+            }
+          }
+
+          // No update available but force requested
+          console.log("[OTA] No update available, treating as force reinstall");
+          this.handleForceSameVersionInstall(
+            version,
+            messageId,
+            currentVersion
+          );
+        } catch (updateError) {
+          console.error("[OTA] Real update check failed:", updateError);
+          this.sendUpdateStatus({
+            status: "error",
+            error: `Update check failed: ${updateError.message}`,
+            timestamp: Date.now(),
+            messageId: messageId,
+          });
+        }
+      } else if (isDowngrade) {
+        // Downgrade scenario
+        console.log("[OTA] Downgrade requested - treating as manual install");
+        this.handleDowngradeInstall(version, messageId, currentVersion);
+      } else {
+        // Same version - force reinstall
+        console.log("[OTA] Same version force reinstall");
+        this.handleForceSameVersionInstall(version, messageId, currentVersion);
+      }
     } catch (error) {
       console.error("[OTA] Error in force update:", error);
       this.sendUpdateStatus({
         status: "error",
         error: error.message,
         timestamp: Date.now(),
+        messageId: command.messageId,
         errorCode: "HANDLER_ERROR",
       });
     }
+  }
+
+  handleForceSameVersionInstall(version, messageId, currentVersion) {
+    this.sendUpdateStatus({
+      status: "downloading",
+      timestamp: Date.now(),
+      version: version,
+      messageId: messageId,
+    });
+
+    // Simulate progress for same version
+    this.simulateDownloadProgress(version, messageId, 0, () => {
+      this.sendUpdateStatus({
+        status: "no_updates_but_force_requested",
+        currentVersion: currentVersion,
+        requestedVersion: version,
+        message: `Force reinstall v${version} (same version)`,
+        timestamp: Date.now(),
+        messageId: messageId,
+      });
+    });
+  }
+
+  handleDowngradeInstall(version, messageId, currentVersion) {
+    this.sendUpdateStatus({
+      status: "downloading",
+      timestamp: Date.now(),
+      version: version,
+      messageId: messageId,
+    });
+
+    // Simulate progress for downgrade
+    this.simulateDownloadProgress(version, messageId, 0, () => {
+      this.sendUpdateStatus({
+        status: "downgrade_requested",
+        currentVersion: currentVersion,
+        requestedVersion: version,
+        message: `Force downgrade from v${currentVersion} to v${version}`,
+        timestamp: Date.now(),
+        messageId: messageId,
+      });
+    });
+  }
+
+  simulateDownloadProgress(version, messageId, percent, onComplete) {
+    if (percent > 100) {
+      onComplete();
+      return;
+    }
+
+    this.sendUpdateStatus({
+      status: "downloading",
+      percent: percent,
+      timestamp: Date.now(),
+      version: version,
+      messageId: messageId,
+      message: `Downloading... ${percent}%`,
+    });
+
+    setTimeout(() => {
+      this.simulateDownloadProgress(
+        version,
+        messageId,
+        percent + 25,
+        onComplete
+      );
+    }, 300);
   }
 
   async handleResetAppCommand(command) {
@@ -2228,7 +2288,7 @@ function ensureAppUpdateFile() {
       const currentVersion = app.getVersion();
       const updateYaml = `version: ${currentVersion}
 files:
-  - url: https://github.com/MinhQuan7/ITS_OurdoorBillboard-/releases/download/v${currentVersion}/ITS-Billboard-Setup-${currentVersion}.exe
+  - url: https://github.com/MQuan-eoh/OutdoorBillboard_Dashboard/releases/download/v${currentVersion}/ITS-Billboard-Setup-${currentVersion}.exe
     sha512: ''
     size: 0
 path: ITS-Billboard-Setup-${currentVersion}.exe
@@ -2240,6 +2300,23 @@ releaseDate: ${new Date().toISOString()}
         "EnsureAppUpdateFile: Created app-update.yml at:",
         appUpdatePath
       );
+
+      // Also update the main latest.yml if in development
+      if (!app.isPackaged) {
+        const mainLatestYml = path.join(app.getAppPath(), "latest.yml");
+        try {
+          fs.writeFileSync(mainLatestYml, updateYaml);
+          console.log(
+            "EnsureAppUpdateFile: Updated main latest.yml at:",
+            mainLatestYml
+          );
+        } catch (writeError) {
+          console.warn(
+            "EnsureAppUpdateFile: Could not update main latest.yml:",
+            writeError.message
+          );
+        }
+      }
     } else {
       console.log(
         "EnsureAppUpdateFile: app-update.yml already exists at:",
@@ -2320,8 +2397,8 @@ async function initializeAutoUpdater() {
     // Configure electron-updater for GitHub releases
     autoUpdater.setFeedURL({
       provider: "github",
-      owner: "MinhQuan7",
-      repo: "ITS_OurdoorBillboard-",
+      owner: "MQuan-eoh",
+      repo: "OutdoorBillboard_Dashboard",
       releaseType: "release",
     });
 
@@ -2407,7 +2484,7 @@ async function initializeAutoUpdater() {
       try {
         console.log(`[OTA] Checking GitHub release for v${targetVersion}...`);
         const https = require("https");
-        const url = `https://api.github.com/repos/MinhQuan7/ITS_OurdoorBillboard-/releases/tags/v${targetVersion}`;
+        const url = `https://api.github.com/repos/MQuan-eoh/OutdoorBillboard_Dashboard/releases/tags/v${targetVersion}`;
 
         return new Promise((resolve, reject) => {
           const request = https.get(
@@ -2565,21 +2642,25 @@ async function initializeAutoUpdater() {
       // Send update success status
       if (mqttService) {
         mqttService.sendUpdateStatus({
-          status: "update_success",
+          status: "download_complete",
           version: info.version,
           timestamp: Date.now(),
+          message: `Update v${info.version} downloaded successfully`,
         });
 
-        // Auto-trigger reset app after 1 second
+        // Wait 2 seconds then trigger install
         setTimeout(() => {
-          console.log(
-            "AutoUpdater: Auto-triggering reset_app after download success"
-          );
-          mqttService.triggerResetApp({
-            reason: "post_update",
+          console.log("AutoUpdater: Triggering install and restart...");
+          mqttService.sendUpdateStatus({
+            status: "installing",
             version: info.version,
+            timestamp: Date.now(),
+            message: "Installing update and restarting...",
           });
-        }, 1000);
+
+          // Auto install and restart
+          autoUpdater.quitAndInstall();
+        }, 2000);
       }
 
       // Send notification to renderer (optional)

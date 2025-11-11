@@ -19,7 +19,9 @@
     "pack": "electron-packager . --platform=win32 --arch=x64 --out=dist/ --overwrite",
     "dist": "npm run pack",
     "prepare-release": "npm run build:renderer && npm run build:nsis",
-    "publish-release": "electron-builder --win --publish=always"
+    "publish-release": "electron-builder --win --publish=always",
+    "convert:app-icon": "powershell -ExecutionPolicy Bypass -File convert-images-to-icons.ps1 -Type app",
+    "convert:banner-logo": "powershell -ExecutionPolicy Bypass -File convert-images-to-icons.ps1 -Type banner"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -68,6 +70,7 @@
           ]
         }
       ],
+      "icon": "assets/icon.png",
       "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
@@ -83,8 +86,8 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "MinhQuan7",
-      "repo": "ITS_OurdoorBillboard-"
+      "owner": "MQuan-eoh",
+      "repo": "OutdoorBillboard_Dashboard"
     },
     "extraMetadata": {
       "main": "main.js"
