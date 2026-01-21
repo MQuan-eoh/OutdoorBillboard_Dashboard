@@ -1353,7 +1353,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
             style: { 
               width: "100%",
               padding: "0px 8px", // Reduced padding
-              margin: "0px 0 0 0" // Reset from -50px to fix overlap
+              margin: "8px 0 0 0" // Added positive margin to push it down
             }
           }, [
             React.createElement("div", { 
@@ -1401,7 +1401,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
               color: "rgba(255, 255, 255, 0.8)", // Increased opacity
               textAlign: "center", 
               fontStyle: "italic",
-              marginTop: "2px", // Positive margin to space it out from AQI
+              marginTop: "4px", // Increased margin for better spacing
               width: "100%",
               position: "relative",
               zIndex: 10,
