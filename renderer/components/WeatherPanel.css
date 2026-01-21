@@ -110,7 +110,7 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 10px;
+  padding: 4px 10px; /* Reduced vertical padding from 10px to 4px */
   position: relative;
   z-index: 2;
   background: linear-gradient(
@@ -118,7 +118,7 @@
     rgba(255, 255, 255, 0.08) 0%,
     rgba(255, 255, 255, 0.02) 100%
   );
-  margin: 6px 8px 4px 8px;
+  margin: 2px 8px 1px 8px; /* Reduced top margin from 6px to 2px, bottom from 4px to 1px */
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -128,8 +128,8 @@
 }
 
 .weather-icon-3d {
-  width: 60px;
-  height: 60px;
+  width: 50px; /* Reduced from 60px */
+  height: 50px; /* Reduced from 60px */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -153,7 +153,7 @@
 }
 
 .temp-main {
-  font-size: 36px;
+  font-size: 32px; /* Reduced from 36px */
   font-weight: bold;
   line-height: 1;
   color: #ffffff;
@@ -163,11 +163,11 @@
 }
 
 .temp-feels {
-  font-size: 14px;
+  font-size: 13px; /* Reduced from 14px */
   color: #e2e8f0;
   opacity: 0.9;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
-  margin-top: 2px;
+  margin-top: 1px; /* Reduced from 2px */
 }
 
 /* Weather details grid - Professional 2x2 layout: Hàng 1: Độ ẩm & UV, Hàng 2: Mưa & Gió */
@@ -176,7 +176,7 @@
   grid-template-columns: 1fr 1fr; /* 2 columns of equal width */
   grid-template-rows: 1fr 1fr; /* 2 rows of equal height */
   gap: 1px; /* Reduced gap from 2px to 1px */
-  padding: 2px 4px; /* Reduced padding */
+  padding: 0px 4px; /* Reduced vertical padding from 2px to 0px */
   position: relative;
   z-index: 2;
   background: linear-gradient(
@@ -198,7 +198,7 @@
   justify-content: flex-start;
   text-align: left;
   padding: 1px 4px; /* Reduced padding from 2px */
-  min-height: 25px; /* Reduced min-height from 28px */
+  min-height: 22px; /* Reduced min-height from 25px */
 }
 
 .weather-details-grid .detail-label {

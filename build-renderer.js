@@ -1096,7 +1096,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            justifyContent: "space-between"
+            justifyContent: "flex-start" // Changed from space-between to allow top-aligned compaction
           }
         }, [
           // Header with city name and time (Moved inside left column)
@@ -1107,7 +1107,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
               fontWeight: "bold",
               textAlign: "center",
               width: "100%",
-              marginBottom: "4px",
+              marginBottom: "0px",
               padding: "0 6px",
               position: "relative",
               zIndex: 2,
@@ -1123,7 +1123,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
                 fontSize: "18px",
                 fontWeight: "bold",
                 color: "#ffffff",
-                marginTop: "8px",
+                marginTop: "2px",
                 textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)",
                 fontFamily: "monospace", // Monospace for digital look
                 letterSpacing: "0px"
@@ -1139,7 +1139,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
               justifyContent: "center", 
               gap: "8px", 
               marginBottom: "0px", // Reduced from 4px to move content up
-              marginTop: "-14px", // Negative margin to pull up closer to Time/Date
+              marginTop: "0px", // Reset from -45px to fix overlap
             }
           }, [
             React.createElement("img", {
@@ -1180,7 +1180,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
               gridTemplateRows: "1fr 1fr", // 2 rows
               gap: "0px", // Minimal gap between all items
               marginBottom: "0px", // Minimal margin
-              marginTop: "-8px", // Negative margin to bring elements directly close to main temperature
+              marginTop: "0px", // Reset from -35px to fix overlap
               paddingLeft: "0px", // Remove left padding to shift more left
               paddingRight: "8px"
             }
@@ -1352,8 +1352,8 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
             key: "weather-air-quality",
             style: { 
               width: "100%",
-              padding: "6px 8px",
-              margin: "-16px 0 4px 0" // Increased negative top margin to push even higher
+              padding: "0px 8px", // Reduced padding
+              margin: "0px 0 0 0" // Reset from -50px to fix overlap
             }
           }, [
             React.createElement("div", { 
@@ -1398,11 +1398,14 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
             key: "citation-line",
             style: { 
               fontSize: "10px", 
-              color: "rgba(255, 255, 255, 0.6)",
+              color: "rgba(255, 255, 255, 0.8)", // Increased opacity
               textAlign: "center", 
               fontStyle: "italic",
-              marginTop: "-4px",
-              width: "100%"
+              marginTop: "2px", // Positive margin to space it out from AQI
+              width: "100%",
+              position: "relative",
+              zIndex: 10,
+              paddingBottom: "4px"
             }
           }, "Theo nguồn tin từ Accuweather")
         ]),

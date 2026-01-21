@@ -455,6 +455,18 @@ const WeatherPanel: React.FC<WeatherPanelProps> = ({
         <div className="air-quality-badge good">TỐT</div>
       </div>
 
+      {/* Citation line */}
+      <div className="citation-line" style={{
+        fontSize: "10px",
+        color: "rgba(255, 255, 255, 0.6)",
+        textAlign: "center",
+        fontStyle: "italic",
+        marginTop: "4px",
+        width: "100%"
+      }}>
+        Theo nguồn tin từ Accuweather
+      </div>
+
       {/* Loading overlay for refresh */}
       {isLoading && (
         <div className="refresh-overlay">
