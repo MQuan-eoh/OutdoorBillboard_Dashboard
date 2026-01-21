@@ -2,6 +2,16 @@
   "logoMode": "loop",
   "logoImages": [
     {
+      "name": "glassLiquidDashboard2",
+      "path": "F:/EoH Company/ITS_OurdoorScreen/downloads/logos/glassliquiddashboard2-1768981033147.png",
+      "size": 55898,
+      "type": "image/png",
+      "id": "glassliquiddashboard2-1768981033147",
+      "source": "github_cdn",
+      "url": "https://raw.githubusercontent.com/MQuan-eoh/billboard-logos-cdn/main/logos/glassliquiddashboard2-1768981033147.png",
+      "filename": "glassliquiddashboard2-1768981033147.png",
+      "priority": 1,
+      "uploadedAt": "2026-01-21T07:37:16.016Z"
     }
   ],
   "logoLoopDuration": 10,
@@ -105,7 +115,7 @@
     "retryAttempts": 3,
     "retryDelay": 2000
   },
-  "_manifestVersion": "1.0.1768884270315",
-  "_manifestLastUpdated": "2026-01-20T04:44:30.315Z",
-  "_lastSyncTime": "2026-01-20T10:52:47.685Z"
+  "_manifestVersion": "1.0.1768981036529",
+  "_manifestLastUpdated": "2026-01-21T07:37:16.529Z",
+  "_lastSyncTime": "2026-01-21T07:39:15.846Z"
 }

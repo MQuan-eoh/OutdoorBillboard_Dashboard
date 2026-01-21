@@ -1655,7 +1655,7 @@ function CompanyLogo() {
         .sort((a, b) => a.priority - b.priority)
         .map(logo => ({
           name: logo.name,
-          path: \`./downloads/logos/\${logo.filename}\`, // Use downloaded path
+          path: logo.localPath || logo.path, // Use absolute path provided by main process
           size: logo.size,
           type: logo.type,
           id: logo.id,
@@ -1802,17 +1802,10 @@ function CompanyLogo() {
   };
 
   const renderCustomLogo = (logo) => {
-    // Enhanced path resolution with multiple fallbacks for remote sync
-    let logoSrc;
-    
-    if (logo.source === 'github_cdn') {
-      // Try local downloaded file first
-      const localPath = path.resolve(\`./downloads/logos/\${logo.filename}\`);
-      logoSrc = \`file://\${localPath}\`;
-    } else {
-      // Local logo files
-      logoSrc = \`file://\${logo.path}\`;
-    }
+    // Enhanced path resolution
+    // Use absolute path provided by main process/config to ensure file:// protocol works
+    // This avoids using 'path' module which is unavailable in the renderer
+    const logoSrc = \`file://\${logo.path}\`;
       
     return React.createElement("img", {
       src: logoSrc,

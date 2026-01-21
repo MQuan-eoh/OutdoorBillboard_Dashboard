@@ -44,11 +44,11 @@ class LogoManifestService {
 
     // CRITICAL FIX: Use appropriate download path based on packaging
     if (app.isPackaged) {
-      // Production: Use userData directory for persistence across updates
       this.downloadPath = app.getPath("userData");
     } else {
-      // Development: Use original config path
-      this.downloadPath = config.downloadPath;
+      // Development: Use original config path, resolved to absolute
+      const path = require("path");
+      this.downloadPath = path.resolve(config.downloadPath || "./downloads");
     }
 
     console.log("LogoManifestService: Initialized with config", {
@@ -333,15 +333,9 @@ class LogoManifestService {
     // This should always use forward slashes for consistency with renderer
     const fullPath = path.join(this.downloadPath, "logos", logo.filename);
 
-    // CRITICAL FIX: For config.json, we need relative path from app directory
-    if (app.isPackaged) {
-      // PACKAGED APP: Return path relative to userData for correct file:// construction
-      // Since downloadPath is already userData, return relative path
-      return path.join("downloads", "logos", logo.filename).replace(/\\/g, "/");
-    } else {
-      // DEVELOPMENT: Return relative path from project root
-      return path.join("downloads", "logos", logo.filename).replace(/\\/g, "/");
-    }
+    // ALWAYS return the full absolute path for consistency across main and renderer
+    // This allows file:// protocol to work reliably without exposing 'path' to renderer
+    return fullPath.replace(/\\/g, "/");
   }
 
   async ensureDownloadDirectory() {
@@ -447,8 +441,17 @@ class LogoManifestService {
   notifyRendererManifestUpdate(manifest) {
     // Send manifest update to renderer
     if (mainWindow && !mainWindow.isDestroyed()) {
+      // Enhance manifest with absolute local paths for renderer
+      const enhancedManifest = {
+        ...manifest,
+        logos: manifest.logos.map(logo => ({
+          ...logo,
+          localPath: this.getLocalLogoPath(logo)
+        }))
+      };
+
       mainWindow.webContents.send("logo-manifest-updated", {
-        manifest: manifest,
+        manifest: enhancedManifest,
         timestamp: Date.now(),
         source: "github_cdn",
       });
