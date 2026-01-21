@@ -2,28 +2,6 @@
   "logoMode": "loop",
   "logoImages": [
     {
-      "name": "z6612387851461_59dc3c7418e0a5aee57245b1937dc3b1",
-      "path": "downloads\\logos\\z6612387851461-59dc3c7418e0a5aee57245b1937dc3b1-1762540916864.jpg",
-      "size": 1082185,
-      "type": "image/jpeg",
-      "id": "z6612387851461-59dc3c7418e0a5aee57245b1937dc3b1-1762540916864",
-      "source": "github_cdn"
-    },
-    {
-      "name": "z6612387866233_0176a248f8ca75ca8b558ed87314b3af",
-      "path": "downloads\\logos\\z6612387866233-0176a248f8ca75ca8b558ed87314b3af-1762540920125.jpg",
-      "size": 1090632,
-      "type": "image/jpeg",
-      "id": "z6612387866233-0176a248f8ca75ca8b558ed87314b3af-1762540920125",
-      "source": "github_cdn"
-    },
-    {
-      "name": "z6609299543817_0f36ebae5e9a91cc7c2dada22cc71b38",
-      "path": "downloads\\logos\\z6609299543817-0f36ebae5e9a91cc7c2dada22cc71b38-1762540923408.jpg",
-      "size": 1732206,
-      "type": "image/jpeg",
-      "id": "z6609299543817-0f36ebae5e9a91cc7c2dada22cc71b38-1762540923408",
-      "source": "github_cdn"
     }
   ],
   "logoLoopDuration": 10,
@@ -82,14 +60,14 @@
   "eraIot": {
     "enabled": true,
     "authToken": "Token a159b7047b33aebfdb2e83f614c5049e5d760d6d",
-    "gatewayToken": "1fb0dddf-8fd1-43f2-a229-32afeec4b0bf",
+    "gatewayToken": null,
     "baseUrl": "https://backend.eoh.io",
     "unitId": "14234",
     "sensorConfigs": {
       "temperature": 145634,
       "humidity": 145615,
-      "pm25": 145635,
-      "pm10": 145636
+      "pm25": 29676,
+      "pm10": 29677
     },
     "scaleConfig": {
       "scaleFactor": 0.1,
@@ -104,7 +82,8 @@
     "updateInterval": 5,
     "timeout": 15000,
     "retryAttempts": 3,
-    "retryDelay": 2000
+    "retryDelay": 2000,
+    "unitFilters": []
   },
   "bannerSync": {
     "enabled": true,
@@ -126,6 +105,7 @@
     "retryAttempts": 3,
     "retryDelay": 2000
   },
-  "_manifestVersion": "1.0.1762540928373",
-  "_manifestLastUpdated": "2025-11-07T18:42:08.373Z"
+  "_manifestVersion": "1.0.1768884270315",
+  "_manifestLastUpdated": "2026-01-20T04:44:30.315Z",
+  "_lastSyncTime": "2026-01-20T10:52:47.685Z"
 }

@@ -1,5 +1,20 @@
 # ITS Outdoor Billboard Display System
 
+> [!CAUTION]
+> **CRITICAL ARCHITECTURE WARNING - READ BEFORE EDITING**
+> 
+> **Source of Truth Anomaly**: The active application logic running in `renderer/app.js` is **NOT** generated from the TypeScript source files in `renderer/components` or `renderer/services`.
+> 
+> Instead, it is generated from a **hardcoded string template** inside `build-renderer.js`. 
+> 
+> - **Editing `renderer/services/eraIotService.ts`**: WILL HAVE NO EFFECT.
+> - **Editing `renderer/components/IoTPanel.tsx`**: WILL HAVE NO EFFECT.
+> - **Editing `build-renderer.js`**: THIS IS THE ONLY WAY TO CHANGE APP LOGIC CURRENTLY.
+> 
+> **Current Status**: The files in `renderer/` contain "Dead Code" that implements a legacy direct-MQTT approach. The active code in `build-renderer.js` implements the correct IPC-based approach. 
+> 
+> **Next Steps**: A refactoring is planned to fix this build system. Until then, refer to `build-renderer.js` to understand the actual running code.
+
 ## 📋 Tổng quan dự án
 
 **ITS Outdoor Billboard** là hệ thống hiển thị billboard ngoài trời thông minh được phát triển bằng Electron + React, tích hợp real-time weather API và IoT sensor data.
@@ -15,14 +30,14 @@
 ## 🏗️ Kiến trúc hệ thống
 
 ```
-├── main.js                 # Electron main process
-├── preload.js             # Electron preload script
-├── build-renderer.js      # Build system cho React components
+├── main.js                 # Electron main process (Active)
+├── preload.js             # Electron preload script (Active)
+├── build-renderer.js      # CONTAINS ACTUAL SOURCE CODE (Template String)
 ├── renderer/
 │   ├── index.html         # Main HTML file
-│   ├── app-built.js       # Generated React bundle
-│   ├── components/        # React components
-│   ├── services/          # Business logic services
+│   ├── app-built.js       # Generated from build-renderer.js (Do not edit)
+│   ├── components/        # REFERENCE ONLY (Currently ignored by build)
+│   ├── services/          # REFERENCE ONLY (Currently ignored by build)
 │   └── assets/           # Static assets
 ├── docs/                 # Documentation
 └── tests/               # Test files

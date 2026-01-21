@@ -9,7 +9,6 @@ class MqttClient {
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 10; // Increased from 5 to 10 for better resilience
     this.isReconnecting = false;
-    // ✅ NEW: Acknowledgment tracking
     this.pendingAcknowledgments = new Map(); // messageId -> {resolve, reject, timeout}
   }
 

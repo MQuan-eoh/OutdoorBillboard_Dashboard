@@ -175,8 +175,8 @@
   display: grid;
   grid-template-columns: 1fr 1fr; /* 2 columns of equal width */
   grid-template-rows: 1fr 1fr; /* 2 rows of equal height */
-  gap: 4px; /* Consistent gap between all items */
-  padding: 6px 8px;
+  gap: 1px; /* Reduced gap from 2px to 1px */
+  padding: 2px 4px; /* Reduced padding */
   position: relative;
   z-index: 2;
   background: linear-gradient(
@@ -197,8 +197,8 @@
   align-items: center;
   justify-content: flex-start;
   text-align: left;
-  padding: 6px 4px;
-  min-height: 35px; /* Ensure consistent height */
+  padding: 1px 4px; /* Reduced padding from 2px */
+  min-height: 25px; /* Reduced min-height from 28px */
 }
 
 .weather-details-grid .detail-label {
@@ -235,7 +235,7 @@
     rgba(72, 187, 120, 0.1) 0%,
     rgba(72, 187, 120, 0.05) 100%
   );
-  margin: -16px 8px 4px 8px; /* Increased negative top margin to push even higher */
+  margin: -6px 8px 4px 8px; /* Reduced negative top margin from -16px to -6px to fix "pushed up too much" */
   border-radius: 4px;
   border: 1px solid rgba(72, 187, 120, 0.2);
 }
@@ -274,15 +274,18 @@
   white-space: nowrap;
 }
 
-/* Device measurements section - Optimized 2x2 grid layout */
+
 .device-measurements-section {
-  padding: 8px;
+  padding: 8px 6px; /* Match weather-header padding (0 6px) */
   position: relative;
   z-index: 2;
   background: transparent;
-  margin: 2px 15px 10px 12px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 10px 0px 10px 0px; /* Full width to ensure alignment with header */
+  border-radius: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: none;
+  border-right: none;
 }
 
 .device-title {
@@ -298,7 +301,7 @@
   padding-bottom: 4px;
 }
 
-/* CSS class for THIẾT BỊ ĐO title - aligned with city name and moved up */
+
 .device-title-aligned {
   font-size: 16px; /* Match city name font size */
   font-weight: bold;

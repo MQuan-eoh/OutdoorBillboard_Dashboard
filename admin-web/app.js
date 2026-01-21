@@ -459,49 +459,24 @@ async function initializeMQTT() {
     console.log("Initializing MQTT client...");
 
     if (window.MqttClient) {
-      try {
-        await window.MqttClient.connect();
+      // Setup MQTT status monitoring
+      window.MqttClient.onStatusChange((status) => {
+        updateConnectionStatus(status);
+        updateMqttStatusDisplay(); // Update device info display
+      });
 
-        // Setup MQTT status monitoring
-        window.MqttClient.onStatusChange((status) => {
-          updateConnectionStatus(status);
-          updateMqttStatusDisplay(); // Update device info display
-        });
+      // Setup MQTT message handlers for update status
+      window.MqttClient.onMessage((topic, message) => {
+        handleMqttStatusMessage(topic, message);
+      });
 
-        // Setup MQTT message handlers for update status
-        window.MqttClient.onMessage((topic, message) => {
-          handleMqttStatusMessage(topic, message);
-        });
-
-        showToast("MQTT connected successfully", "success");
-      } catch (error) {
-        console.warn("MQTT connection failed:", error);
-        showToast(
-          "MQTT connection failed, continuing in offline mode",
-          "warning"
-        );
-        updateMqttStatusDisplay(); // Update even on failure
-
-        // Retry connection after 5 seconds
-        setTimeout(async () => {
-          console.log("Retrying MQTT connection...");
-          try {
-            await window.MqttClient.connect();
-            showToast("MQTT reconnected successfully", "success");
-          } catch (retryError) {
-            console.warn("MQTT retry failed:", retryError);
-          }
-        }, 5000);
-      }
+      // Note: We do NOT connect here anymore.
+      // Connection is handled by authenticateGitHub() or autoLoadStoredToken()
     } else {
       console.warn("MQTT client not available");
-      showToast("MQTT client not available", "warning");
-      updateMqttStatusDisplay(); // Update when not available
     }
   } catch (error) {
     console.error("MQTT initialization error:", error);
-    showToast("MQTT initialization failed: " + error.message, "error");
-    updateMqttStatusDisplay(); // Update on error
   }
 }
 
@@ -788,16 +763,16 @@ class LogoManifestManager {
     } catch (error) {
       if (error.name === "AbortError") {
         console.error("Fetch timeout:", error);
-        showToast("Timeout khi tải manifest từ GitHub", "error");
+        showToast("Timeout khi tải dữ liệu từ hệ thống", "error");
       } else if (error.message.includes("404")) {
         console.error("Manifest not found:", error);
         showToast(
-          "Manifest không tồn tại trên GitHub. Kiểm tra URL repository.",
+          "Không tìm thấy dữ liệu trên hệ thống. Vui lòng kiểm tra lại cấu hình.",
           "error"
         );
       } else {
         console.error("Failed to fetch manifest:", error);
-        showToast("Không thể tải manifest từ GitHub", "error");
+        showToast("Không thể tải dữ liệu từ hệ thống", "error");
       }
 
       this.updateManifestStatus("error");
@@ -1031,14 +1006,14 @@ function showHelp() {
   showModal(
     "Hướng dẫn sử dụng",
     `
-        <h4>Cách sử dụng Banner Management System:</h4>
+        <h4>Cách sử dụng Hệ thống Quản lý Banner:</h4>
         <ul>
-            <li><strong>GitHub Authentication:</strong> Nhập GitHub token để upload banner</li>
-            <li><strong>Upload Banner:</strong> Chọn files và click "Upload Banner"</li>
-            <li><strong>Quản lý Banner:</strong> Enable/Disable hoặc xóa banner trong CDN</li>
-            <li><strong>Cài đặt:</strong> Thay đổi chế độ hiển thị và sync settings</li>
+            <li><strong>Đăng nhập:</strong> Nhập Token quản trị để truy cập hệ thống</li>
+            <li><strong>Tải lên Banner:</strong> Chọn files và click "Tải lên Banner"</li>
+            <li><strong>Quản lý Banner:</strong> Bật/Tắt hoặc xóa banner trong hệ thống</li>
+            <li><strong>Cài đặt:</strong> Thay đổi chế độ hiển thị và đồng bộ cài đặt</li>
         </ul>
-        <p><strong>Lưu ý:</strong> Chỉ sử dụng GitHub CDN workflow - đơn giản và hiệu quả</p>
+        <p><strong>Lưu ý:</strong> Hệ thống sử dụng CDN để tối ưu hóa hiệu suất hiển thị</p>
     `
   );
 }
@@ -1050,9 +1025,9 @@ function showAbout() {
         <h4>ITS Billboard Management System</h4>
         <p><strong>Version:</strong> ${window.BannerConfig.app.version}</p>
         <p><strong>Công ty:</strong> ITS Company</p>
-        <p><strong>Mô tả:</strong> Hệ thống quản lý banner quảng cáo đơn giản với GitHub CDN</p>
+        <p><strong>Mô tả:</strong> Hệ thống quản lý banner quảng cáo tập trung trên nền tảng E-Ra IoT</p>
         <br>
-        <p><strong>Workflow:</strong> GitHub CDN → MQTT → Billboard Display</p>
+        <p><strong>Quy trình:</strong> E-Ra CDN → MQTT → Billboard Display</p>
     `
   );
 }
@@ -1068,7 +1043,7 @@ async function authenticateGitHub() {
   const token = tokenInput.value.trim();
 
   if (!token) {
-    showToast("Vui lòng nhập GitHub token", "error");
+    showToast("Vui lòng nhập Token quản trị", "error");
     return;
   }
 
@@ -1076,10 +1051,10 @@ async function authenticateGitHub() {
   const authBtn = document.querySelector("#githubAuthCard button");
   const originalText = authBtn.textContent;
   authBtn.disabled = true;
-  authBtn.textContent = "Authenticating...";
+  authBtn.textContent = "Đang xác thực...";
 
   try {
-    console.log("[Auth] Starting GitHub authentication...");
+    console.log("[Auth] Starting authentication...");
 
     // Initialize GitHub service with enhanced error handling
     const success = await window.initializeGitHubService(token);
@@ -1105,28 +1080,33 @@ async function authenticateGitHub() {
       tokenInput.value = "";
 
       showToast(
-        `GitHub authentication successful - Using repository: ${status.repository}`,
+        `Đăng nhập thành công - Tài khoản: ${status.authenticatedUser}`,
         "success"
       );
 
       updateRepositoryDisplay(status);
+
+      // Reconnect MQTT on successful login
+      if (window.MqttClient && !window.MqttClient.connected) {
+        console.log("[Auth] Reconnecting MQTT after login...");
+        window.MqttClient.connect().catch((err) =>
+          console.warn("MQTT reconnect failed:", err)
+        );
+      }
     } else {
-      throw new Error(
-        "Authentication failed - Please check your token and repository access"
-      );
+      throw new Error("Xác thực thất bại - Vui lòng kiểm tra lại Token");
     }
   } catch (error) {
-    console.error("[Auth] GitHub authentication failed:", error);
+    console.error("[Auth] Authentication failed:", error);
 
     // Provide specific error messages
-    let errorMessage = "GitHub authentication failed";
+    let errorMessage = "Đăng nhập thất bại";
     if (error.message.includes("401")) {
-      errorMessage = "Invalid GitHub token - Please check your token";
+      errorMessage = "Token không hợp lệ - Vui lòng kiểm tra lại";
     } else if (error.message.includes("403")) {
-      errorMessage =
-        "Token doesn't have required permissions - Need 'repo' access";
+      errorMessage = "Token không có quyền truy cập hệ thống";
     } else if (error.message.includes("404")) {
-      errorMessage = "Repository not found or no access - Will try fallback";
+      errorMessage = "Không thể kết nối đến kho dữ liệu";
     } else if (error.message) {
       errorMessage = error.message;
     }
@@ -1157,6 +1137,14 @@ async function autoLoadStoredToken() {
         const status = window.getGitHubServiceStatus();
         showToast(`Auto-authenticated as ${tokenData.userLogin}`, "info");
         updateRepositoryDisplay(status);
+
+        // Reconnect MQTT on successful auto-login
+        if (window.MqttClient && !window.MqttClient.connected) {
+          console.log("[Auth] Reconnecting MQTT after auto-login...");
+          window.MqttClient.connect().catch((err) =>
+            console.warn("MQTT reconnect failed:", err)
+          );
+        }
 
         console.log("[Auth] Auto-authentication successful");
       } else {
@@ -1207,6 +1195,14 @@ function handleGitHubFileSelection(files) {
     `Selected ${githubSelectedFiles.length} valid banner files`,
     "info"
   );
+
+  // Show display settings modal immediately after valid file selection
+  if (
+    githubSelectedFiles.length > 0 &&
+    typeof showDisplaySettingsModal === "function"
+  ) {
+    showDisplaySettingsModal();
+  }
 }
 
 async function testGitHubConnection() {
@@ -1386,8 +1382,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateDeviceInfoDisplay();
   updateMqttStatusDisplay();
 
-  // Initialize MQTT
-  await initializeMQTT();
+  // Initialize MQTT - BUT DO NOT CONNECT YET
+  // Connection will be handled by authentication or auto-login
+  // await initializeMQTT(); // Removed auto-connect on load
+  console.log("MQTT Client initialized (waiting for auth to connect)");
 
   // Load settings
   await loadSettings();
@@ -1417,12 +1415,14 @@ function updateRepositoryDisplay(status) {
     <div class="repo-info-content">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <h4>Repository Information</h4>
-          <p><strong>Repository:</strong> ${status.repository || "Unknown"}</p>
-          <p><strong>User:</strong> ${status.authenticatedUser || "Unknown"}</p>
+          <h4>Thông tin tài khoản</h4>
+          <p><strong>Hệ thống:</strong> E-Ra IoT Platform</p>
+          <p><strong>Người dùng:</strong> ${
+            status.authenticatedUser || "Unknown"
+          }</p>
         </div>
         <button id="githubLogoutBtn" class="btn btn-outline btn-sm" onclick="logoutGitHub()">
-          Logout
+          Đăng xuất
         </button>
       </div>
     </div>
@@ -1431,13 +1431,46 @@ function updateRepositoryDisplay(status) {
 
 // Add logout functionality
 function logoutGitHub() {
+  // Fix: Blur active element to prevent focus trapping issues
+  if (document.activeElement) {
+    document.activeElement.blur();
+  }
+
   if (window.TokenManager) {
     window.TokenManager.clearToken();
   }
 
   // Reset UI
-  document.getElementById("githubAuthCard").style.display = "block";
-  document.getElementById("githubUploadSection").style.display = "none";
+  const authCard = document.getElementById("githubAuthCard");
+  const uploadSection = document.getElementById("githubUploadSection");
+  const tokenInput = document.getElementById("githubToken");
+
+  if (uploadSection) {
+    uploadSection.style.display = "none";
+  }
+
+  if (authCard) {
+    // Force a hard reset of the element's state to fix rendering/focus issues
+    authCard.style.display = "none";
+    authCard.style.visibility = "hidden";
+
+    // Use a small timeout to let the rendering engine catch up
+    setTimeout(() => {
+      authCard.style.display = "block";
+      authCard.style.visibility = "visible";
+
+      // Force layout recalc
+      void authCard.offsetHeight;
+
+      // Force focus onto the input field
+      if (tokenInput) {
+        tokenInput.value = "";
+        tokenInput.focus();
+        // Optional: Select text if any (though it's empty now)
+        tokenInput.select();
+      }
+    }, 50);
+  }
 
   // Clear file selection
   githubSelectedFiles = [];
@@ -1453,34 +1486,12 @@ function logoutGitHub() {
     window.GitHubUploadService.authenticatedUser = null;
   }
 
-  showToast("Logged out successfully", "info");
-  console.log("[Auth] GitHub logout completed");
-}
-
-// Add logout functionality
-function logoutGitHub() {
-  if (window.TokenManager) {
-    window.TokenManager.clearToken();
+  // Disconnect MQTT to prevent background retries blocking UI
+  if (window.MqttClient) {
+    console.log("[Auth] Disconnecting MQTT on logout...");
+    window.MqttClient.disconnect();
   }
 
-  // Reset UI
-  document.getElementById("githubAuthCard").style.display = "block";
-  document.getElementById("githubUploadSection").style.display = "none";
-
-  // Clear file selection
-  githubSelectedFiles = [];
-  const fileInput = document.getElementById("githubFileInput");
-  if (fileInput) {
-    fileInput.value = "";
-  }
-
-  // Reset GitHub service
-  if (window.GitHubUploadService) {
-    window.GitHubUploadService.isAuthenticated = false;
-    window.GitHubUploadService.token = null;
-    window.GitHubUploadService.authenticatedUser = null;
-  }
-
-  showToast("Logged out successfully", "info");
+  showToast("Đăng xuất thành công", "info");
   console.log("[Auth] GitHub logout completed");
 }

@@ -1,6 +1,6 @@
 {
   "name": "its-outdoor-billboard-app",
-  "version": "1.0.3",
+  "version": "1.0.7",
   "description": "Mini Desktop App for 384x384 LED Outdoor Billboard Display",
   "author": "EoH Company",
   "main": "main.js",
@@ -52,7 +52,9 @@
     "files": [
       "main.js",
       "preload.js",
+      "config.json",
       "renderer/**/*",
+      "assets/**/*",
       "package.json"
     ],
     "win": {

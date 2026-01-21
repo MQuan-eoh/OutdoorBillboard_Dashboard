@@ -690,9 +690,6 @@ async function saveConfig(config) {
     throw error;
   }
 }
-
-// MainProcessMqttService class - handles MQTT communication for E-Ra IoT and manifest sync
-// Now uses dual-broker: mqtt1.eoh.io for sensor data, HiveMQ for commands
 class MainProcessMqttService {
   constructor() {
     this.client = null; // E-Ra IoT broker

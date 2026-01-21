@@ -720,6 +720,34 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
   const [eraIotData, setEraIotData] = useState(null);
   // Air quality data state (for THIẾT BỊ ĐO panel only)
   const [airQualityData, setAirQualityData] = useState(null);
+  
+  // Current time state
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getFormattedTime = () => {
+    try {
+      const now = new Date();
+      // Calculate UTC+7 directly to avoid locale issues
+      // getTimezoneOffset returns minutes to remove to reach UTC. So adding it gives UTC.
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const timeRef = new Date(utc + (3600000 * 7)); // Add 7 hours
+
+      const h = timeRef.getHours().toString().padStart(2, '0');
+      const m = timeRef.getMinutes().toString().padStart(2, '0');
+      const d = timeRef.getDate().toString().padStart(2, '0');
+      const mo = (timeRef.getMonth() + 1).toString().padStart(2, '0');
+      const y = timeRef.getFullYear();
+      return \`\${h}:\${m}|\${d}.\${mo}.\${y}\`;
+    } catch (e) {
+      console.error("Time formatting error:", e);
+      return "00:00|01.01.2026";
+    }
+  };
 
   useEffect(() => {
     // Subscribe to global weather service
@@ -1014,7 +1042,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
     style: {
       flex: "1",
       background: "linear-gradient(135deg, #142A3F 0%, #1e3a5f 50%, #1e3a5f 100%)",
-      padding: "16px",
+      padding: "10px 16px",
       border: "none",
       display: "flex",
       flexDirection: "column",
@@ -1037,24 +1065,6 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
         zIndex: 1
       }
     }),
-    // Header with city name
-    React.createElement("div", { 
-      key: "title",
-      style: { 
-        fontSize: "16px", 
-        fontWeight: "bold",
-        textAlign: "left", // Changed from center to left to align with IoT panel
-        marginBottom: "0px", // Removed margin to move higher
-        padding: "2px 6px", // Reduced right padding to align with IoT panel
-        position: "relative",
-        zIndex: 2,
-        textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)",
-         marginRight:"50px",
-      }
-    }, [
-      React.createElement("span", { key: "city" }, weatherData.cityName)
-    ]),
-
     // Unified content container
     React.createElement("div", { 
       key: "unified-content",
@@ -1063,12 +1073,12 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
         padding: "0",
         display: "flex",
         flexDirection: "column",
-        gap: "4px", // Further reduced gap to move content up more
+        gap: "4px",
         position: "relative",
         zIndex: 2
       }
     }, [
-      // Main content - two column layout like in the image
+      // Main content - two column layout
       React.createElement("div", { 
         key: "main-content",
         style: { 
@@ -1077,18 +1087,49 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
           width: "100%"
         }
       }, [
-        // Left column - Weather info (like in image)
+        // Left column - Weather info + City/Time Header
         React.createElement("div", { 
           key: "weather-left",
           style: { 
             flex: 1,
-            padding: "4px 0", // Removed right padding
+            padding: "4px 0",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "space-between"
           }
         }, [
+          // Header with city name and time (Moved inside left column)
+          React.createElement("div", { 
+            key: "title",
+            style: { 
+              fontSize: "16px", 
+              fontWeight: "bold",
+              textAlign: "center",
+              width: "100%",
+              marginBottom: "4px",
+              padding: "0 6px",
+              position: "relative",
+              zIndex: 2,
+              display: "flex",
+              flexDirection: "column",
+              textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)"
+            }
+          }, [
+            React.createElement("span", { key: "city" }, weatherData.cityName),
+            React.createElement("span", { 
+              key: "time",
+              style: {
+                fontSize: "18px",
+                fontWeight: "bold",
+                color: "#ffffff",
+                marginTop: "8px",
+                textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)",
+                fontFamily: "monospace", // Monospace for digital look
+                letterSpacing: "0px"
+              }
+            }, getFormattedTime())
+          ]),
           // Weather icon and main temperature
           React.createElement("div", { 
             key: "temp-main-container",
@@ -1097,7 +1138,8 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
               alignItems: "center", 
               justifyContent: "center", 
               gap: "8px", 
-              marginBottom: "0px" // Reduced from 4px to move content up
+              marginBottom: "0px", // Reduced from 4px to move content up
+              marginTop: "-14px", // Negative margin to pull up closer to Time/Date
             }
           }, [
             React.createElement("img", {
@@ -1136,8 +1178,8 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
               display: "grid",
               gridTemplateColumns: "1fr 1fr", // 2 columns
               gridTemplateRows: "1fr 1fr", // 2 rows
-              gap: "4px", // Consistent gap between all items
-              marginBottom: "2px", // Minimal margin
+              gap: "0px", // Minimal gap between all items
+              marginBottom: "0px", // Minimal margin
               marginTop: "-8px", // Negative margin to bring elements directly close to main temperature
               paddingLeft: "0px", // Remove left padding to shift more left
               paddingRight: "8px"
@@ -1151,9 +1193,9 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "flex-start",
-                padding: "6px 4px",    
+                padding: "2px 4px",    
                 borderRadius: "3px",
-                minHeight: "35px"
+                minHeight: "25px"
               }
             }, [
               React.createElement("div", { 
@@ -1191,9 +1233,9 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "flex-start",
-                padding: "6px 4px",
+                padding: "2px 4px",
                 borderRadius: "3px",
-                minHeight: "35px"
+                minHeight: "25px"
               }
             }, [
               React.createElement("div", { 
@@ -1231,9 +1273,9 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "flex-start",
-                padding: "6px 4px",
+                padding: "2px 4px",
                 borderRadius: "3px",
-                minHeight: "35px"
+                minHeight: "25px"
               }
             }, [
               React.createElement("div", { 
@@ -1271,9 +1313,9 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "flex-start",
-                padding: "6px 4px",
+                padding: "2px 4px",
                 borderRadius: "3px",
-                minHeight: "35px"
+                minHeight: "25px"
               }
             }, [
               React.createElement("div", { 
@@ -1349,18 +1391,20 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
             ])
           ]),
 
-          // Air quality status (bottom of left column)
+
+
+          // Citation line
           React.createElement("div", { 
-            key: "air-quality-status",
+            key: "citation-line",
             style: { 
-              fontSize: "14px", 
-              color: "#ffffffff",
-              opacity: 1,
+              fontSize: "10px", 
+              color: "rgba(255, 255, 255, 0.6)",
               textAlign: "center", 
-              textShadow: "0 1px 2px rgba(0, 0, 0, 0.8)",
-              whiteSpace: "nowrap"
+              fontStyle: "italic",
+              marginTop: "-4px",
+              width: "100%"
             }
-          }, \`Chất lượng không khí: \${weatherData.airQuality}\`)
+          }, "Theo nguồn tin từ Accuweather")
         ]),
 
         // Right column - Device measurements (like in image)
@@ -1369,14 +1413,25 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
           style: { 
             flex: "0 0 140px",
             background: "transparent",
-            padding: "12px",
+            padding: "4px 12px 12px 12px",
             display: "flex",
             flexDirection: "column"
           }
         }, [
           React.createElement("div", { 
             key: "device-title",
-            className: "device-title-aligned" // Using CSS class instead of inline styles
+            style: {
+              fontSize: "16px",
+              fontWeight: "bold",
+              color: "#ffffff",
+              textAlign: "left",
+              marginBottom: "10px",
+              marginTop: "0px",
+              textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)",
+              letterSpacing: "1px",
+              textTransform: "uppercase"
+            },
+            className: "device-title-aligned-fixed"
           }, "THIẾT BỊ ĐO"),
 
           React.createElement("div", { 
@@ -1818,7 +1873,6 @@ function CompanyLogo() {
           fontSize: "36px",
           fontWeight: "bold",
           color: "#ff6b35",
-          cursor: "pointer",
         },
       }, "C"),
       React.createElement("div", {
@@ -1864,12 +1918,7 @@ function CompanyLogo() {
       position: "relative",
       overflow: "hidden",
     },
-    onClick: async () => {
-      // Debug click - force sync manifest
-      console.log("CompanyLogo: Debug click - forcing manifest sync...");
-      const result = await GlobalLogoManifestServiceManager.forceSync();
-      console.log("CompanyLogo: Force sync result:", result);
-    }
+
   }, [
     currentLogo ? renderCustomLogo(currentLogo) : renderDefaultLogo(),
     
