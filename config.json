@@ -2,16 +2,10 @@
   "logoMode": "loop",
   "logoImages": [
     {
-      "name": "glassLiquidDashboard2",
-      "path": "F:/EoH Company/ITS_OurdoorScreen/downloads/logos/glassliquiddashboard2-1768981033147.png",
-      "size": 55898,
-      "type": "image/png",
-      "id": "glassliquiddashboard2-1768981033147",
-      "source": "github_cdn",
-      "url": "https://raw.githubusercontent.com/MQuan-eoh/billboard-logos-cdn/main/logos/glassliquiddashboard2-1768981033147.png",
-      "filename": "glassliquiddashboard2-1768981033147.png",
-      "priority": 1,
-      "uploadedAt": "2026-01-21T07:37:16.016Z"
+      "name": "z7448916207550_3e7d3a273a02b93786c355713ea64c8d.jpg",
+      "path": "C:\\Users\\lemin\\Downloads\\z7448916207550_3e7d3a273a02b93786c355713ea64c8d.jpg",
+      "size": 0,
+      "type": "image/*"
     }
   ],
   "logoLoopDuration": 10,
@@ -70,14 +64,14 @@
   "eraIot": {
     "enabled": true,
     "authToken": "Token a159b7047b33aebfdb2e83f614c5049e5d760d6d",
-    "gatewayToken": null,
+    "gatewayToken": "1fb0dddf-8fd1-43f2-a229-32afeec4b0bf",
     "baseUrl": "https://backend.eoh.io",
     "unitId": "14234",
     "sensorConfigs": {
       "temperature": 145634,
       "humidity": 145615,
-      "pm25": 29676,
-      "pm10": 29677
+      "pm25": 145635,
+      "pm10": 145636
     },
     "scaleConfig": {
       "scaleFactor": 0.1,

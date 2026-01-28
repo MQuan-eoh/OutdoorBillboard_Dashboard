@@ -42,6 +42,7 @@ class WeatherService {
     {
       name: "OpenMeteo",
       baseUrl: "https://api.open-meteo.com/v1",
+      airQualityUrl: "https://air-quality-api.open-meteo.com/v1",
       enabled: true,
     },
   ];
@@ -58,7 +59,7 @@ class WeatherService {
       } catch (error) {
         console.error(
           "WeatherService: Failed to initialize E-Ra IoT service:",
-          error
+          error,
         );
       }
     }
@@ -84,12 +85,15 @@ class WeatherService {
       clearInterval(this.updateTimer);
     }
 
-    this.updateTimer = setInterval(() => {
-      this.fetchWeatherData();
-    }, this.config.updateInterval * 60 * 1000);
+    this.updateTimer = setInterval(
+      () => {
+        this.fetchWeatherData();
+      },
+      this.config.updateInterval * 60 * 1000,
+    );
 
     console.log(
-      `WeatherService: Updates every ${this.config.updateInterval} minutes`
+      `WeatherService: Updates every ${this.config.updateInterval} minutes`,
     );
   }
 
@@ -158,25 +162,54 @@ class WeatherService {
     api: any,
     lat: number,
     lon: number,
-    city: string
+    city: string,
   ): Promise<WeatherData | null> {
-    const url = `${api.baseUrl}/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relativehumidity_2m,windspeed_10m,uv_index,apparent_temperature,precipitation_probability,visibility&timezone=Asia/Ho_Chi_Minh&forecast_days=1`;
+    const weatherUrl = `${api.baseUrl}/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,relativehumidity_2m,windspeed_10m,uv_index,apparent_temperature,precipitation_probability,visibility&timezone=Asia/Ho_Chi_Minh&forecast_days=1`;
+    const aqUrl = `${
+      api.airQualityUrl || "https://air-quality-api.open-meteo.com/v1"
+    }/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm10,pm2_5&timezone=Asia/Ho_Chi_Minh`;
 
-    console.log("WeatherService: API URL:", url);
+    console.log(
+      "\n================ [WEATHER SERVICE API CALL] ================",
+    );
+    console.log("1. Weather URL    : ", weatherUrl);
+    console.log("2. AirQuality URL : ", aqUrl);
+    console.log(
+      "============================================================\n",
+    );
 
     try {
-      const response = await axios.get(url, {
-        timeout: 15000,
-        headers: {
-          "User-Agent": "ITS-Billboard/1.0",
-        },
-      });
+      const [weatherResponse, aqResponse] = await Promise.all([
+        axios.get(weatherUrl, {
+          timeout: 15000,
+          headers: {
+            "User-Agent": "ITS-Billboard/1.0",
+          },
+        }),
+        axios
+          .get(aqUrl, {
+            timeout: 15000,
+            headers: {
+              "User-Agent": "ITS-Billboard/1.0",
+            },
+          })
+          .catch((e) => {
+            console.error(
+              "WeatherService: AQI fetch failed, using defaults",
+              e.message,
+            );
+            return { data: null };
+          }),
+      ]);
 
-      const data = response.data;
+      const data = weatherResponse.data;
+      const aqData = aqResponse?.data?.current || null;
+
       console.log("WeatherService: API Response:", {
         hasCurrentWeather: !!data.current_weather,
-        hasHourly: !!data.hourly,
+        hasAQI: !!aqData,
         temperature: data.current_weather?.temperature,
+        aqi: aqData?.us_aqi,
       });
 
       const current = data.current_weather;
@@ -200,12 +233,34 @@ class WeatherService {
 
       const weatherCondition = this.getWeatherCondition(
         current.weathercode,
-        rainProbability
+        rainProbability,
       );
-      const airQualityData = this.estimateAirQuality(
-        current.weathercode,
-        visibility
-      );
+
+      // Process Air Quality directly from API
+      let airQualityData = { text: "Tốt", index: 15 }; // Default fallback
+      let pm25Val = 2.06;
+      let pm10Val = 2.4;
+
+      if (aqData) {
+        const aqi = aqData.us_aqi;
+        // Map US AQI to text and standard index (1-6)
+        if (aqi <= 50) airQualityData = { text: "Tốt", index: 1 };
+        else if (aqi <= 100) airQualityData = { text: "Trung bình", index: 2 };
+        else if (aqi <= 150) airQualityData = { text: "Kém", index: 3 };
+        else if (aqi <= 200) airQualityData = { text: "Xấu", index: 4 };
+        else if (aqi <= 300) airQualityData = { text: "Rất xấu", index: 5 };
+        else airQualityData = { text: "Nguy hại", index: 6 };
+
+        pm25Val = aqData.pm2_5;
+        pm10Val = aqData.pm10;
+      } else {
+        // Fallback to estimation if AQI API failed
+        const estimated = this.estimateAirQuality(
+          current.weathercode,
+          visibility,
+        );
+        airQualityData = { text: estimated.text, index: estimated.index };
+      }
 
       // Get real sensor data from E-Ra IoT service if available
       const sensorData = this.getSensorData();
@@ -223,8 +278,8 @@ class WeatherService {
         airQuality: airQualityData.text,
         aqi: airQualityData.index,
         visibility: visibility,
-        pm25: sensorData.pm25 ?? 2.06,
-        pm10: sensorData.pm10 ?? 2.4,
+        pm25: sensorData.pm25 ?? pm25Val,
+        pm10: sensorData.pm10 ?? pm10Val,
         lastUpdated: new Date(),
       };
 
@@ -279,7 +334,7 @@ class WeatherService {
 
   private estimateAirQuality(
     weatherCode: number,
-    visibility: number
+    visibility: number,
   ): { text: string; index: number } {
     if (visibility >= 10) {
       if (weatherCode <= 3) return { text: "Tốt", index: 1 };
@@ -296,7 +351,7 @@ class WeatherService {
   private handleFetchFailure(): void {
     this.retryCount++;
     console.error(
-      `WeatherService: Failed (${this.retryCount}/${this.config.maxRetries})`
+      `WeatherService: Failed (${this.retryCount}/${this.config.maxRetries})`,
     );
 
     if (this.retryCount >= this.config.maxRetries) {
@@ -306,12 +361,15 @@ class WeatherService {
     } else {
       const retryDelay = Math.min(
         this.config.retryInterval * Math.pow(2, this.retryCount - 1),
-        30
+        30,
       );
       console.log(`WeatherService: Retrying in ${retryDelay} minutes`);
-      setTimeout(() => {
-        this.fetchWeatherData();
-      }, retryDelay * 60 * 1000);
+      setTimeout(
+        () => {
+          this.fetchWeatherData();
+        },
+        retryDelay * 60 * 1000,
+      );
     }
   }
 
@@ -400,8 +458,8 @@ class WeatherService {
       if (dataAge < fiveMinutes) {
         console.log(
           `WeatherService: Data fresh (${Math.round(
-            dataAge / 60000
-          )}min), skipping`
+            dataAge / 60000,
+          )}min), skipping`,
         );
         return;
       }

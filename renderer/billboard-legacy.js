@@ -131,11 +131,10 @@ class BillboardApp {
         `;
 
     weatherPanel.innerHTML = `
-            <h3 style="font-size: 14px; margin-bottom: 8px; margin-top: 0;">TP. THỪA THIÊN HUẾ</h3>
-            <div style="font-size: 32px; font-weight: bold;">24,2°</div>
-            <div style="font-size: 12px;">-29,7°</div>
-            <div style="font-size: 12px;">Độ ẩm 95% | UV Thấp</div>
+            <h3 style="font-size: 14px; margin-bottom: 8px; margin-top: 0;">MENAS ZONE VĨ DẠ</h3>
+            <div style="font-size: 12px;">UV Thấp</div>
             <div style="font-size: 12px;">Mưa 97% | Gió 1,6 km/h</div>
+            <div style="font-size: 12px;">Tầm nhìn 10 km</div>
             <div style="font-size: 10px; margin-top: 5px;">Chất lượng không khí: Tốt</div>
         `;
 
@@ -399,12 +398,12 @@ class BillboardApp {
       const humidity = (70 + Math.random() * 30).toFixed(0);
 
       weatherPanel.innerHTML = `
-                <h3 style="font-size: 14px; margin-bottom: 8px; margin-top: 0;margin-left: 70px;">TP. THỪA THIÊN HUẾ</h3>
-                <div style="font-size: 32px; font-weight: bold;">${temp}°</div>
-                <div style="font-size: 14px;">Độ ẩm ${humidity}% | UV Thấp</div>
+                <h3 style="font-size: 14px; margin-bottom: 8px; margin-top: 0;margin-left: 70px;">MENAS ZONE VĨ DẠ</h3>
+                <div style="font-size: 14px;">UV Thấp</div>
                 <div style="font-size: 12px;">Mưa ${Math.floor(
                   Math.random() * 100
                 )}% | Gió ${(Math.random() * 5).toFixed(1)} km/h</div>
+                <div style="font-size: 12px;">Tầm nhìn 10 km</div>
                 <div style="font-size: 10px; margin-top: 5px;">Chất lượng không khí: Tốt</div>
             `;
     }

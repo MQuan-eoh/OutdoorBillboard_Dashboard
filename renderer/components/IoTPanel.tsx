@@ -53,10 +53,8 @@ const IoTPanel: React.FC<IoTPanelProps> = ({
       // Update connection status based on data status
       switch (data.status) {
         case "success":
-          setConnectionStatus("connected");
-          break;
         case "partial":
-          setConnectionStatus("connected"); // Still showing some data
+          setConnectionStatus("connected");
           break;
         case "error":
           setConnectionStatus("error");

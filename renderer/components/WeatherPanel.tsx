@@ -1,6 +1,4 @@
 // WeatherPanel.tsx - Professional weather display component
-// Designed for 24/7 outdoor billboard operation
-
 import React, { useState, useEffect } from "react";
 import WeatherService, {
   WeatherData,
@@ -27,7 +25,7 @@ class GlobalWeatherServiceManager {
         location: {
           lat: 16.4637, // Huế coordinates
           lon: 107.5909,
-          city: "TP. THỪA THIÊN HUẾ",
+          city: "MENAS ZONE VĨ DẠ",
         },
         updateInterval: 10, // Update every 10 minutes
         retryInterval: 3, // Retry every 3 minutes on failure
@@ -41,24 +39,24 @@ class GlobalWeatherServiceManager {
       try {
         console.log(
           "WeatherServiceManager: Creating weather service for",
-          weatherConfig.location.city
+          weatherConfig.location.city,
         );
         console.log(
           "WeatherServiceManager: E-Ra IoT config available:",
-          !!eraIotConfig
+          !!eraIotConfig,
         );
 
         GlobalWeatherServiceManager.instance = new WeatherService(
           weatherConfig,
-          eraIotConfig
+          eraIotConfig,
         );
         console.log(
-          "WeatherServiceManager: Weather service created successfully"
+          "WeatherServiceManager: Weather service created successfully",
         );
       } catch (error) {
         console.error(
           "WeatherServiceManager: Failed to create weather service:",
-          error
+          error,
         );
         throw error;
       }
@@ -75,7 +73,7 @@ class GlobalWeatherServiceManager {
   }
 
   public static subscribe(
-    callback: (data: WeatherData | null) => void
+    callback: (data: WeatherData | null) => void,
   ): () => void {
     console.log("WeatherServiceManager: Subscribe called");
     GlobalWeatherServiceManager.subscribers.add(callback);
@@ -88,7 +86,7 @@ class GlobalWeatherServiceManager {
     const currentData = instance?.getCurrentWeather() || null;
     console.log(
       "WeatherServiceManager: Current data available:",
-      !!currentData
+      !!currentData,
     );
     callback(currentData);
 
@@ -100,7 +98,7 @@ class GlobalWeatherServiceManager {
 
   private static notifySubscribers(data: WeatherData | null): void {
     GlobalWeatherServiceManager.subscribers.forEach((callback) =>
-      callback(data)
+      callback(data),
     );
   }
 
@@ -118,7 +116,7 @@ class GlobalWeatherServiceManager {
           config.eraIot.authToken
         ) {
           console.log(
-            "WeatherServiceManager: Loading E-Ra IoT config from Electron"
+            "WeatherServiceManager: Loading E-Ra IoT config from Electron",
           );
           return {
             authToken: config.eraIot.authToken,
@@ -144,7 +142,7 @@ class GlobalWeatherServiceManager {
         const parsedConfig = JSON.parse(storedConfig);
         if (parsedConfig.authToken) {
           console.log(
-            "WeatherServiceManager: Loading E-Ra IoT config from localStorage"
+            "WeatherServiceManager: Loading E-Ra IoT config from localStorage",
           );
           return parsedConfig;
         }
@@ -155,7 +153,7 @@ class GlobalWeatherServiceManager {
     } catch (error) {
       console.error(
         "WeatherServiceManager: Failed to load E-Ra IoT config:",
-        error
+        error,
       );
       return undefined;
     }
@@ -180,7 +178,7 @@ const WeatherPanel: React.FC<WeatherPanelProps> = ({
     const unsubscribe = GlobalWeatherServiceManager.subscribe((data) => {
       console.log(
         "WeatherPanel: Subscription callback called with data:",
-        !!data
+        !!data,
       );
 
       if (data) {
@@ -202,7 +200,7 @@ const WeatherPanel: React.FC<WeatherPanelProps> = ({
         });
       } else {
         console.log(
-          "WeatherPanel: No weather data, keeping loading state or showing error"
+          "WeatherPanel: No weather data, keeping loading state or showing error",
         );
         if (!isLoading) {
           setConnectionStatus("error");
@@ -249,8 +247,10 @@ const WeatherPanel: React.FC<WeatherPanelProps> = ({
         return "poor";
       case 5:
         return "very-poor";
+      case 6:
+        return "hazardous";
       default:
-        return "";
+        return "good";
     }
   };
 
@@ -293,7 +293,7 @@ const WeatherPanel: React.FC<WeatherPanelProps> = ({
   if (isLoading && !weatherData) {
     return (
       <div className={`weather-panel loading ${className}`}>
-        <div className="weather-title">TP. THỪA THIÊN HUẾ</div>
+        <div className="weather-title">MENAS ZONE VĨ DẠ</div>
         <div className="weather-loading">
           <div className="loading-spinner"></div>
           <div className="loading-text">Đang tải...</div>
@@ -306,7 +306,7 @@ const WeatherPanel: React.FC<WeatherPanelProps> = ({
   if (!weatherData && connectionStatus === "error") {
     return (
       <div className={`weather-panel error ${className}`}>
-        <div className="weather-title">TP. THỪA THIÊN HUẾ</div>
+        <div className="weather-title">MENAS ZONE VĨ DẠ</div>
         <div className="weather-error">
           <div className="error-icon">⚠</div>
           <div className="error-text">Lỗi kết nối</div>
@@ -324,7 +324,7 @@ const WeatherPanel: React.FC<WeatherPanelProps> = ({
 
   const weatherIcon = getWeatherIcon(
     weatherData.weatherCode,
-    weatherData.weatherCondition
+    weatherData.weatherCondition,
   );
 
   // Get weather type for styling
@@ -377,18 +377,14 @@ const WeatherPanel: React.FC<WeatherPanelProps> = ({
           />
         </div>
         <div className="temperature-display">
-          <div className="temp-main">{weatherData.temperature}°</div>
-          <div className="temp-feels">- {weatherData.feelsLike}°</div>
+
+
         </div>
       </div>
 
       {/* Weather details 2x2 grid - Hàng 1: Độ ẩm và UV, Hàng 2: Mưa và Gió */}
       <div className="weather-details-grid">
         {/* First row */}
-        <div className="detail-item">
-          <span className="detail-label">Độ ẩm</span>
-          <span className="detail-value">{weatherData.humidity}%</span>
-        </div>
         <div className="detail-item">
           <span className="detail-label">UV</span>
           <span className="detail-value">
@@ -402,7 +398,11 @@ const WeatherPanel: React.FC<WeatherPanelProps> = ({
         </div>
         <div className="detail-item">
           <span className="detail-label">Gió</span>
-          <span className="detail-value">{weatherData.windSpeed}</span>
+          <span className="detail-value">{weatherData.windSpeed} km/h</span>
+        </div>
+        <div className="detail-item">
+          <span className="detail-label">Tầm nhìn</span>
+          <span className="detail-value">{weatherData.visibility} km</span>
         </div>
       </div>
 
@@ -452,18 +452,25 @@ const WeatherPanel: React.FC<WeatherPanelProps> = ({
         <div className="air-quality-text">
           Chất lượng không khí: {weatherData.airQuality}
         </div>
-        <div className="air-quality-badge good">TỐT</div>
+        <div
+          className={`air-quality-badge ${getAirQualityClass(weatherData.aqi)}`}
+        >
+          {weatherData.airQuality.toUpperCase()}
+        </div>
       </div>
 
       {/* Citation line */}
-      <div className="citation-line" style={{
-        fontSize: "10px",
-        color: "rgba(255, 255, 255, 0.6)",
-        textAlign: "center",
-        fontStyle: "italic",
-        marginTop: "4px",
-        width: "100%"
-      }}>
+      <div
+        className="citation-line"
+        style={{
+          fontSize: "10px",
+          color: "rgba(255, 255, 255, 0.6)",
+          textAlign: "center",
+          fontStyle: "italic",
+          marginTop: "4px",
+          width: "100%",
+        }}
+      >
         Theo nguồn tin từ Accuweather
       </div>
 

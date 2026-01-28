@@ -33,6 +33,17 @@ export interface ElectronAPI {
     config: any
   ) => Promise<{ success: boolean; error?: string }>;
   onEraIotConfigUpdated?: (callback: (event: any, config: any) => void) => void;
+  // E-Ra IoT MQTT data handlers (NEW)
+  getEraIotData: () => Promise<any>;
+  refreshEraIotConnection: () => Promise<{
+    success: boolean;
+    message?: string;
+  }>;
+  onEraIotDataUpdate: (callback: (event: any, data: any) => void) => void;
+  onEraIotStatusUpdate: (callback: (event: any, status: any) => void) => void;
+  removeEraIotDataListener: () => void;
+  removeEraIotStatusListener: () => void;
+  getGatewayToken: () => Promise<string>;
 
   // Authentication handlers
   updateAuthToken?: (

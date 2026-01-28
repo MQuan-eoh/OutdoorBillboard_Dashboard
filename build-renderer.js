@@ -516,19 +516,30 @@ class WeatherService {
     try {
       console.log("WeatherService: Fetching from OpenMeteo API");
       const { lat, lon, city } = this.config.location;
-      const url = \`https://api.open-meteo.com/v1/forecast?latitude=\${lat}&longitude=\${lon}&current_weather=true&hourly=temperature_2m,relativehumidity_2m,windspeed_10m,uv_index,apparent_temperature,precipitation_probability,visibility&timezone=Asia/Ho_Chi_Minh&forecast_days=1\`;
+      const weatherUrl = \`https://api.open-meteo.com/v1/forecast?latitude=\${lat}&longitude=\${lon}&current_weather=true&hourly=temperature_2m,relativehumidity_2m,windspeed_10m,uv_index,apparent_temperature,precipitation_probability,visibility&timezone=Asia/Ho_Chi_Minh&forecast_days=1\`;
+      const aqUrl = \`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=\${lat}&longitude=\${lon}&current=us_aqi,pm10,pm2_5&timezone=Asia/Ho_Chi_Minh\`;
+
+      console.log("\\n================ [WEATHER SERVICE API CALL (BUNDLED)] ================");
+      console.log("1. Weather URL    : ", weatherUrl);
+      console.log("2. AirQuality URL : ", aqUrl);
+      console.log("======================================================================\\n");
       
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'ITS-Billboard/1.0'
-        }
-      });
+      const [weatherResponse, aqResponse] = await Promise.all([
+        fetch(weatherUrl, { headers: { 'User-Agent': 'ITS-Billboard/1.0' } }),
+        fetch(aqUrl, { headers: { 'User-Agent': 'ITS-Billboard/1.0' } }).catch(e => {
+            console.error("AQI fetch failed:", e);
+            return { ok: false };
+        })
+      ]);
       
-      if (!response.ok) {
-        throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+      if (!weatherResponse.ok) {
+        throw new Error(\`Weather API HTTP \${weatherResponse.status}\`);
       }
       
-      const data = await response.json();
+      const data = await weatherResponse.json();
+      const aqDataRaw = aqResponse.ok ? await aqResponse.json() : null;
+      const aqData = aqDataRaw?.current || null;
+
       const current = data.current_weather;
       const hourly = data.hourly;
       
@@ -537,6 +548,30 @@ class WeatherService {
       }
       
       const currentHour = new Date().getHours();
+
+      // Process Air Quality directly from API
+      let airQualityData = { text: "Tốt", index: 1 }; // Default fallback
+      let pm25Val = 2.06;
+      let pm10Val = 2.4;
+
+      if (aqData) {
+        const aqi = aqData.us_aqi;
+        if (aqi <= 50) airQualityData = { text: "Tốt", index: 1 };
+        else if (aqi <= 100) airQualityData = { text: "Trung bình", index: 2 };
+        else if (aqi <= 150) airQualityData = { text: "Kém", index: 3 };
+        else if (aqi <= 200) airQualityData = { text: "Xấu", index: 4 };
+        else if (aqi <= 300) airQualityData = { text: "Rất xấu", index: 5 };
+        else airQualityData = { text: "Nguy hại", index: 6 };
+
+        pm25Val = aqData.pm2_5;
+        pm10Val = aqData.pm10;
+      } else {
+         // Fallback logic
+         const visibility = hourly.visibility?.[currentHour] ? Math.round(hourly.visibility[currentHour] / 1000) : 10;
+         if (visibility >= 10) airQualityData = { text: "Tốt", index: 1 };
+         else if (visibility >= 5) airQualityData = { text: "Trung bình", index: 2 };
+         else airQualityData = { text: "Kém", index: 3 };
+      }
       
       this.currentData = {
         cityName: city,
@@ -548,9 +583,11 @@ class WeatherService {
         rainProbability: Math.round(hourly.precipitation_probability[currentHour] || 20),
         weatherCondition: this.getWeatherCondition(current.weathercode),
         weatherCode: current.weathercode,
-        airQuality: "Tốt",
-        aqi: 1,
-        visibility: 10,
+        airQuality: airQualityData.text,
+        aqi: airQualityData.index,
+        visibility: hourly.visibility?.[currentHour] ? Math.round(hourly.visibility[currentHour] / 1000) : 10,
+        pm25: pm25Val,
+        pm10: pm10Val,
         lastUpdated: new Date(),
       };
       
@@ -558,13 +595,14 @@ class WeatherService {
       console.log('WeatherService: Data updated successfully', {
         temp: this.currentData.temperature,
         condition: this.currentData.weatherCondition,
-        humidity: this.currentData.humidity
+        humidity: this.currentData.humidity,
+        aqi: this.currentData.aqi
       });
       
       // Notify subscribers immediately after successful update
       GlobalWeatherServiceManager.notifySubscribers(this.currentData);
     } catch (error) {
-      console.error('WeatherService: API failed', error);
+           console.error('WeatherService: API failed', error);
       this.handleFetchFailure();
     } finally {
       this.isUpdating = false;
@@ -665,7 +703,7 @@ class GlobalWeatherServiceManager {
         location: {
           lat: 16.4637,
           lon: 107.5909,
-          city: "TP. THỪA THIÊN HUẾ",
+          city: "MENAS ZONE VĨ DẠ",
         },
         updateInterval: 2,
         retryInterval: 5,
@@ -872,25 +910,21 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
       case 3: return "moderate";
       case 4: return "poor";
       case 5: return "very-poor";
-      default: return "";
+      case 6: return "hazardous";
+      default: return "good";
     }
   };
 
   // Get air quality badge color and text based on AQI
   const getAirQualityBadge = (aqi, airQuality) => {
     switch (aqi) {
-      case 1:
-        return { color: "#4ade80", text: "TỐT" }; // Green - Good
-      case 2:
-        return { color: "#fbbf24", text: "KHẤP" }; // Yellow - Fair
-      case 3:
-        return { color: "#f97316", text: "TB" }; // Orange - Moderate
-      case 4:
-        return { color: "#ef4444", text: "KÉM" }; // Red - Poor
-      case 5:
-        return { color: "#7c2d12", text: "XẤU" }; // Dark red - Very poor
-      default:
-        return { color: "#4ade80", text: "TỐT" };
+      case 1: return { color: "#4ade80", text: "TỐT" }; // Green - Good
+      case 2: return { color: "#ecc94b", text: "TB" }; // Yellow - Fair
+      case 3: return { color: "#f97316", text: "KÉM" }; // Orange - Moderate
+      case 4: return { color: "#ef4444", text: "XẤU" }; // Red - Poor
+      case 5: return { color: "#9f7aea", text: "RẤT XẤU" }; // Purple - Very poor
+      case 6: return { color: "#744210", text: "NGUY HẠI" }; // Brown - Hazardous
+      default: return { color: "#4ade80", text: "TỐT" };
     }
   };
 
@@ -950,7 +984,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
           zIndex: 2,
           textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)"
         } 
-      }, "TP. THỪA THIÊN HUẾ"),
+      }, "MENAS ZONE VĨ DẠ"),
       React.createElement("div", { 
         key: "loading", 
         style: { 
@@ -1001,7 +1035,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
           zIndex: 2,
           textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)"
         } 
-      }, "TP. THỪA THIÊN HUẾ"),
+      }, "MENAS ZONE VĨ DẠ"),
       React.createElement("div", { 
         key: "error", 
         style: { 
@@ -1158,16 +1192,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
                 e.target.style.display = "none";
               }
             }),
-            React.createElement("div", { 
-              key: "temp-main",
-              style: { 
-                fontSize: "48px", 
-                fontWeight: "bold", 
-                color: "#ffffff",
-                textShadow: "0 3px 6px rgba(0, 0, 0, 0.8)",
-                lineHeight: 1
-              }
-            }, \`\${weatherData.temperature}°\`)
+
           ]),
 
           // Weather details 2x2 grid - Hàng 1: Độ ẩm và UV, Hàng 2: Mưa và Gió
@@ -1180,51 +1205,12 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
               gridTemplateRows: "1fr 1fr", // 2 rows
               gap: "0px", // Minimal gap between all items
               marginBottom: "0px", // Minimal margin
-              marginTop: "0px", // Reset from -35px to fix overlap
+              marginTop: "10px", // Increased to move elements down
               paddingLeft: "0px", // Remove left padding to shift more left
               paddingRight: "8px"
             }
           }, [
-            // First row, first column: Độ ẩm
-            React.createElement("div", { 
-              key: "humidity",
-              style: { 
-                display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                padding: "2px 4px",    
-                borderRadius: "3px",
-                minHeight: "25px"
-              }
-            }, [
-              React.createElement("div", { 
-                key: "label",
-                style: { 
-                  fontSize: "12px",
-                  color: "#ffffffff", 
-                  opacity: 1,
-                  textShadow: "0 1px 2px rgba(0, 0, 0, 0.8)",
-                  marginBottom: "0px",
-                  marginRight: "8px",
-                  fontWeight: "600",
-                  letterSpacing: "0.2px",
-                  textTransform: "capitalize",
-                  whiteSpace: "nowrap"
-                }
-              }, "Độ ẩm"),
-              React.createElement("div", { 
-                key: "value",
-                style: { 
-                  fontSize: "14px",
-                  fontWeight: "bold", 
-                  color: "#ffffff", 
-                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)",
-                  lineHeight: 1.1,
-                  whiteSpace: "nowrap"
-                }
-              }, weatherData.humidity + '%')
-            ]),
+
             // First row, second column: UV
             React.createElement("div", { 
               key: "uv",
@@ -1322,7 +1308,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
                 key: "label",
                 style: { 
                   fontSize: "12px",
-                  color: "#ffffffff",
+                  color: "#ffffffff", 
                   opacity: 1,
                   textShadow: "0 1px 2px rgba(0, 0, 0, 0.8)",
                   marginBottom: "0px",
@@ -1344,6 +1330,46 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
                   whiteSpace: "nowrap"
                 }
               }, weatherData.windSpeed + ' km/h')
+            ]),
+            // Second row, second column: Visibility
+            React.createElement("div", { 
+              key: "visibility",
+              style: { 
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                padding: "2px 4px",
+                borderRadius: "3px",
+                minHeight: "25px"
+              }
+            }, [
+              React.createElement("div", { 
+                key: "label",
+                style: { 
+                  fontSize: "12px",
+                  color: "#ffffffff", 
+                  opacity: 1,
+                  textShadow: "0 1px 2px rgba(0, 0, 0, 0.8)",
+                  marginBottom: "0px",
+                  marginRight: "8px",
+                  fontWeight: "600",
+                  letterSpacing: "0.2px",
+                  textTransform: "capitalize",
+                  whiteSpace: "nowrap"
+                }
+              }, "Tầm nhìn"),
+              React.createElement("div", { 
+                key: "value",
+                style: { 
+                  fontSize: "14px",
+                  fontWeight: "bold", 
+                  color: "#ffffff", 
+                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)",
+                  lineHeight: 1.1,
+                  whiteSpace: "nowrap"
+                }
+              }, weatherData.visibility + ' km')
             ])
           ]),
 
@@ -1353,7 +1379,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
             style: { 
               width: "100%",
               padding: "0px 8px", // Reduced padding
-              margin: "8px 0 0 0" // Added positive margin to push it down
+              margin: "4px 0 0px 0" // Reduced top margin to fix layout overflow
             }
           }, [
             React.createElement("div", { 
@@ -1362,7 +1388,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                padding: "4px 6px"
+                padding: "4px 6px 0px 6px"
               }
             }, [
               React.createElement("span", { 
@@ -1401,13 +1427,13 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
               color: "rgba(255, 255, 255, 0.8)", // Increased opacity
               textAlign: "center", 
               fontStyle: "italic",
-              marginTop: "4px", // Increased margin for better spacing
+              marginTop: "0px", // Reduced margin to min
               width: "100%",
               position: "relative",
               zIndex: 10,
               paddingBottom: "4px"
             }
-          }, "Theo nguồn tin từ Accuweather")
+          }, "Theo nguồn tin từ accuweather.com")
         ]),
 
         // Right column - Device measurements (like in image)
@@ -1918,21 +1944,7 @@ function CompanyLogo() {
   }, [
     currentLogo ? renderCustomLogo(currentLogo) : renderDefaultLogo(),
     
-    // Debug overlay showing source
-    React.createElement("div", {
-      key: "debug-overlay",
-      style: {
-        position: "absolute",
-        bottom: "2px",
-        right: "2px",
-        fontSize: "8px",
-        color: "rgba(255,255,255,0.5)",
-        background: "rgba(0,0,0,0.3)",
-        padding: "1px 3px",
-        borderRadius: "2px",
-        pointerEvents: "none",
-      }
-    }, \`\${useManifestLogos ? 'CDN' : 'Local'} (\${activeLogos.length})\`)
+
   ]);
 }
 

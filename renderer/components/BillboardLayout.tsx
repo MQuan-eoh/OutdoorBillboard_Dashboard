@@ -74,32 +74,17 @@ const BillboardLayout: React.FC<BillboardLayoutProps> = ({
           hasConfig: !!config,
           enabled: config?.enabled,
           hasAuthToken: !!config?.authToken,
-          authTokenPreview: config?.authToken?.substring(0, 20) + "...",
-          isPlaceholder: config?.authToken?.includes("1234272955"),
         });
 
-        if (config && config.authToken && config.authToken.trim() !== "") {
-          if (config.authToken.includes("1234272955")) {
-            console.log(
-              "BillboardLayout: E-Ra IoT using placeholder AUTHTOKEN - will show error state"
-            );
-          } else {
-            console.log(
-              "BillboardLayout: Initializing E-Ra IoT service with valid config"
-            );
-          }
-
+        if (config && config.authToken) {
           // Cleanup existing service
           if (eraIotService) {
             eraIotService.destroy();
           }
 
           const service = new EraIotService(config);
-          console.log("EraIotService: Starting MQTT-based sensor data service");
-          console.log(
-            "EraIotService: Started MQTT callback updates every 1 second for real-time UI responsiveness"
-          );
-
+          console.log("EraIotService: Starting IPC-based sensor data service");
+          
           await service.startPeriodicUpdates();
           setEraIotService(service);
           console.log(
@@ -107,7 +92,7 @@ const BillboardLayout: React.FC<BillboardLayoutProps> = ({
           );
         } else {
           console.log(
-            "BillboardLayout: No valid E-Ra IoT configuration found - missing or invalid AUTHTOKEN"
+            "BillboardLayout: No valid E-Ra IoT configuration found"
           );
           if (eraIotService) {
             eraIotService.destroy();
@@ -298,23 +283,13 @@ const BillboardLayout: React.FC<BillboardLayoutProps> = ({
 
       // Try to access config from electron main process
       if (typeof window !== "undefined" && (window as any).electronAPI) {
-        console.log(
-          "BillboardLayout: electronAPI available, fetching config..."
-        );
-
         const config = await (window as any).electronAPI.getConfig?.();
-        console.log("BillboardLayout: Raw config received:", {
-          hasEraIot: !!config?.eraIot,
-          enabled: config?.eraIot?.enabled,
-          hasAuthToken: !!config?.eraIot?.authToken,
-          authTokenPrefix: config?.eraIot?.authToken?.substring(0, 10),
-        });
-
+        
         if (config?.eraIot && config.eraIot.authToken) {
           return {
             enabled: config.eraIot.enabled,
             authToken: config.eraIot.authToken,
-            gatewayToken: config.eraIot.gatewayToken || "", // Add required gatewayToken field
+            gatewayToken: config.eraIot.gatewayToken || "", 
             baseUrl: config.eraIot.baseUrl || "https://backend.eoh.io",
             sensorConfigs: config.eraIot.sensorConfigs || {
               temperature: null,
@@ -327,21 +302,6 @@ const BillboardLayout: React.FC<BillboardLayoutProps> = ({
             retryAttempts: config.eraIot.retryAttempts || 3,
             retryDelay: config.eraIot.retryDelay || 2000,
           };
-        }
-      } else {
-        console.log("BillboardLayout: electronAPI not available");
-      }
-
-      // Fallback: Try localStorage
-      console.log("BillboardLayout: Trying localStorage fallback...");
-      const storedConfig = localStorage.getItem("eraIotConfig");
-      if (storedConfig) {
-        const parsedConfig = JSON.parse(storedConfig);
-        console.log("BillboardLayout: Found localStorage config:", {
-          hasAuthToken: !!parsedConfig.authToken,
-        });
-        if (parsedConfig.authToken) {
-          return parsedConfig;
         }
       }
 

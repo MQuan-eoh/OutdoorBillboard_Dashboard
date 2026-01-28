@@ -8,7 +8,7 @@ async function testWeatherService() {
     location: {
       lat: 16.4637,
       lon: 107.5909,
-      city: "TP. THỪA THIÊN HUẾ",
+      city: "MENAS ZONE VĨ DẠ",
     },
     updateInterval: 10,
     retryInterval: 3,

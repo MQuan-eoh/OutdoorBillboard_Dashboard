@@ -3,7 +3,7 @@
  * Extends existing MQTT infrastructure to support remote banner updates
  */
 
-import MqttService from "./mqttService";
+
 
 export interface BannerData {
   id: string;

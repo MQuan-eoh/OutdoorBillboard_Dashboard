@@ -406,13 +406,14 @@ class WeatherPanel extends React.Component {
     super(props);
     this.state = {
       weatherData: {
-        city: "TP. THỪA THIÊN HUẾ",
+        city: "MENAS ZONE VĨ DẠ",
         temperature: "24,2",
         lowTemp: "-29,7",
         humidity: "95",
         uvIndex: "Thấp",
         rainChance: "97",
         windSpeed: "1,6",
+        visibility: "10",
         airQuality: "Tốt",
       },
     };
@@ -437,6 +438,7 @@ class WeatherPanel extends React.Component {
       humidity: (70 + Math.random() * 30).toFixed(0),
       rainChance: Math.floor(Math.random() * 100),
       windSpeed: (Math.random() * 5).toFixed(1),
+      visibility: "10",
     };
 
     this.setState({
@@ -477,25 +479,22 @@ class WeatherPanel extends React.Component {
         },
         weatherData.city
       ),
-      React.createElement(
-        "div",
-        { style: { fontSize: "32px", fontWeight: "bold" } },
-        `${weatherData.temperature}°`
-      ),
+
+
       React.createElement(
         "div",
         { style: { fontSize: "12px" } },
-        `${weatherData.lowTemp}°`
-      ),
-      React.createElement(
-        "div",
-        { style: { fontSize: "12px" } },
-        `Độ ẩm ${weatherData.humidity}% | UV ${weatherData.uvIndex}`
+        `UV ${weatherData.uvIndex}`
       ),
       React.createElement(
         "div",
         { style: { fontSize: "12px" } },
         `Mưa ${weatherData.rainChance}% | Gió ${weatherData.windSpeed} km/h`
+      ),
+      React.createElement(
+        "div",
+        { style: { fontSize: "12px" } },
+        `Tầm nhìn ${weatherData.visibility} km`
       ),
       React.createElement(
         "div",

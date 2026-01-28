@@ -2158,6 +2158,17 @@ ipcMain.handle("update-era-iot-config", async (event, eraIotConfig) => {
       ...eraIotConfig,
     };
 
+    // Auto-extract gateway token if authToken is present but gatewayToken is missing
+    if (currentConfig.eraIot.authToken && !currentConfig.eraIot.gatewayToken) {
+       if (currentConfig.eraIot.authToken.includes("Token ")) {
+          const parts = currentConfig.eraIot.authToken.split("Token ");
+          if (parts.length > 1 && parts[1].trim()) {
+             currentConfig.eraIot.gatewayToken = parts[1].trim();
+             console.log("Automatically extracted gatewayToken from authToken during config update");
+          }
+       }
+    }
+
     fs.writeFileSync(configPath, JSON.stringify(currentConfig, null, 2));
     console.log("E-Ra IoT configuration updated successfully");
 
@@ -2202,25 +2213,36 @@ ipcMain.handle("update-auth-token", async (event, authToken) => {
       };
     }
 
-    // FIXED: Do NOT extract gatewayToken from authToken
-    // authToken and gatewayToken are two separate values
-    // gatewayToken should be preserved from config or set manually
+    // FIXED: restored extraction logic because users expect it working this way
+    // Extract gateway token if found in auth token (format: "Token <gateway_token>")
+    // This provides fallback when gatewayToken is missing
+    let extractedGatewayToken = null;
+    if (authToken && authToken.includes("Token ")) {
+      const parts = authToken.split("Token ");
+      if (parts.length > 1 && parts[1].trim()) {
+        extractedGatewayToken = parts[1].trim();
+      }
+    }
 
-    // Update only auth token, keep existing gatewayToken
+    // Update auth token
     currentConfig.eraIot.authToken = authToken;
 
-    // Only set gatewayToken if it doesn't exist (preserve existing value)
-    if (!currentConfig.eraIot.gatewayToken) {
-      console.warn("gatewayToken not found in config - please set it manually");
+    // Use existing gatewayToken, or extracted one, or empty string
+    // This allows manual override via config file if needed, but defaults to extraction
+    if (!currentConfig.eraIot.gatewayToken && extractedGatewayToken) {
+       console.log("Automatically extracting gatewayToken from authToken");
+       currentConfig.eraIot.gatewayToken = extractedGatewayToken;
+    } else if (!currentConfig.eraIot.gatewayToken) {
+       console.warn("gatewayToken not found and could not be extracted - please set it manually");
     }
 
     fs.writeFileSync(configPath, JSON.stringify(currentConfig, null, 2));
     console.log("Authentication token updated successfully");
     console.log(
-      "Gateway token extracted:",
+      "Gateway token status:",
       currentConfig.eraIot.gatewayToken
-        ? currentConfig.eraIot.gatewayToken.substring(0, 20) + "..."
-        : "null"
+        ? "Present (" + currentConfig.eraIot.gatewayToken.substring(0, 10) + "...)"
+        : "MISSING"
     );
 
     // Broadcast config update to all windows

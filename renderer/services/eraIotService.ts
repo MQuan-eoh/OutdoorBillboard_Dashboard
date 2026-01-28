@@ -10,21 +10,13 @@
  * - Real-time data streaming instead of polling API
  */
 
-import MqttService, {
-  MqttConfig,
-  MqttSensorData,
-  MqttConnectionStatus,
-} from "./mqttService";
-
-export interface SensorReading {
-  configId: number;
-  name: string;
-  value: number;
-  unit: string;
-  timestamp: Date;
-  deviceId: number;
-  deviceName: string;
-}
+/**
+ * E-Ra IoT Platform Service
+ * Uses IPC to communicate with Main Process for real-time sensor data
+ *
+ * This service acts as a bridge between the React components and the
+ * Electron Main Process which handles the actual MQTT connection.
+ */
 
 export interface EraIotData {
   temperature: number | null;
@@ -39,9 +31,8 @@ export interface EraIotData {
 export interface EraIotConfig {
   enabled?: boolean;
   authToken: string; // E-RA authentication token for API calls
-  gatewayToken: string; // E-RA gateway token for MQTT authentication (separate from authToken)
-  baseUrl: string; // E-RA API base URL (for config management only)
-  unitId?: string; // Unit ID for air quality API calls (/property_manager/units/{unit_id}/summary/)
+  gatewayToken: string; // E-RA gateway token for MQTT authentication
+  baseUrl: string; // E-RA API base URL
   sensorConfigs: {
     temperature: number | null;
     humidity: number | null;
@@ -57,147 +48,170 @@ export interface EraIotConfig {
       pm10: boolean;
     };
   };
-  updateInterval: number; // minutes (for compatibility, not used in MQTT)
-  timeout: number; // milliseconds (connection timeout)
+  updateInterval: number;
+  timeout: number;
   retryAttempts: number;
-  retryDelay: number; // milliseconds
+  retryDelay: number;
+  unitId?: string; // Add unitId for type compatibility
 }
 
 class EraIotService {
   private config: EraIotConfig;
-  private mqttService: MqttService | null = null;
   private currentData: EraIotData | null = null;
-  private mqttDataUnsubscribe: (() => void) | null = null;
-  private mqttStatusUnsubscribe: (() => void) | null = null;
+  private isInitialized: boolean = false;
   private dataUpdateCallbacks: ((data: EraIotData) => void)[] = [];
   private statusUpdateCallbacks: ((status: any) => void)[] = [];
 
   constructor(config: EraIotConfig) {
     this.config = config;
-    this.initializeMqttService();
-    console.log("EraIotService: Initialized with config", config);
-  }
-
-  /**
-   * Update authentication token dynamically
-   * This method is called when user successfully logs in
-   */
-  public updateAuthToken(newAuthToken: string): void {
-    console.log("EraIotService: Updating auth token");
-
-    this.config.authToken = newAuthToken;
-
-    // Reinitialize MQTT service with new token
-    this.destroy();
-    this.initializeMqttService();
-
-    // Automatically start connection with new token
-    this.startPeriodicUpdates().catch((error) => {
-      console.error("EraIotService: Failed to start with new token:", error);
+    
+    console.log("EraIotService: Initializing with IPC-based communication");
+    console.log("EraIotService: Config:", {
+      enabled: config.enabled,
+      authToken: config.authToken ? config.authToken.substring(0, 20) + "..." : "none",
+      // sensorConfigs: config.sensorConfigs,
     });
   }
 
-  private initializeMqttService(): void {
+  /**
+   * Start listening for updates from the Main Process
+   */
+  public async startPeriodicUpdates(): Promise<void> {
+    console.log("EraIotService: Starting IPC-based connection...");
+    
     try {
-      console.log("EraIotService: Initializing MQTT service with config");
-
-      // FIXED: Use gatewayToken directly from config instead of extracting
-      // Test shows gatewayToken works but extracted token fails authentication
-      const gatewayToken = this.config.gatewayToken;
-      if (!gatewayToken) {
-        console.error("EraIotService: gatewayToken not found in config");
-        return;
-      }
-
-      console.log(
-        "EraIotService: Using gatewayToken from config:",
-        gatewayToken.substring(0, 15) + "..."
-      );
-
-      const mqttConfig: MqttConfig = {
-        enabled: this.config.enabled,
-        gatewayToken,
-        authToken: this.config.authToken, // Keep for compatibility
-        sensorConfigs: this.config.sensorConfigs,
-        scaleConfig: this.config.scaleConfig, // Pass scale configuration to MQTT service
-        options: {
-          keepalive: 60,
-          connectTimeout: this.config.timeout,
-          reconnectPeriod: this.config.retryDelay,
-          clean: true,
-        },
-      };
-
-      console.log("EraIotService: Creating MQTT service with config", {
-        enabled: mqttConfig.enabled,
-        gatewayToken: gatewayToken.substring(0, 10) + "...",
-        sensorConfigs: mqttConfig.sensorConfigs,
-      });
-
-      this.mqttService = new MqttService(mqttConfig);
-
-      // Subscribe to MQTT data updates
-      this.mqttDataUnsubscribe = this.mqttService.onDataUpdate((mqttData) => {
-        this.handleMqttData(mqttData);
-      });
-
-      // Subscribe to MQTT status updates
-      this.mqttStatusUnsubscribe = this.mqttService.onStatusUpdate((status) => {
-        console.log("EraIotService: MQTT status update:", status);
-        this.notifyStatusUpdateCallbacks();
-      });
-    } catch (error) {
-      console.error("EraIotService: Failed to initialize MQTT service:", error);
+      // Set up IPC listeners for data from main process
+      this.setupIpcListeners();
+      
+      // Get initial data from main process
+      await this.fetchInitialData();
+      
+      console.log("EraIotService: Started IPC-based sensor data service");
+      console.log("EraIotService: Listening for updates from Main Process");
+      this.isInitialized = true;
+      
+    } catch (error: any) {
+      console.error("EraIotService: Failed to start IPC connection:", error);
+      this.useFallbackData(error);
     }
   }
 
-  /**
-   * Handle MQTT data and convert to EraIotData format
-   */
-  private handleMqttData(mqttData: MqttSensorData): void {
-    this.currentData = {
-      temperature: mqttData.temperature,
-      humidity: mqttData.humidity,
-      pm25: mqttData.pm25,
-      pm10: mqttData.pm10,
-      lastUpdated: mqttData.timestamp,
-      status: this.determineMqttDataStatus(mqttData),
-      errorMessage: undefined,
-    };
+  private setupIpcListeners(): void {
+    if (!window.electronAPI) {
+      console.error("EraIotService: electronAPI not available");
+      return;
+    }
 
-    console.log("EraIotService: Updated data from MQTT:", {
-      temperature: this.currentData.temperature,
-      humidity: this.currentData.humidity,
-      pm25: this.currentData.pm25,
-      pm10: this.currentData.pm10,
-      status: this.currentData.status,
+    // Listen for data updates from main process
+    window.electronAPI.onEraIotDataUpdate((_event: any, data: any) => {
+      // console.log("EraIotService: Received data update from main process:", data);
+      
+      // Convert raw data to EraIotData if needed, or use as is
+      this.handleIncomingData(data);
     });
 
-    // Immediately notify all subscribed components of data updates
+    // Listen for status updates from main process
+    window.electronAPI.onEraIotStatusUpdate((_event: any, status: any) => {
+      console.log("EraIotService: Received status update from main process:", status);
+      this.notifyStatusUpdateCallbacks(status);
+    });
+
+    console.log("EraIotService: IPC listeners established");
+  }
+  
+  private handleIncomingData(data: any): void {
+      // Ensure dates are parsed back to Date objects if they come as strings
+      const processedData: EraIotData = {
+          ...data,
+          lastUpdated: new Date(data.lastUpdated)
+      };
+      
+      this.currentData = processedData;
+      this.notifyDataUpdateCallbacks();
+  }
+
+  private async fetchInitialData(): Promise<void> {
+    if (!window.electronAPI) {
+      throw new Error("electronAPI not available");
+    }
+
+    try {
+      // Currently getEraIotData returns any, assuming it matches the structure
+      const data = await window.electronAPI.getEraIotData();
+      if (data) {
+        console.log("EraIotService: Retrieved initial data from main process");
+        this.handleIncomingData(data);
+      } else {
+        console.log("EraIotService: No initial data available from main process");
+      }
+    } catch (error) {
+      console.error("EraIotService: Failed to fetch initial data:", error);
+      throw error;
+    }
+  }
+
+  public stopPeriodicUpdates(): void {
+    // Remove IPC listeners
+    if (window.electronAPI) {
+      window.electronAPI.removeEraIotDataListener();
+      window.electronAPI.removeEraIotStatusListener();
+    }
+    
+    this.isInitialized = false;
+    console.log("EraIotService: Stopped IPC-based updates");
+  }
+
+  private useFallbackData(error: Error): void {
+    this.currentData = {
+      temperature: null,
+      humidity: null,
+      pm25: 15.0, // Default safe value
+      pm10: 25.0, // Default safe value
+      lastUpdated: new Date(),
+      status: "error",
+      errorMessage: `IPC Connection failed: ${error.message || "Unknown error"}`,
+    };
+    
+    // Notify callbacks about fallback data
     this.notifyDataUpdateCallbacks();
+    
+    console.log("EraIotService: Using fallback sensor data");
   }
 
-  /**
-   * Determine data status based on MQTT data completeness
-   */
-  private determineMqttDataStatus(
-    mqttData: MqttSensorData
-  ): EraIotData["status"] {
-    const validValues = [
-      mqttData.temperature,
-      mqttData.humidity,
-      mqttData.pm25,
-      mqttData.pm10,
-    ].filter((value) => value !== null).length;
-
-    if (validValues === 4) return "success";
-    if (validValues > 0) return "partial";
-    return "error";
+  public getCurrentData(): EraIotData | null {
+    return this.currentData;
   }
 
-  /**
-   * Notify all data update callbacks with current data
-   */
+  public async refreshData(): Promise<void> {
+    console.log("EraIotService: Manual refresh requested - triggering main process refresh");
+    
+    if (!window.electronAPI) {
+      console.error("EraIotService: electronAPI not available for refresh");
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.refreshEraIotConnection();
+      if (result.success) {
+        console.log("EraIotService: Main process refresh command sent successfully");
+        // Data will come through IPC listeners
+      } else {
+        console.error("EraIotService: Main process refresh failed:", result.message);
+      }
+    } catch (error) {
+      console.error("EraIotService: Failed to trigger main process refresh:", error);
+    }
+  }
+
+  public destroy(): void {
+    this.stopPeriodicUpdates();
+    this.currentData = null;
+    this.dataUpdateCallbacks = [];
+    this.statusUpdateCallbacks = [];
+    console.log("EraIotService: Destroyed");
+  }
+
+  // Notify all data update callbacks with current data
   private notifyDataUpdateCallbacks(): void {
     if (!this.currentData) return;
 
@@ -210,11 +224,8 @@ class EraIotService {
     });
   }
 
-  /**
-   * Notify all status update callbacks
-   */
-  private notifyStatusUpdateCallbacks(): void {
-    const status = this.getStatus();
+  // Notify all status update callbacks
+  private notifyStatusUpdateCallbacks(status: any): void {
     this.statusUpdateCallbacks.forEach((callback) => {
       try {
         callback(status);
@@ -224,109 +235,7 @@ class EraIotService {
     });
   }
 
-  /**
-   * Start MQTT connection and data streaming
-   */
-  public async startPeriodicUpdates(): Promise<void> {
-    if (!this.mqttService) {
-      console.error("EraIotService: MQTT service not initialized");
-      return;
-    }
-
-    try {
-      console.log("EraIotService: Starting MQTT connection...");
-      await this.mqttService.connect();
-      console.log("EraIotService: Started MQTT-based sensor data service");
-      console.log(
-        "EraIotService: Started MQTT callback updates every 1 second for real-time UI responsiveness"
-      );
-    } catch (error) {
-      console.error("EraIotService: Failed to start MQTT connection:", error);
-    }
-  }
-
-  /**
-   * Stop MQTT connection
-   */
-  public async stopPeriodicUpdates(): Promise<void> {
-    if (this.mqttService) {
-      await this.mqttService.disconnect();
-      console.log("EraIotService: Stopped MQTT connection");
-    }
-  }
-
-  /**
-   * Get fallback data when MQTT connection fails
-   */
-  private getFallbackData(): EraIotData {
-    return {
-      temperature: null,
-      humidity: null,
-      pm25: 15.0, // Fallback PM2.5 value
-      pm10: 25.0, // Fallback PM10 value
-      lastUpdated: new Date(),
-      status: "error",
-      errorMessage: "MQTT connection failed - using fallback data",
-    };
-  }
-
-  /**
-   * Get current sensor data
-   */
-  public getCurrentData(): EraIotData | null {
-    return this.currentData;
-  }
-
-  /**
-   * Manual refresh of sensor data (forces MQTT reconnection)
-   */
-  public async refreshData(): Promise<void> {
-    console.log("EraIotService: Manual refresh requested - reconnecting MQTT");
-    if (this.mqttService) {
-      await this.mqttService.disconnect();
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      await this.mqttService.connect();
-    }
-  }
-
-  /**
-   * Update configuration
-   */
-  public updateConfig(newConfig: Partial<EraIotConfig>): void {
-    this.config = { ...this.config, ...newConfig };
-
-    if (newConfig.authToken || newConfig.baseUrl) {
-      // Reinitialize MQTT service with new config
-      this.destroy();
-      this.initializeMqttService();
-    }
-
-    console.log("EraIotService: Configuration updated");
-  }
-
-  /**
-   * Get service status
-   */
-  public getStatus(): {
-    isRunning: boolean;
-    lastUpdate: Date | null;
-    retryCount: number;
-    currentStatus: EraIotData["status"] | "inactive";
-  } {
-    const mqttStatus = this.mqttService?.getStatus();
-    return {
-      isRunning: mqttStatus?.connected || false,
-      lastUpdate: this.currentData?.lastUpdated || null,
-      retryCount: mqttStatus?.reconnectAttempts || 0,
-      currentStatus: this.currentData?.status || "inactive",
-    };
-  }
-
-  /**
-   * Subscribe to real-time data updates (called every second)
-   * @param callback Function to call when data is updated
-   * @returns Unsubscribe function
-   */
+  // Subscribe to real-time data updates
   public onDataUpdate(callback: (data: EraIotData) => void): () => void {
     this.dataUpdateCallbacks.push(callback);
 
@@ -347,11 +256,7 @@ class EraIotService {
     };
   }
 
-  /**
-   * Subscribe to service status updates
-   * @param callback Function to call when status changes
-   * @returns Unsubscribe function
-   */
+  // Subscribe to service status updates
   public onStatusUpdate(callback: (status: any) => void): () => void {
     this.statusUpdateCallbacks.push(callback);
 
@@ -370,71 +275,53 @@ class EraIotService {
     };
   }
 
-  /**
-   * Test MQTT connection
-   */
+  public getStatus(): {
+    isRunning: boolean;
+    lastUpdate: Date | null;
+    retryCount: number;
+    currentStatus: EraIotData["status"] | "inactive";
+  } {
+    return {
+      isRunning: this.isInitialized,
+      lastUpdate: this.currentData?.lastUpdated || null,
+      retryCount: 0,
+      currentStatus: this.currentData?.status || "inactive",
+    };
+  }
+
   public async testConnection(): Promise<{
     success: boolean;
     message: string;
   }> {
-    try {
-      console.log("EraIotService: Testing E-RA MQTT connection...");
-
-      // Validate AUTHTOKEN format
-      if (
-        !this.config.authToken ||
-        this.config.authToken.includes("1234272955")
-      ) {
-        return {
-          success: false,
-          message:
-            "Invalid AUTHTOKEN - please use your real AUTHTOKEN from E-Ra platform",
-        };
-      }
-
-      if (!this.mqttService) {
-        return {
-          success: false,
-          message: "MQTT service not initialized",
-        };
-      }
-
-      // Test MQTT connection
-      const result = await this.mqttService.testConnection();
-      return result;
-    } catch (error: any) {
-      console.error("EraIotService: MQTT connection test failed:", error);
+    console.log("EraIotService: Testing connection via IPC");
+    
+    if (!window.electronAPI) {
       return {
         success: false,
-        message: `MQTT connection failed: ${error.message}`,
+        message: "Electron API not available",
+      };
+    }
+
+    try {
+      const result = await window.electronAPI.refreshEraIotConnection();
+      return {
+        success: result.success,
+        message: result.message || (result.success ? "Connected successfully" : "Connection failed"),
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: `Connection test failed: ${error.message}`,
       };
     }
   }
 
-  /**
-   * Clean up resources
-   */
-  public destroy(): void {
-    if (this.mqttDataUnsubscribe) {
-      this.mqttDataUnsubscribe();
-      this.mqttDataUnsubscribe = null;
-    }
-
-    if (this.mqttStatusUnsubscribe) {
-      this.mqttStatusUnsubscribe();
-      this.mqttStatusUnsubscribe = null;
-    }
-
-    if (this.mqttService) {
-      this.mqttService.destroy();
-      this.mqttService = null;
-    }
-
-    // Clear all component callbacks
-    this.dataUpdateCallbacks = [];
-    this.statusUpdateCallbacks = [];
-    this.currentData = null;
-    console.log("EraIotService: Destroyed");
+  // Compatibility method for existing code
+  public updateAuthToken(newAuthToken: string): void {
+      console.log("EraIotService: updateAuthToken called (IPC mode handles this via Main process config)");
+      this.config.authToken = newAuthToken;
+      // In IPC mode, we expect the main process to be updated separately or re-init happens
+      // No manual MQTT reconnection needed here as it's handled by Main
   }
 }
 
