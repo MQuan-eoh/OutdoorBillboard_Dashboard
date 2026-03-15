@@ -1364,52 +1364,6 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
             ])
           ]),
 
-          // New Air Quality Element - positioned higher to avoid alert banner
-          React.createElement("div", { 
-            key: "weather-air-quality",
-            style: { 
-              width: "100%",
-              padding: "0px 8px", // Reduced padding
-              margin: "4px 0 0px 0" // Reduced top margin to fix layout overflow
-            }
-          }, [
-            React.createElement("div", { 
-              key: "air-quality-item",
-              style: { 
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "4px 6px 0px 6px"
-              }
-            }, [
-              React.createElement("span", { 
-                key: "air-quality-label",
-                style: { 
-                  fontSize: "13px",
-                  color: "#ffffffff",
-                  opacity: 1,
-                  textShadow: "0 1px 2px rgba(0, 0, 0, 0.8)",
-                  fontWeight: "600",
-                  letterSpacing: "0.3px",
-                  whiteSpace: "nowrap"
-                }
-              }, "Chất lượng không khí"),
-              React.createElement("span", { 
-                key: "air-quality-status-value",
-                style: { 
-                  fontSize: "15px",
-                  fontWeight: "bold",
-                  color: "#48bb78",
-                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(72, 187, 120, 0.3)",
-                  padding: "2px 8px",
-                  whiteSpace: "nowrap"
-                }
-              }, "TỐT")
-            ])
-          ]),
-
-
-
           // Citation line
           React.createElement("div", { 
             key: "citation-line",
@@ -1452,7 +1406,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
               textTransform: "uppercase"
             },
             className: "device-title-aligned-fixed"
-          }, "THIẾT BỊ ĐO"),
+          }, ""),
 
           React.createElement("div", { 
             key: "device-temp",
@@ -2259,7 +2213,7 @@ function IoTPanel({ eraIotService, className = "" }) {
         boxSizing: "border-box",
       }
     }, [
-      React.createElement("div", { key: "title", style: { fontSize: "14px", fontWeight: "bold", marginBottom: "6px" } }, "THIẾT BỊ ĐO"),
+      React.createElement("div", { key: "title", style: { fontSize: "14px", fontWeight: "bold", marginBottom: "6px" } }, ""),
       React.createElement("div", { key: "loading", style: { fontSize: "8px", color: "#888" } }, "Đang kết nối...")
     ]);
   }
@@ -2281,7 +2235,7 @@ function IoTPanel({ eraIotService, className = "" }) {
         boxSizing: "border-box",
       }
     }, [
-      React.createElement("div", { key: "title", style: { fontSize: "14px", fontWeight: "bold", marginBottom: "6px" } }, "THIẾT BỊ ĐO"),
+      React.createElement("div", { key: "title", style: { fontSize: "14px", fontWeight: "bold", marginBottom: "6px" } }, ""),
       React.createElement("div", { key: "error", style: { fontSize: "8px", color: "#ff4444" } }, !eraIotService ? "Chưa cấu hình" : "Lỗi kết nối")
     ]);
   }
@@ -2303,7 +2257,7 @@ function IoTPanel({ eraIotService, className = "" }) {
         boxSizing: "border-box",
       }
     }, [
-      React.createElement("div", { key: "title", style: { fontSize: "11px", fontWeight: "bold", marginBottom: "6px" } }, "THIẾT BỊ ĐO"),
+      React.createElement("div", { key: "title", style: { fontSize: "11px", fontWeight: "bold", marginBottom: "6px" } }, ""),
       React.createElement("div", { key: "offline", style: { fontSize: "8px", color: "#888" } }, "Không có dữ liệu")
     ]);
   }
@@ -2408,7 +2362,7 @@ function IoTPanel({ eraIotService, className = "" }) {
           textAlign: "left", // Changed from center to left to align with city name
           marginBottom: "2px"
         } 
-      }, "THIẾT BỊ ĐO"),
+      }, ""),
       React.createElement("div", {
         key: "status",
         style: {
@@ -2514,33 +2468,6 @@ function IoTPanel({ eraIotService, className = "" }) {
         ])
       ])
     )),
-
-    // Air Quality Indicator
-    React.createElement("div", {
-      key: "air-quality-container",
-      style: {
-        display: "flex",
-        justifyContent: "center",
-        margin: "-4px auto 8px auto", // Negative top margin to move up, keep bottom margin for spacing from bottom
-        width: "95%",
-        position: "relative",
-        zIndex: 2,
-      }
-    }, React.createElement("div", {
-      key: "air-quality-indicator", 
-      style: {
-        backgroundColor: airQuality.color,
-        color: "white",
-        fontSize: "12px",
-        fontWeight: "bold",
-        padding: "6px 16px",
-        borderRadius: "6px",
-        textAlign: "center",
-        letterSpacing: "0.5px",
-        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
-        minWidth: "60px"
-      }
-    }, airQuality.status)),
 
     // Simple footer
     React.createElement("div", {

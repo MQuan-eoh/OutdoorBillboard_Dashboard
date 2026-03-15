@@ -25,7 +25,7 @@ class GlobalWeatherServiceManager {
         location: {
           lat: 16.4637, // Huế coordinates
           lon: 107.5909,
-          city: "MENAS ZONE VĨ DẠ",
+          city: "TP.THỪA THIÊN HUẾ",
         },
         updateInterval: 10, // Update every 10 minutes
         retryInterval: 3, // Retry every 3 minutes on failure
@@ -293,7 +293,7 @@ const WeatherPanel: React.FC<WeatherPanelProps> = ({
   if (isLoading && !weatherData) {
     return (
       <div className={`weather-panel loading ${className}`}>
-        <div className="weather-title">MENAS ZONE VĨ DẠ</div>
+        <div className="weather-title">TP.THỪA THIÊN HUẾ</div>
         <div className="weather-loading">
           <div className="loading-spinner"></div>
           <div className="loading-text">Đang tải...</div>
@@ -306,7 +306,7 @@ const WeatherPanel: React.FC<WeatherPanelProps> = ({
   if (!weatherData && connectionStatus === "error") {
     return (
       <div className={`weather-panel error ${className}`}>
-        <div className="weather-title">MENAS ZONE VĨ DẠ</div>
+        <div className="weather-title">TP.THỪA THIÊN HUẾ</div>
         <div className="weather-error">
           <div className="error-icon">⚠</div>
           <div className="error-text">Lỗi kết nối</div>
@@ -406,17 +406,16 @@ const WeatherPanel: React.FC<WeatherPanelProps> = ({
         </div>
       </div>
 
-      {/* New Air Quality Element - Positioned directly below weather grid */}
-      <div className="weather-air-quality">
-        <div className="air-quality-item">
-          <span className="air-quality-label">Chất lượng không khí</span>
-          <span className="air-quality-status-value">TỐT</span>
-        </div>
-      </div>
+      
 
       {/* Device measurements section - Optimized layout */}
       <div className="device-measurements-section">
-        <div className="device-title">CẢM BIẾN IOT</div>
+        <div className="device-title">
+          <div style={{ textAlign: "center", lineHeight: "1.2" }}>
+            <div>MENAS ZONE</div>
+            <div>VĨ DẠ</div>
+          </div>
+        </div>
         <div className="device-readings">
           <div className="sensor-row">
             <div className="sensor-item">
@@ -444,18 +443,6 @@ const WeatherPanel: React.FC<WeatherPanelProps> = ({
               </span>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Air quality status - Professional styling */}
-      <div className="air-quality-status">
-        <div className="air-quality-text">
-          Chất lượng không khí: {weatherData.airQuality}
-        </div>
-        <div
-          className={`air-quality-badge ${getAirQualityClass(weatherData.aqi)}`}
-        >
-          {weatherData.airQuality.toUpperCase()}
         </div>
       </div>
 

@@ -504,7 +504,7 @@ class WeatherPanel extends React.Component {
             marginTop: "5px",
           },
         },
-        `Chất lượng không khí: ${weatherData.airQuality}`
+        ``
       )
     );
   }
@@ -581,7 +581,7 @@ class IoTPanel extends React.Component {
             marginTop: 0,
           },
         },
-        "THIẾT BỊ ĐO"
+        ""
       ),
       React.createElement(
         "div",

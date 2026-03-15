@@ -1,13 +1,6 @@
 {
   "logoMode": "loop",
-  "logoImages": [
-    {
-      "name": "z7448916207550_3e7d3a273a02b93786c355713ea64c8d.jpg",
-      "path": "C:\\Users\\lemin\\Downloads\\z7448916207550_3e7d3a273a02b93786c355713ea64c8d.jpg",
-      "size": 0,
-      "type": "image/*"
-    }
-  ],
+  "logoImages": [],
   "logoLoopDuration": 10,
   "layoutPositions": {
     "weather": {

@@ -703,7 +703,7 @@ class GlobalWeatherServiceManager {
         location: {
           lat: 16.4637,
           lon: 107.5909,
-          city: "MENAS ZONE VĨ DẠ",
+          city: "TP.THỪA THIÊN HUẾ",
         },
         updateInterval: 2,
         retryInterval: 5,
@@ -984,7 +984,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
           zIndex: 2,
           textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)"
         } 
-      }, "MENAS ZONE VĨ DẠ"),
+      }, "TP.THỪA THIÊN HUẾ"),
       React.createElement("div", { 
         key: "loading", 
         style: { 
@@ -1035,7 +1035,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
           zIndex: 2,
           textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)"
         } 
-      }, "MENAS ZONE VĨ DẠ"),
+      }, "TP.THỪA THIÊN HUẾ"),
       React.createElement("div", { 
         key: "error", 
         style: { 
@@ -1195,176 +1195,175 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
 
           ]),
 
-          // Weather details 2x2 grid - Hàng 1: Độ ẩm và UV, Hàng 2: Mưa và Gió
-          React.createElement("div", { 
+          // Weather details 2x2 grid - modified layout shrunk
+          React.createElement("div", {
             key: "weather-details-grid",
-            style: { 
+            style: {
               width: "100%",
               display: "grid",
-              gridTemplateColumns: "1fr 1fr", // 2 columns
-              gridTemplateRows: "1fr 1fr", // 2 rows
-              gap: "0px", // Minimal gap between all items
-              marginBottom: "0px", // Minimal margin
-              marginTop: "10px", // Increased to move elements down
-              paddingLeft: "0px", // Remove left padding to shift more left
+              gridTemplateColumns: "1fr 1fr", 
+              gridTemplateRows: "auto auto", 
+              gap: "6px",
+              marginBottom: "0px", 
+              marginTop: "4px", 
+              paddingLeft: "0px", 
               paddingRight: "8px"
             }
           }, [
-
-            // First row, second column: UV
-            React.createElement("div", { 
+            // Item: uv
+            React.createElement("div", {
               key: "uv",
-              style: { 
+              style: {
                 display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                padding: "2px 4px",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                justifyContent: "center",
+                padding: "2px 8px",
                 borderRadius: "3px",
-                minHeight: "25px"
+                minHeight: "auto"
               }
             }, [
-              React.createElement("div", { 
+              React.createElement("div", {
                 key: "label",
-                style: { 
-                  fontSize: "12px",
-                  color: "#ffffffff",
+                style: {
+                  fontSize: "14px",
+                  color: "#cbd5e0",
                   opacity: 1,
                   textShadow: "0 1px 2px rgba(0, 0, 0, 0.8)",
-                  marginBottom: "0px",
-                  marginRight: "8px",
+                  marginBottom: "2px",
+                  marginRight: "0px",
                   fontWeight: "600",
                   letterSpacing: "0.2px",
                   textTransform: "capitalize",
                   whiteSpace: "nowrap"
                 }
               }, "UV"),
-              React.createElement("div", { 
+              React.createElement("div", {
                 key: "value",
-                style: { 
+                style: {
                   fontSize: "14px",
-                  fontWeight: "bold", 
-                  color: "#ffffff", 
+                  fontWeight: "bold",
+                  color: "#ffffff",
                   textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)",
                   lineHeight: 1.1,
                   whiteSpace: "nowrap"
                 }
               }, getUVLevel(weatherData.uvIndex))
             ]),
-            // Second row, first column: Mưa
-            React.createElement("div", { 
+            // Item: rain
+            React.createElement("div", {
               key: "rain",
-              style: { 
+              style: {
                 display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                padding: "2px 4px",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                justifyContent: "center",
+                padding: "2px 8px",
                 borderRadius: "3px",
-                minHeight: "25px"
+                minHeight: "auto"
               }
             }, [
-              React.createElement("div", { 
+              React.createElement("div", {
                 key: "label",
-                style: { 
-                  fontSize: "12px",
-                  color: "#ffffffff",
+                style: {
+                  fontSize: "14px",
+                  color: "#cbd5e0",
                   opacity: 1,
                   textShadow: "0 1px 2px rgba(0, 0, 0, 0.8)",
-                  marginBottom: "0px",
-                  marginRight: "8px",
+                  marginBottom: "2px",
+                  marginRight: "0px",
                   fontWeight: "600",
                   letterSpacing: "0.2px",
                   textTransform: "capitalize",
                   whiteSpace: "nowrap"
                 }
               }, "Mưa"),
-              React.createElement("div", { 
+              React.createElement("div", {
                 key: "value",
-                style: { 
+                style: {
                   fontSize: "14px",
-                  fontWeight: "bold", 
-                  color: "#ffffff", 
+                  fontWeight: "bold",
+                  color: "#ffffff",
                   textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)",
                   lineHeight: 1.1,
                   whiteSpace: "nowrap"
                 }
               }, weatherData.rainProbability + '%')
             ]),
-            // Second row, second column: Gió
-            React.createElement("div", { 
+            // Item: wind
+            React.createElement("div", {
               key: "wind",
-              style: { 
+              style: {
                 display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                padding: "2px 4px",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                justifyContent: "center",
+                padding: "2px 8px",
                 borderRadius: "3px",
-                minHeight: "25px"
+                minHeight: "auto"
               }
             }, [
-              React.createElement("div", { 
+              React.createElement("div", {
                 key: "label",
-                style: { 
-                  fontSize: "12px",
-                  color: "#ffffffff", 
+                style: {
+                  fontSize: "14px",
+                  color: "#cbd5e0",
                   opacity: 1,
                   textShadow: "0 1px 2px rgba(0, 0, 0, 0.8)",
-                  marginBottom: "0px",
-                  marginRight: "8px",
+                  marginBottom: "2px",
+                  marginRight: "0px",
                   fontWeight: "600",
                   letterSpacing: "0.2px",
                   textTransform: "capitalize",
                   whiteSpace: "nowrap"
                 }
               }, "Gió"),
-              React.createElement("div", { 
+              React.createElement("div", {
                 key: "value",
-                style: { 
+                style: {
                   fontSize: "14px",
-                  fontWeight: "bold", 
-                  color: "#ffffff", 
+                  fontWeight: "bold",
+                  color: "#ffffff",
                   textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)",
                   lineHeight: 1.1,
                   whiteSpace: "nowrap"
                 }
               }, weatherData.windSpeed + ' km/h')
             ]),
-            // Second row, second column: Visibility
-            React.createElement("div", { 
+            // Item: visibility
+            React.createElement("div", {
               key: "visibility",
-              style: { 
+              style: {
                 display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                padding: "2px 4px",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                justifyContent: "center",
+                padding: "2px 8px",
                 borderRadius: "3px",
-                minHeight: "25px"
+                minHeight: "auto"
               }
             }, [
-              React.createElement("div", { 
+              React.createElement("div", {
                 key: "label",
-                style: { 
-                  fontSize: "12px",
-                  color: "#ffffffff", 
+                style: {
+                  fontSize: "14px",
+                  color: "#cbd5e0",
                   opacity: 1,
                   textShadow: "0 1px 2px rgba(0, 0, 0, 0.8)",
-                  marginBottom: "0px",
-                  marginRight: "8px",
+                  marginBottom: "2px",
+                  marginRight: "0px",
                   fontWeight: "600",
                   letterSpacing: "0.2px",
                   textTransform: "capitalize",
                   whiteSpace: "nowrap"
                 }
               }, "Tầm nhìn"),
-              React.createElement("div", { 
+              React.createElement("div", {
                 key: "value",
-                style: { 
+                style: {
                   fontSize: "14px",
-                  fontWeight: "bold", 
-                  color: "#ffffff", 
+                  fontWeight: "bold",
+                  color: "#ffffff",
                   textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)",
                   lineHeight: 1.1,
                   whiteSpace: "nowrap"
@@ -1372,54 +1371,6 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
               }, weatherData.visibility + ' km')
             ])
           ]),
-
-          // New Air Quality Element - positioned higher to avoid alert banner
-          React.createElement("div", { 
-            key: "weather-air-quality",
-            style: { 
-              width: "100%",
-              padding: "0px 8px", // Reduced padding
-              margin: "4px 0 0px 0" // Reduced top margin to fix layout overflow
-            }
-          }, [
-            React.createElement("div", { 
-              key: "air-quality-item",
-              style: { 
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "4px 6px 0px 6px"
-              }
-            }, [
-              React.createElement("span", { 
-                key: "air-quality-label",
-                style: { 
-                  fontSize: "13px",
-                  color: "#ffffffff",
-                  opacity: 1,
-                  textShadow: "0 1px 2px rgba(0, 0, 0, 0.8)",
-                  fontWeight: "600",
-                  letterSpacing: "0.3px",
-                  whiteSpace: "nowrap"
-                }
-              }, "Chất lượng không khí"),
-              React.createElement("span", { 
-                key: "air-quality-status-value",
-                style: { 
-                  fontSize: "15px",
-                  fontWeight: "bold",
-                  color: "#48bb78",
-                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(72, 187, 120, 0.3)",
-                  padding: "2px 8px",
-                  whiteSpace: "nowrap"
-                }
-              }, "TỐT")
-            ])
-          ]),
-
-
-
-          // Citation line
           React.createElement("div", { 
             key: "citation-line",
             style: { 
@@ -1461,7 +1412,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
               textTransform: "uppercase"
             },
             className: "device-title-aligned-fixed"
-          }, "THIẾT BỊ ĐO"),
+          }, React.createElement("div", { style: { textAlign: "center", lineHeight: "1.2", width: "100%" } }, React.createElement("div", { style: { whiteSpace: "nowrap" } }, "MENAS ZONE"), React.createElement("div", null, "VĨ DẠ"))),
 
           React.createElement("div", { 
             key: "device-temp",
@@ -1476,12 +1427,12 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
           }, [
             React.createElement("span", { 
               key: "label",
-              style: { fontSize: "14px", color: "#ffffff", opacity: 0.9 }
+              style: { fontSize: "15px", color: "#ffffff", opacity: 0.9 }
             }, "Nhiệt độ"),
             React.createElement("span", { 
               key: "value",
                 style: { 
-                  fontSize: "13px", 
+                  fontSize: "15px", 
                   fontWeight: "bold", 
                   color: "#ffffff", 
                   textShadow: "0 1px 3px rgba(0, 0, 0, 0.8)" 
@@ -1502,12 +1453,12 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
           }, [
             React.createElement("span", { 
               key: "label",
-              style: { fontSize: "14px", color: "#ffffff", opacity: 0.9 }
+              style: { fontSize: "15px", color: "#ffffff", opacity: 0.9 }
             }, "Độ ẩm"),
             React.createElement("span", { 
               key: "value",
                 style: { 
-                  fontSize: "13px", 
+                  fontSize: "15px", 
                   fontWeight: "bold", 
                   color: "#ffffff", 
                   textShadow: "0 1px 3px rgba(0, 0, 0, 0.8)" 
@@ -1528,12 +1479,12 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
           }, [
             React.createElement("span", { 
               key: "label",
-              style: { fontSize: "14px", color: "#ffffff", opacity: 0.9 }
+              style: { fontSize: "15px", color: "#ffffff", opacity: 0.9 }
             }, "PM2.5"),
             React.createElement("span", { 
               key: "value",
                 style: { 
-                  fontSize: "13px", 
+                  fontSize: "15px", 
                   fontWeight: "bold", 
                   color: "#ffffff", 
                   textShadow: "0 1px 3px rgba(0, 0, 0, 0.8)" 
@@ -1560,12 +1511,12 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
           }, [
             React.createElement("span", { 
               key: "label",
-              style: { fontSize: "14px", color: "#ffffff", opacity: 0.9 }
+              style: { fontSize: "15px", color: "#ffffff", opacity: 0.9 }
             }, "PM10"),
             React.createElement("span", { 
               key: "value",
                 style: { 
-                  fontSize: "13px", 
+                  fontSize: "15px", 
                   fontWeight: "bold", 
                   color: "#ffffff", 
                   textShadow: "0 1px 3px rgba(0, 0, 0, 0.8)" 
@@ -1579,23 +1530,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
             ])
           ]),
 
-          React.createElement("div", { 
-            key: "air-quality-badge",
-            style: { 
-              background: airQualityData?.status === "Bad" ? "#ef4444" : "#4ade80", // Red for Bad, Green for Good
-              color: "#ffffff",
-              fontSize: "12px",
-              fontWeight: "bold",
-              textAlign: "center",
-              padding: "4px 8px",
-              borderRadius: "6px",
-              marginTop: "-4px", // Further reduced to negative margin to move even higher
-              textShadow: "0 1px 2px rgba(0, 0, 0, 0.5)",
-              boxShadow: airQualityData?.status === "Bad" 
-                ? "0 2px 4px rgba(239, 68, 68, 0.3)" 
-                : "0 2px 4px rgba(74, 222, 128, 0.3)"
-            }
-          }, airQualityData?.status === "Bad" ? "XẤU" : "TỐT")
+          
         ])
       ]),
 
@@ -2268,7 +2203,7 @@ function IoTPanel({ eraIotService, className = "" }) {
         boxSizing: "border-box",
       }
     }, [
-      React.createElement("div", { key: "title", style: { fontSize: "14px", fontWeight: "bold", marginBottom: "6px" } }, "THIẾT BỊ ĐO"),
+      React.createElement("div", { key: "title", style: { fontSize: "14px", fontWeight: "bold", marginBottom: "6px" } }, React.createElement("div", { style: { textAlign: "center", lineHeight: "1.2", width: "100%" } }, React.createElement("div", { style: { whiteSpace: "nowrap" } }, "MENAS ZONE"), React.createElement("div", null, "VĨ DẠ"))),
       React.createElement("div", { key: "loading", style: { fontSize: "8px", color: "#888" } }, "Đang kết nối...")
     ]);
   }
@@ -2290,7 +2225,7 @@ function IoTPanel({ eraIotService, className = "" }) {
         boxSizing: "border-box",
       }
     }, [
-      React.createElement("div", { key: "title", style: { fontSize: "14px", fontWeight: "bold", marginBottom: "6px" } }, "THIẾT BỊ ĐO"),
+      React.createElement("div", { key: "title", style: { fontSize: "14px", fontWeight: "bold", marginBottom: "6px" } }, React.createElement("div", { style: { textAlign: "center", lineHeight: "1.2", width: "100%" } }, React.createElement("div", { style: { whiteSpace: "nowrap" } }, "MENAS ZONE"), React.createElement("div", null, "VĨ DẠ"))),
       React.createElement("div", { key: "error", style: { fontSize: "8px", color: "#ff4444" } }, !eraIotService ? "Chưa cấu hình" : "Lỗi kết nối")
     ]);
   }
@@ -2312,7 +2247,7 @@ function IoTPanel({ eraIotService, className = "" }) {
         boxSizing: "border-box",
       }
     }, [
-      React.createElement("div", { key: "title", style: { fontSize: "11px", fontWeight: "bold", marginBottom: "6px" } }, "THIẾT BỊ ĐO"),
+      React.createElement("div", { key: "title", style: { fontSize: "11px", fontWeight: "bold", marginBottom: "6px" } }, React.createElement("div", { style: { textAlign: "center", lineHeight: "1.2", width: "100%" } }, React.createElement("div", { style: { whiteSpace: "nowrap" } }, "MENAS ZONE"), React.createElement("div", null, "VĨ DẠ"))),
       React.createElement("div", { key: "offline", style: { fontSize: "8px", color: "#888" } }, "Không có dữ liệu")
     ]);
   }
@@ -2417,7 +2352,7 @@ function IoTPanel({ eraIotService, className = "" }) {
           textAlign: "left", // Changed from center to left to align with city name
           marginBottom: "2px"
         } 
-      }, "THIẾT BỊ ĐO"),
+      }, React.createElement("div", { style: { textAlign: "center", lineHeight: "1.2", width: "100%" } }, React.createElement("div", { style: { whiteSpace: "nowrap" } }, "MENAS ZONE"), React.createElement("div", null, "VĨ DẠ"))),
       React.createElement("div", {
         key: "status",
         style: {
@@ -2523,33 +2458,6 @@ function IoTPanel({ eraIotService, className = "" }) {
         ])
       ])
     )),
-
-    // Air Quality Indicator
-    React.createElement("div", {
-      key: "air-quality-container",
-      style: {
-        display: "flex",
-        justifyContent: "center",
-        margin: "-4px auto 8px auto", // Negative top margin to move up, keep bottom margin for spacing from bottom
-        width: "95%",
-        position: "relative",
-        zIndex: 2,
-      }
-    }, React.createElement("div", {
-      key: "air-quality-indicator", 
-      style: {
-        backgroundColor: airQuality.color,
-        color: "white",
-        fontSize: "12px",
-        fontWeight: "bold",
-        padding: "6px 16px",
-        borderRadius: "6px",
-        textAlign: "center",
-        letterSpacing: "0.5px",
-        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
-        minWidth: "60px"
-      }
-    }, airQuality.status)),
 
     // Simple footer
     React.createElement("div", {

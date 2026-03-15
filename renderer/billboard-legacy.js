@@ -135,7 +135,7 @@ class BillboardApp {
             <div style="font-size: 12px;">UV Thấp</div>
             <div style="font-size: 12px;">Mưa 97% | Gió 1,6 km/h</div>
             <div style="font-size: 12px;">Tầm nhìn 10 km</div>
-            <div style="font-size: 10px; margin-top: 5px;">Chất lượng không khí: Tốt</div>
+            <div style="font-size: 10px; margin-top: 5px;"></div>
         `;
 
     return weatherPanel;
@@ -157,7 +157,7 @@ class BillboardApp {
         `;
 
     iotPanel.innerHTML = `
-            <h3 style="font-size: 14px; margin-bottom: 8px; margin-top: 0;">THIẾT BỊ ĐO</h3>
+            <h3 style="font-size: 14px; margin-bottom: 8px; margin-top: 0;"></h3>
             <div style="font-size: 14px; margin-bottom: 4px;">Nhiệt độ: 24,0°</div>
             <div style="font-size: 14px; margin-bottom: 4px;">Độ ẩm: 96%</div>
             <div style="font-size: 14px; margin-bottom: 4px;">PM2.5: 2,06 μg</div>
@@ -404,7 +404,7 @@ class BillboardApp {
                   Math.random() * 100
                 )}% | Gió ${(Math.random() * 5).toFixed(1)} km/h</div>
                 <div style="font-size: 12px;">Tầm nhìn 10 km</div>
-                <div style="font-size: 10px; margin-top: 5px;">Chất lượng không khí: Tốt</div>
+                <div style="font-size: 10px; margin-top: 5px;"></div>
             `;
     }
   }
@@ -419,7 +419,7 @@ class BillboardApp {
       const pm10 = (2 + Math.random() * 4).toFixed(1);
 
       iotPanel.innerHTML = `
-                <h3 style="font-size: 14px; margin-bottom: 8px; margin-top: 0;">THIẾT BỊ ĐO</h3>
+                <h3 style="font-size: 14px; margin-bottom: 8px; margin-top: 0;"></h3>
                 <div style="font-size: 14px; margin-bottom: 4px;">Nhiệt độ: ${temp}°</div>
                 <div style="font-size: 14px; margin-bottom: 4px;">Độ ẩm: ${humidity}%</div>
                 <div style="font-size: 14px; margin-bottom: 4px;">PM2.5: ${pm25} μg</div>

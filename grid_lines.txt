@@ -1,0 +1,202 @@
+          // Weather details 2x2 grid - Hàng 1: Độ ẩm và UV, Hàng 2: Mưa và Gió
+          React.createElement("div", { 
+            key: "weather-details-grid",
+            style: { 
+              width: "100%",
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr", // 2 columns
+              gridTemplateRows: "1fr 1fr", // 2 rows
+              gap: "0px", // Minimal gap between all items
+              marginBottom: "0px", // Minimal margin
+              marginTop: "10px", // Increased to move elements down
+              paddingLeft: "0px", // Remove left padding to shift more left
+              paddingRight: "8px"
+            }
+          }, [
+
+            // First row, second column: UV
+            React.createElement("div", { 
+              key: "uv",
+              style: { 
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                padding: "2px 4px",
+                borderRadius: "3px",
+                minHeight: "25px"
+              }
+            }, [
+              React.createElement("div", { 
+                key: "label",
+                style: { 
+                  fontSize: "12px",
+                  color: "#ffffffff",
+                  opacity: 1,
+                  textShadow: "0 1px 2px rgba(0, 0, 0, 0.8)",
+                  marginBottom: "0px",
+                  marginRight: "8px",
+                  fontWeight: "600",
+                  letterSpacing: "0.2px",
+                  textTransform: "capitalize",
+                  whiteSpace: "nowrap"
+                }
+              }, "UV"),
+              React.createElement("div", { 
+                key: "value",
+                style: { 
+                  fontSize: "14px",
+                  fontWeight: "bold", 
+                  color: "#ffffff", 
+                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)",
+                  lineHeight: 1.1,
+                  whiteSpace: "nowrap"
+                }
+              }, getUVLevel(weatherData.uvIndex))
+            ]),
+            // Second row, first column: Mưa
+            React.createElement("div", { 
+              key: "rain",
+              style: { 
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                padding: "2px 4px",
+                borderRadius: "3px",
+                minHeight: "25px"
+              }
+            }, [
+              React.createElement("div", { 
+                key: "label",
+                style: { 
+                  fontSize: "12px",
+                  color: "#ffffffff",
+                  opacity: 1,
+                  textShadow: "0 1px 2px rgba(0, 0, 0, 0.8)",
+                  marginBottom: "0px",
+                  marginRight: "8px",
+                  fontWeight: "600",
+                  letterSpacing: "0.2px",
+                  textTransform: "capitalize",
+                  whiteSpace: "nowrap"
+                }
+              }, "Mưa"),
+              React.createElement("div", { 
+                key: "value",
+                style: { 
+                  fontSize: "14px",
+                  fontWeight: "bold", 
+                  color: "#ffffff", 
+                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)",
+                  lineHeight: 1.1,
+                  whiteSpace: "nowrap"
+                }
+              }, weatherData.rainProbability + '%')
+            ]),
+            // Second row, second column: Gió
+            React.createElement("div", { 
+              key: "wind",
+              style: { 
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                padding: "2px 4px",
+                borderRadius: "3px",
+                minHeight: "25px"
+              }
+            }, [
+              React.createElement("div", { 
+                key: "label",
+                style: { 
+                  fontSize: "12px",
+                  color: "#ffffffff", 
+                  opacity: 1,
+                  textShadow: "0 1px 2px rgba(0, 0, 0, 0.8)",
+                  marginBottom: "0px",
+                  marginRight: "8px",
+                  fontWeight: "600",
+                  letterSpacing: "0.2px",
+                  textTransform: "capitalize",
+                  whiteSpace: "nowrap"
+                }
+              }, "Gió"),
+              React.createElement("div", { 
+                key: "value",
+                style: { 
+                  fontSize: "14px",
+                  fontWeight: "bold", 
+                  color: "#ffffff", 
+                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)",
+                  lineHeight: 1.1,
+                  whiteSpace: "nowrap"
+                }
+              }, weatherData.windSpeed + ' km/h')
+            ]),
+            // Second row, second column: Visibility
+            React.createElement("div", { 
+              key: "visibility",
+              style: { 
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                padding: "2px 4px",
+                borderRadius: "3px",
+                minHeight: "25px"
+              }
+            }, [
+              React.createElement("div", { 
+                key: "label",
+                style: { 
+                  fontSize: "12px",
+                  color: "#ffffffff", 
+                  opacity: 1,
+                  textShadow: "0 1px 2px rgba(0, 0, 0, 0.8)",
+                  marginBottom: "0px",
+                  marginRight: "8px",
+                  fontWeight: "600",
+                  letterSpacing: "0.2px",
+                  textTransform: "capitalize",
+                  whiteSpace: "nowrap"
+                }
+              }, "Tầm nhìn"),
+              React.createElement("div", { 
+                key: "value",
+                style: { 
+                  fontSize: "14px",
+                  fontWeight: "bold", 
+                  color: "#ffffff", 
+                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)",
+                  lineHeight: 1.1,
+                  whiteSpace: "nowrap"
+                }
+              }, weatherData.visibility + ' km')
+            ])
+          ]),
+
+          // Citation line
+          React.createElement("div", { 
+            key: "citation-line",
+            style: { 
+              fontSize: "10px", 
+              color: "rgba(255, 255, 255, 0.8)", // Increased opacity
+              textAlign: "center", 
+              fontStyle: "italic",
+              marginTop: "0px", // Reduced margin to min
+              width: "100%",
+              position: "relative",
+              zIndex: 10,
+              paddingBottom: "4px"
+            }
+          }, "Theo nguồn tin từ accuweather.com")
+        ]),
+
+        // Right column - Device measurements (like in image)
+        React.createElement("div", { 
+          key: "weather-right",
+          style: { 
+            flex: "0 0 140px",
+            background: "transparent",
+            padding: "4px 12px 12px 12px",

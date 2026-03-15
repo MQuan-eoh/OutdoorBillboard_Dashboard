@@ -119,7 +119,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 6px;
   padding: 4px 10px; /* Reduced vertical padding from 10px to 4px */
   position: relative;
   z-index: 2;
@@ -187,7 +187,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr; /* 2 columns of equal width */
   grid-template-rows: 1fr 1fr; /* 2 rows of equal height */
-  gap: 1px; /* Reduced gap from 2px to 1px */
+  gap: 6px;
   padding: 0px 4px; /* Reduced vertical padding from 2px to 0px */
   position: relative;
   z-index: 2;
@@ -205,36 +205,35 @@
 
 .weather-details-grid .detail-item {
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-start;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
   text-align: left;
-  padding: 1px 4px; /* Reduced padding from 2px */
-  min-height: 22px; /* Reduced min-height from 25px */
+  padding: 2px 8px;
+  gap: 2px;
+  min-height: auto;
 }
 
 .weather-details-grid .detail-label {
-  display: inline-block;
-  font-size: 12px;
+  display: block;
+  font-size: 14px;
   color: #cbd5e0;
   opacity: 1;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-  margin-bottom: 0px;
-  margin-right: 8px;
+  margin-bottom: 2px;
+  margin-right: 0;
   font-weight: 600;
   letter-spacing: 0.2px;
   text-transform: capitalize;
-  white-space: nowrap; /* Prevent label wrapping */
+  white-space: nowrap;
 }
 
 .weather-details-grid .detail-value {
-  display: inline-block;
+  display: block;
   font-size: 14px;
-  font-weight: bold;
-  color: #ffffff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
   line-height: 1.1;
-  white-space: nowrap; /* Prevent value wrapping */
+  white-space: nowrap;
 }
 
 /* New Air Quality Element - positioned higher to avoid alert banner */
@@ -354,7 +353,7 @@
 
 .sensor-label {
   display: block;
-  font-size: 10px;
+  font-size: 11.5px;
   color: #e2e8f0;
   opacity: 0.9;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
@@ -365,7 +364,7 @@
 
 .sensor-value {
   display: block;
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: bold;
   color: #ffffff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
@@ -380,7 +379,7 @@
 }
 
 .unit {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: normal;
   opacity: 0.8;
   margin-left: 1px;
