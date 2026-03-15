@@ -11,12 +11,25 @@ class BillboardConfigManager {
         logo: { x: 0, y: 288, width: 384, height: 96 },
       },
       schedules: [],
+      renderMode: "native-384-window",
       billboardWindow: {
         x: null,
         y: null,
         displayId: null,
         hasSavedPosition: false,
         preferExternalDisplay: true,
+      },
+      outputCheck: {
+        displayResolution: null,
+        scaleFactor: null,
+        windowBounds: null,
+        renderMode: "native-384-window",
+        isScaleFactorSafe: null,
+        isNative384Display: null,
+        requiresControllerMapping: null,
+        pixelPerfectLikely: null,
+        warnings: [],
+        checkedAt: null,
       },
     };
 
@@ -400,7 +413,22 @@ class BillboardConfigManager {
     };
   }
 
-  ensureBillboardWindowConfig() {
+  getDefaultOutputCheck() {
+    return {
+      displayResolution: null,
+      scaleFactor: null,
+      windowBounds: null,
+      renderMode: "native-384-window",
+      isScaleFactorSafe: null,
+      isNative384Display: null,
+      requiresControllerMapping: null,
+      pixelPerfectLikely: null,
+      warnings: [],
+      checkedAt: null,
+    };
+  }
+
+  ensureDisplayConfig() {
     this.config.billboardWindow = {
       ...this.getDefaultBillboardWindowConfig(),
       ...(this.config.billboardWindow || {}),
@@ -411,14 +439,28 @@ class BillboardConfigManager {
       this.config.billboardWindow.y = null;
       this.config.billboardWindow.displayId = null;
     }
+
+    this.config.renderMode =
+      this.config.renderMode === "fullscreen-scaled"
+        ? "fullscreen-scaled"
+        : "native-384-window";
+    this.config.outputCheck = {
+      ...this.getDefaultOutputCheck(),
+      ...(this.config.outputCheck || {}),
+      renderMode: this.config.renderMode,
+      warnings: Array.isArray(this.config.outputCheck?.warnings)
+        ? this.config.outputCheck.warnings
+        : [],
+    };
   }
 
   setupDisplaySettings() {
-    this.ensureBillboardWindowConfig();
+    this.ensureDisplayConfig();
 
     const startBtn = document.getElementById("start-reposition-btn");
     const cancelBtn = document.getElementById("cancel-reposition-btn");
     const refreshBtn = document.getElementById("refresh-display-info-btn");
+    const renderModeSelect = document.getElementById("render-mode-select");
 
     if (startBtn) {
       startBtn.addEventListener("click", async () => {
@@ -435,6 +477,23 @@ class BillboardConfigManager {
     if (refreshBtn) {
       refreshBtn.addEventListener("click", async () => {
         await this.refreshDisplayInfo();
+      });
+    }
+
+    if (renderModeSelect) {
+      renderModeSelect.addEventListener("change", (event) => {
+        this.config.renderMode =
+          event.target.value === "fullscreen-scaled"
+            ? "fullscreen-scaled"
+            : "native-384-window";
+
+        this.config.outputCheck = {
+          ...this.getDefaultOutputCheck(),
+          ...(this.config.outputCheck || {}),
+          renderMode: this.config.renderMode,
+        };
+
+        this.renderDisplayInfo();
       });
     }
 
@@ -460,12 +519,18 @@ class BillboardConfigManager {
       const result = await window.electronAPI.startBillboardReposition();
 
       if (!result?.success) {
-        throw new Error(result?.error || "Could not start drag mode.");
+        throw new Error(result?.error || "Không thể bật chế độ kéo thả.");
       }
 
       this.isBillboardRepositioning = true;
       if (result.displayInfo) {
         this.displayInfo = result.displayInfo;
+      }
+      if (result.displayInfo?.outputCheck) {
+        this.config.outputCheck = {
+          ...this.getDefaultOutputCheck(),
+          ...result.displayInfo.outputCheck,
+        };
       }
       if (result.billboardWindow) {
         this.config.billboardWindow = {
@@ -476,13 +541,13 @@ class BillboardConfigManager {
 
       this.renderDisplayInfo();
       this.showNotification(
-        "Drag mode is active. Drag the billboard window to the LED screen, then click Save & Apply.",
+        "Chế độ kéo thả đã bật. Hãy kéo cửa sổ billboard sang màn hình LED, sau đó bấm Lưu & Áp dụng.",
         "info"
       );
     } catch (error) {
       console.error("DisplaySettings: Failed to start drag mode:", error);
       this.showNotification(
-        "Could not start drag mode: " + error.message,
+        "Không thể bật chế độ kéo thả: " + error.message,
         "error"
       );
     }
@@ -499,19 +564,25 @@ class BillboardConfigManager {
       });
 
       if (!result?.success) {
-        throw new Error(result?.error || "Could not cancel drag mode.");
+        throw new Error(result?.error || "Không thể hủy chế độ kéo thả.");
       }
 
       this.isBillboardRepositioning = false;
       if (result.displayInfo) {
         this.displayInfo = result.displayInfo;
       }
+      if (result.displayInfo?.outputCheck) {
+        this.config.outputCheck = {
+          ...this.getDefaultOutputCheck(),
+          ...result.displayInfo.outputCheck,
+        };
+      }
 
       this.renderDisplayInfo();
     } catch (error) {
       console.error("DisplaySettings: Failed to cancel drag mode:", error);
       this.showNotification(
-        "Could not cancel drag mode: " + error.message,
+        "Không thể hủy chế độ kéo thả: " + error.message,
         "error"
       );
     }
@@ -522,7 +593,7 @@ class BillboardConfigManager {
       return;
     }
 
-    this.ensureBillboardWindowConfig();
+    this.ensureDisplayConfig();
     this.config.billboardWindow = {
       ...this.config.billboardWindow,
       ...(payload.billboardWindow || {}),
@@ -534,6 +605,16 @@ class BillboardConfigManager {
       this.displayInfo.reposition = {
         ...(this.displayInfo.reposition || {}),
         pendingBounds: payload.bounds,
+      };
+      if (payload.outputCheck) {
+        this.displayInfo.outputCheck = payload.outputCheck;
+      }
+    }
+
+    if (payload.outputCheck) {
+      this.config.outputCheck = {
+        ...this.getDefaultOutputCheck(),
+        ...payload.outputCheck,
       };
     }
 
@@ -556,7 +637,7 @@ class BillboardConfigManager {
 
   formatBounds(bounds) {
     if (!bounds || !Number.isFinite(bounds.x) || !Number.isFinite(bounds.y)) {
-      return "Not set";
+      return "Chưa cài đặt";
     }
 
     return `${bounds.x}, ${bounds.y} (${bounds.width}x${bounds.height})`;
@@ -564,12 +645,65 @@ class BillboardConfigManager {
 
   formatStartupMode(mode) {
     if (mode === "saved-position") {
-      return "Saved position";
+      return "Dùng vị trí đã lưu";
     }
     if (mode === "external-display") {
-      return "Auto to external display";
+      return "Tự động sang màn hình ngoài";
     }
-    return "Primary display fallback";
+    return "Dự phòng về màn hình chính";
+  }
+
+  formatRenderMode(mode) {
+    return mode === "fullscreen-scaled"
+      ? "Toàn màn hình có scale"
+      : "Cửa sổ 384 gốc";
+  }
+
+  formatScaleFactor(scaleFactor) {
+    if (typeof scaleFactor !== "number") {
+      return "Không rõ";
+    }
+
+    return `${Math.round(scaleFactor * 100)}%`;
+  }
+
+  getOutputCheckStatus(outputCheck) {
+    if (!outputCheck) {
+      return {
+        className: "idle",
+        message: "Thông tin chẩn đoán đầu ra sẽ xuất hiện sau khi làm mới.",
+      };
+    }
+
+    if (outputCheck.isScaleFactorSafe === false) {
+      return {
+        className: "warn",
+        message:
+          "Tỉ lệ scale của Windows không phải 100%. Đầu ra LED 1:1 sẽ không đáng tin cậy cho đến khi được chỉnh lại.",
+      };
+    }
+
+    if (outputCheck.renderMode === "fullscreen-scaled") {
+      return {
+        className: "warn",
+        message:
+          "Chế độ toàn màn hình có scale sẽ lấp đầy màn hình, nhưng có thể làm mờ hoặc scale canvas 384x384.",
+      };
+    }
+
+    if (outputCheck.requiresControllerMapping) {
+      return {
+        className: "idle",
+        message:
+          "Chế độ cửa sổ 384 gốc đang được bật. Đầu ra 1:1 lúc này phụ thuộc vào việc NovaStar map đúng vùng 384x384.",
+      };
+    }
+
+    return {
+      className: "ok",
+      message:
+        "Chế độ cửa sổ 384 gốc đang được bật và scale của Windows đang an toàn cho đầu ra 1:1.",
+    };
   }
 
   escapeHtml(value) {
@@ -590,6 +724,12 @@ class BillboardConfigManager {
     const displayListEl = document.getElementById("display-list");
     const startBtn = document.getElementById("start-reposition-btn");
     const cancelBtn = document.getElementById("cancel-reposition-btn");
+    const renderModeSelect = document.getElementById("render-mode-select");
+    const renderModeValueEl = document.getElementById("render-mode-value");
+    const outputResolutionValueEl = document.getElementById("output-resolution-value");
+    const windowsScaleValueEl = document.getElementById("windows-scale-value");
+    const outputCheckBannerEl = document.getElementById("output-check-banner");
+    const outputCheckListEl = document.getElementById("output-check-list");
 
     if (
       !startupModeEl ||
@@ -597,12 +737,19 @@ class BillboardConfigManager {
       !savedPositionEl ||
       !preferredDisplayEl ||
       !statusBannerEl ||
-      !displayListEl
+      !displayListEl ||
+      !renderModeSelect ||
+      !renderModeValueEl ||
+      !outputResolutionValueEl ||
+      !windowsScaleValueEl ||
+      !outputCheckBannerEl ||
+      !outputCheckListEl
     ) {
       return;
     }
 
     const info = this.displayInfo;
+    const outputCheck = info?.outputCheck || this.config.outputCheck;
     const savedWindow = this.config.billboardWindow || this.getDefaultBillboardWindowConfig();
     const savedBounds = savedWindow.hasSavedPosition
       ? {
@@ -615,31 +762,71 @@ class BillboardConfigManager {
 
     startupModeEl.textContent = info
       ? this.formatStartupMode(info.startupMode)
-      : "Loading...";
+      : "Đang tải...";
     currentPositionEl.textContent = info
       ? this.formatBounds(info.currentBounds)
-      : "Loading...";
+      : "Đang tải...";
     savedPositionEl.textContent = this.formatBounds(savedBounds);
-    preferredDisplayEl.textContent = info?.preferredDisplay?.label || "Loading...";
+    preferredDisplayEl.textContent = info?.preferredDisplay?.label || "Đang tải...";
+    renderModeSelect.value = this.config.renderMode || "native-384-window";
+    renderModeValueEl.textContent = this.formatRenderMode(
+      this.config.renderMode || "native-384-window"
+    );
+    outputResolutionValueEl.textContent = outputCheck?.displayResolution
+      ? `${outputCheck.displayResolution.width}x${outputCheck.displayResolution.height}`
+      : "Đang tải...";
+    windowsScaleValueEl.textContent = this.formatScaleFactor(
+      outputCheck?.scaleFactor
+    );
 
     if (this.isBillboardRepositioning) {
       statusBannerEl.className = "display-status-banner drag";
       statusBannerEl.textContent =
-        "Drag mode is on. Move the billboard window now, then click Save & Apply to keep the new position.";
+        "Chế độ kéo thả đang bật. Hãy di chuyển cửa sổ billboard ngay bây giờ, sau đó bấm Lưu & Áp dụng để giữ vị trí mới.";
       startBtn?.classList.add("hidden");
       cancelBtn?.classList.remove("hidden");
     } else {
       statusBannerEl.className = "display-status-banner idle";
       statusBannerEl.textContent =
-        "Drag mode is off. Billboard stays hidden while config is open.";
+        "Chế độ kéo thả đang tắt. Billboard sẽ ẩn trong khi màn hình cấu hình đang mở.";
       startBtn?.classList.remove("hidden");
       cancelBtn?.classList.add("hidden");
     }
 
+    const outputStatus = this.getOutputCheckStatus(outputCheck);
+    outputCheckBannerEl.className = `output-check-banner ${outputStatus.className}`;
+    outputCheckBannerEl.textContent = outputStatus.message;
+
+    const diagnosticItems = [];
+
+    if (outputCheck?.windowBounds) {
+      diagnosticItems.push(
+        `Tọa độ cửa sổ hiện tại: ${outputCheck.windowBounds.x}, ${outputCheck.windowBounds.y} (${outputCheck.windowBounds.width}x${outputCheck.windowBounds.height})`
+      );
+    }
+
+    if (outputCheck?.warnings?.length) {
+      outputCheck.warnings.forEach((warning) => diagnosticItems.push(warning));
+    } else {
+      diagnosticItems.push(
+        "Không phát hiện cảnh báo scale tức thời nào từ Electron trên đầu ra đang chọn."
+      );
+    }
+
+    diagnosticItems.push(
+      this.config.renderMode === "fullscreen-scaled"
+        ? "Chỉ dùng chế độ này khi địa điểm chủ động scale toàn bộ canvas HDMI."
+        : "Giữ scale Windows ở 100% và map vùng NovaStar 384x384 để đạt độ nét tốt nhất."
+    );
+
+    outputCheckListEl.innerHTML = diagnosticItems
+      .map((item) => `<li>${this.escapeHtml(item)}</li>`)
+      .join("");
+
     if (!info?.displays?.length) {
       displayListEl.innerHTML = `
         <div class="display-card">
-          <div class="display-card-title">No displays detected</div>
+          <div class="display-card-title">Không phát hiện màn hình nào</div>
         </div>
       `;
       return;
@@ -649,10 +836,10 @@ class BillboardConfigManager {
       .map((display) => {
         const pills = [];
         if (display.isPrimary) {
-          pills.push('<span class="display-pill primary">Primary</span>');
+          pills.push('<span class="display-pill primary">Màn hình chính</span>');
         }
         if (info.currentDisplay?.id === display.id) {
-          pills.push('<span class="display-pill current">Current billboard</span>');
+          pills.push('<span class="display-pill current">Billboard hiện tại</span>');
         }
 
         return `
@@ -664,9 +851,9 @@ class BillboardConfigManager {
               <div>${pills.join(" ")}</div>
             </div>
             <div class="display-card-meta">
-              Bounds: ${display.bounds.x}, ${display.bounds.y} (${display.bounds.width}x${display.bounds.height})<br />
-              Work area: ${display.workArea.x}, ${display.workArea.y} (${display.workArea.width}x${display.workArea.height})<br />
-              Scale factor: ${display.scaleFactor}
+              Tọa độ màn hình: ${display.bounds.x}, ${display.bounds.y} (${display.bounds.width}x${display.bounds.height})<br />
+              Vùng làm việc: ${display.workArea.x}, ${display.workArea.y} (${display.workArea.width}x${display.workArea.height})<br />
+              Tỉ lệ scale: ${display.scaleFactor}
             </div>
           </div>
         `;
@@ -684,11 +871,15 @@ class BillboardConfigManager {
       this.isBillboardRepositioning = Boolean(
         this.displayInfo?.reposition?.isRepositioning
       );
+      this.config.outputCheck = {
+        ...this.getDefaultOutputCheck(),
+        ...(this.displayInfo?.outputCheck || {}),
+      };
       this.renderDisplayInfo();
     } catch (error) {
       console.error("DisplaySettings: Failed to load display info:", error);
       this.showNotification(
-        "Could not load display information: " + error.message,
+        "Không thể tải thông tin màn hình: " + error.message,
         "error"
       );
     }
@@ -2354,7 +2545,7 @@ class BillboardConfigManager {
       if (window.electronAPI) {
         const savedConfig = await window.electronAPI.getConfig();
         this.config = { ...this.config, ...savedConfig };
-        this.ensureBillboardWindowConfig();
+        this.ensureDisplayConfig();
 
         console.log("ConfigManager: Loaded configuration from config.json:", {
           logoMode: this.config.logoMode,
@@ -2480,7 +2671,7 @@ class BillboardConfigManager {
   }
 
   updateUI() {
-    this.ensureBillboardWindowConfig();
+    this.ensureDisplayConfig();
 
     // Update logo mode radio buttons
     const modeRadio = document.querySelector(
@@ -2828,7 +3019,7 @@ class BillboardConfigManager {
 
   async saveConfiguration() {
     try {
-      this.ensureBillboardWindowConfig();
+      this.ensureDisplayConfig();
 
       if (window.electronAPI) {
         const result = await window.electronAPI.saveConfig(this.config);
@@ -2953,7 +3144,7 @@ async function saveAndApply() {
 
       if (!repositionResult?.success) {
         throw new Error(
-          repositionResult?.error || "Could not finalize billboard position."
+          repositionResult?.error || "Không thể hoàn tất vị trí billboard."
         );
       }
 
@@ -2966,6 +3157,10 @@ async function saveAndApply() {
 
       if (repositionResult.displayInfo) {
         configManager.displayInfo = repositionResult.displayInfo;
+        configManager.config.outputCheck = {
+          ...configManager.getDefaultOutputCheck(),
+          ...(repositionResult.displayInfo.outputCheck || {}),
+        };
       }
 
       configManager.isBillboardRepositioning = false;
@@ -3004,7 +3199,7 @@ async function saveAndApply() {
     // Add details about what was saved
     const savedItems = [];
     if (configManager.config.billboardWindow?.hasSavedPosition) {
-      savedItems.push("Billboard position");
+      savedItems.push("Vị trí billboard");
     }
     if (
       configManager.eraConfigService &&

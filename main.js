@@ -14,6 +14,7 @@ const BILLBOARD_HEIGHT = 384;
 let mainWindow;
 let configWindow;
 let isConfigMode = false;
+let runtimeConfig = null;
 let billboardRepositionState = {
   isRepositioning: false,
   preRepositionBounds: null,
@@ -677,6 +678,7 @@ async function createMainWindow() {
   }
 
   mainWindow.once("ready-to-show", () => {
+    applyMainWindowPresentation(currentConfig);
     syncMainWindowVisibility();
 
     // Add a delay to ensure the window is fully loaded before accepting config updates
@@ -812,6 +814,27 @@ function getDefaultBillboardWindowConfig() {
   };
 }
 
+function getDefaultOutputCheck() {
+  return {
+    displayResolution: null,
+    scaleFactor: null,
+    windowBounds: null,
+    renderMode: "native-384-window",
+    isScaleFactorSafe: null,
+    isNative384Display: null,
+    requiresControllerMapping: null,
+    pixelPerfectLikely: null,
+    warnings: [],
+    checkedAt: null,
+  };
+}
+
+function normalizeRenderMode(renderMode) {
+  return renderMode === "fullscreen-scaled"
+    ? "fullscreen-scaled"
+    : "native-384-window";
+}
+
 function getDefaultConfig() {
   return {
     logoMode: "fixed",
@@ -823,7 +846,9 @@ function getDefaultConfig() {
       logo: { x: 0, y: 288, width: 384, height: 96 },
     },
     schedules: [],
+    renderMode: "native-384-window",
     billboardWindow: getDefaultBillboardWindowConfig(),
+    outputCheck: getDefaultOutputCheck(),
     logoManifest: {
       enabled: false,
       manifestUrl: "",
@@ -859,10 +884,12 @@ function normalizeBillboardWindowConfig(billboardWindow = {}) {
 
 function normalizeConfig(config = {}) {
   const defaults = getDefaultConfig();
+  const renderMode = normalizeRenderMode(config.renderMode);
 
   return {
     ...defaults,
     ...config,
+    renderMode,
     logoImages: Array.isArray(config.logoImages) ? config.logoImages : [],
     schedules: Array.isArray(config.schedules) ? config.schedules : [],
     layoutPositions: {
@@ -884,6 +911,14 @@ function normalizeConfig(config = {}) {
       ...(config.logoManifest || {}),
     },
     billboardWindow: normalizeBillboardWindowConfig(config.billboardWindow),
+    outputCheck: {
+      ...defaults.outputCheck,
+      ...(config.outputCheck || {}),
+      renderMode,
+      warnings: Array.isArray(config.outputCheck?.warnings)
+        ? config.outputCheck.warnings
+        : [],
+    },
   };
 }
 
@@ -1020,12 +1055,133 @@ function serializeDisplay(display) {
 
   return {
     id: display.id,
-    label: isPrimary ? "Primary Display" : display.label || `Display ${display.id}`,
+    label: isPrimary ? "Màn hình chính" : display.label || `Màn hình ${display.id}`,
     isPrimary,
     bounds: display.bounds,
     workArea: display.workArea,
     scaleFactor: display.scaleFactor,
   };
+}
+
+function boundsAreEqual(a, b) {
+  if (!a || !b) {
+    return false;
+  }
+
+  return (
+    a.x === b.x &&
+    a.y === b.y &&
+    a.width === b.width &&
+    a.height === b.height
+  );
+}
+
+function buildOutputCheck(config, windowBounds = null, display = null) {
+  const normalizedConfig = normalizeConfig(config);
+  const effectiveWindowBounds =
+    windowBounds || mainWindow?.getBounds() || resolveBillboardPlacement(normalizedConfig).bounds;
+  const effectiveDisplay =
+    display || getDisplayForBounds(effectiveWindowBounds);
+  const displayResolution = effectiveDisplay
+    ? {
+        width: effectiveDisplay.bounds.width,
+        height: effectiveDisplay.bounds.height,
+      }
+    : null;
+  const scaleFactor = effectiveDisplay?.scaleFactor ?? null;
+  const isScaleFactorSafe =
+    typeof scaleFactor === "number" ? Math.abs(scaleFactor - 1) < 0.01 : null;
+  const isNative384Display = Boolean(
+    displayResolution &&
+      displayResolution.width === BILLBOARD_WIDTH &&
+      displayResolution.height === BILLBOARD_HEIGHT
+  );
+  const requiresControllerMapping =
+    normalizedConfig.renderMode === "native-384-window" && !isNative384Display;
+  const warnings = [];
+
+  if (isScaleFactorSafe === false) {
+    warnings.push(
+      `Tỉ lệ scale của Windows đang là ${Math.round(scaleFactor * 100)}%. Hãy đặt màn hình này về 100% để có đầu ra chính xác theo pixel.`
+    );
+  }
+
+  if (requiresControllerMapping && displayResolution) {
+    warnings.push(
+      `Windows đang nhìn đầu ra này là ${displayResolution.width}x${displayResolution.height}. Đầu ra 1:1 phụ thuộc vào việc NovaStar map đúng một vùng 384x384.`
+    );
+  }
+
+  if (normalizedConfig.renderMode === "fullscreen-scaled") {
+    warnings.push(
+      "Chế độ toàn màn hình có scale sẽ lấp đầy màn hình nhưng có thể scale canvas 384x384 thay vì giữ 1:1 pixel."
+    );
+  }
+
+  return {
+    displayResolution,
+    scaleFactor,
+    windowBounds: effectiveWindowBounds
+      ? {
+          x: Math.round(effectiveWindowBounds.x),
+          y: Math.round(effectiveWindowBounds.y),
+          width: Math.round(effectiveWindowBounds.width),
+          height: Math.round(effectiveWindowBounds.height),
+        }
+      : null,
+    renderMode: normalizedConfig.renderMode,
+    isScaleFactorSafe,
+    isNative384Display,
+    requiresControllerMapping,
+    pixelPerfectLikely:
+      normalizedConfig.renderMode === "native-384-window" &&
+      isScaleFactorSafe === true,
+    warnings,
+    checkedAt: new Date().toISOString(),
+  };
+}
+
+function applyMainWindowPresentation(config) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  const normalizedConfig = normalizeConfig(config);
+  const placement = resolveBillboardPlacement(normalizedConfig);
+  const currentDisplay = getDisplayForBounds(mainWindow.getBounds());
+  const renderMode = normalizeRenderMode(normalizedConfig.renderMode);
+  const shouldUseFullscreen =
+    renderMode === "fullscreen-scaled" &&
+    !billboardRepositionState.isRepositioning;
+
+  if (!shouldUseFullscreen) {
+    if (mainWindow.isFullScreen()) {
+      mainWindow.setFullScreen(false);
+    }
+
+    if (!boundsAreEqual(mainWindow.getBounds(), placement.bounds)) {
+      mainWindow.setBounds(placement.bounds);
+    }
+
+    return;
+  }
+
+  const targetBounds = placement.display?.bounds || placement.bounds;
+  const isAlreadyOnTargetDisplay =
+    mainWindow.isFullScreen() &&
+    currentDisplay?.id === placement.display?.id;
+
+  if (!isAlreadyOnTargetDisplay) {
+    if (mainWindow.isFullScreen()) {
+      mainWindow.setFullScreen(false);
+    }
+
+    if (!boundsAreEqual(mainWindow.getBounds(), targetBounds)) {
+      mainWindow.setBounds(targetBounds);
+    }
+
+    mainWindow.setFullScreen(true);
+  }
 }
 
 function sendToWindow(targetWindow, channel, payload) {
@@ -1039,10 +1195,10 @@ function sendToWindow(targetWindow, channel, payload) {
 }
 
 async function getDisplayInfoPayload(configOverride = null) {
-  const resolvedConfig = normalizeConfig(configOverride || (await loadConfig()));
-  const currentBounds =
-    normalizeBillboardBounds(mainWindow?.getBounds()) ||
-    resolveBillboardPlacement(resolvedConfig).bounds;
+  const resolvedConfig = normalizeConfig(
+    configOverride || runtimeConfig || (await loadConfig())
+  );
+  const currentBounds = mainWindow?.getBounds() || resolveBillboardPlacement(resolvedConfig).bounds;
   const currentDisplay = getDisplayForBounds(currentBounds);
   const preferredDisplay =
     (resolvedConfig.billboardWindow.hasSavedPosition &&
@@ -1060,6 +1216,8 @@ async function getDisplayInfoPayload(configOverride = null) {
     currentBounds,
     currentDisplay: serializeDisplay(currentDisplay),
     preferredDisplay: serializeDisplay(preferredDisplay),
+    renderMode: resolvedConfig.renderMode,
+    outputCheck: buildOutputCheck(resolvedConfig, currentBounds, currentDisplay),
     startupMode: resolvedConfig.billboardWindow.hasSavedPosition
       ? "saved-position"
       : getPreferredExternalDisplay()
@@ -1079,6 +1237,7 @@ function syncMainWindowVisibility() {
     return;
   }
 
+  applyMainWindowPresentation(runtimeConfig || getDefaultConfig());
   mainWindow.setAlwaysOnTop(!billboardRepositionState.isRepositioning);
 
   const shouldShow =
@@ -1110,11 +1269,13 @@ function emitBillboardPositionUpdated(source = "move") {
     billboardRepositionState.pendingBounds ||
     normalizeBillboardBounds(mainWindow?.getBounds());
   const currentDisplay = getDisplayForBounds(bounds);
+  const currentConfig = normalizeConfig(runtimeConfig || getDefaultConfig());
   const payload = {
     source,
     bounds,
     display: serializeDisplay(currentDisplay),
     billboardWindow: buildBillboardWindowConfig(bounds),
+    outputCheck: buildOutputCheck(currentConfig, bounds, currentDisplay),
   };
 
   sendToWindow(configWindow, "billboard-position-updated", payload);
@@ -1124,11 +1285,12 @@ async function startBillboardReposition() {
   if (!mainWindow || mainWindow.isDestroyed()) {
     return {
       success: false,
-      error: "Main billboard window is not available.",
+      error: "Cửa sổ billboard chính hiện không khả dụng.",
     };
   }
 
-  const currentBounds = normalizeBillboardBounds(mainWindow.getBounds());
+  const currentConfig = normalizeConfig(runtimeConfig || (await loadConfig()));
+  const currentBounds = resolveBillboardPlacement(currentConfig).bounds;
 
   billboardRepositionState = {
     isRepositioning: true,
@@ -1136,6 +1298,7 @@ async function startBillboardReposition() {
     pendingBounds: currentBounds,
   };
 
+  applyMainWindowPresentation(currentConfig);
   syncMainWindowVisibility();
   mainWindow.focus();
   emitBillboardRepositionModeChanged();
@@ -1153,7 +1316,7 @@ async function finishBillboardReposition({ save = false } = {}) {
   if (!mainWindow || mainWindow.isDestroyed()) {
     return {
       success: false,
-      error: "Main billboard window is not available.",
+      error: "Cửa sổ billboard chính hiện không khả dụng.",
     };
   }
 
@@ -1181,14 +1344,19 @@ async function finishBillboardReposition({ save = false } = {}) {
   }
 
   const updatedWindowConfig = buildBillboardWindowConfig(finalBounds);
+  const nextConfig = save
+    ? {
+        ...(runtimeConfig || (await loadConfig())),
+        billboardWindow: updatedWindowConfig,
+      }
+    : runtimeConfig || (await loadConfig());
+  applyMainWindowPresentation(nextConfig);
 
   return {
     success: true,
     bounds: finalBounds,
     billboardWindow: save ? updatedWindowConfig : null,
-    displayInfo: await getDisplayInfoPayload(
-      save ? { ...(await loadConfig()), billboardWindow: updatedWindowConfig } : null
-    ),
+    displayInfo: await getDisplayInfoPayload(save ? nextConfig : null),
   };
 }
 
@@ -1201,29 +1369,22 @@ function applyBillboardWindowFromConfig(config) {
     return;
   }
 
-  const placement = resolveBillboardPlacement(config);
-  const currentBounds = normalizeBillboardBounds(mainWindow.getBounds());
-
-  if (
-    !currentBounds ||
-    currentBounds.x !== placement.bounds.x ||
-    currentBounds.y !== placement.bounds.y
-  ) {
-    mainWindow.setBounds(placement.bounds);
-  }
+  applyMainWindowPresentation(config);
 }
 
 async function loadConfig() {
   try {
     if (fs.existsSync(configPath)) {
       const configData = fs.readFileSync(configPath, "utf8");
-      return normalizeConfig(JSON.parse(configData));
+      runtimeConfig = normalizeConfig(JSON.parse(configData));
+      return runtimeConfig;
     }
   } catch (error) {
     console.error("Error loading config:", error);
   }
 
-  return getDefaultConfig();
+  runtimeConfig = getDefaultConfig();
+  return runtimeConfig;
 }
 
 /**
@@ -1232,9 +1393,11 @@ async function loadConfig() {
 async function saveConfig(config) {
   try {
     const normalizedConfig = normalizeConfig(config);
+    normalizedConfig.outputCheck = buildOutputCheck(normalizedConfig);
     const configData = JSON.stringify(normalizedConfig, null, 2);
     fs.writeFileSync(configPath, configData, "utf8");
     console.log("Configuration saved successfully");
+    runtimeConfig = normalizedConfig;
     return normalizedConfig;
   } catch (error) {
     console.error("Error saving config:", error);
@@ -2362,6 +2525,7 @@ function setupConfigWatcher() {
         try {
           const configData = fs.readFileSync(configPath, "utf8");
           const config = normalizeConfig(JSON.parse(configData));
+          runtimeConfig = config;
 
           console.log("External config change detected:", {
             logoMode: config.logoMode,
@@ -2388,6 +2552,8 @@ function setupConfigWatcher() {
  */
 function broadcastConfigUpdate(config) {
   const normalizedConfig = normalizeConfig(config);
+  normalizedConfig.outputCheck = buildOutputCheck(normalizedConfig);
+  runtimeConfig = normalizedConfig;
 
   console.log("Broadcasting config update to all windows", {
     logoMode: normalizedConfig.logoMode,

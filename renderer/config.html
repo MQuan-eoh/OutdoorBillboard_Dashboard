@@ -336,6 +336,32 @@
         color: #8a5300;
       }
 
+      .output-check-banner {
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin: 18px 0 16px;
+        font-size: 14px;
+        border: 1px solid transparent;
+      }
+
+      .output-check-banner.ok {
+        background: #edfdf3;
+        border-color: #bbe7c8;
+        color: #146c43;
+      }
+
+      .output-check-banner.warn {
+        background: #fff4e5;
+        border-color: #ffd19a;
+        color: #9a4d00;
+      }
+
+      .output-check-banner.idle {
+        background: #eef6ff;
+        border-color: #cfe3ff;
+        color: #1f4b7a;
+      }
+
       .display-summary-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -368,6 +394,18 @@
         display: flex;
         gap: 12px;
         flex-wrap: wrap;
+      }
+
+      .diagnostic-list {
+        margin: 0;
+        padding-left: 20px;
+        color: #495057;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .diagnostic-list li + li {
+        margin-top: 6px;
       }
 
       .display-list {
@@ -947,7 +985,7 @@
           </li>
           <li class="nav-item">
             <a href="#" class="nav-link" data-tab="display-settings-panel">
-              Display Settings
+              Cài đặt hiển thị
             </a>
           </li>
         </ul>
@@ -1723,51 +1761,89 @@
 
         <div id="display-settings-panel" class="tab-content">
           <div class="content-header">
-            <h2 class="content-title">Display Settings</h2>
+            <h2 class="content-title">Cài đặt hiển thị</h2>
             <p class="content-subtitle">
-              Quan ly vi tri cua billboard window tren man hinh LED
+              Quản lý vị trí của cửa sổ billboard trên màn hình LED
             </p>
           </div>
           <div class="config-card">
             <h3 class="card-title">
-              <span class="card-icon">Display</span>
-              Billboard placement
+              <span class="card-icon">Màn hình</span>
+              Vị trí billboard
             </h3>
             <p class="info-text">
-              Bat che do keo tha tam thoi de di chuyen billboard sang man hinh
-              LED. Khi drag mode tat, billboard van sach va khong co header.
+              Bật chế độ kéo thả tạm thời để di chuyển billboard sang màn hình
+              LED. Khi chế độ kéo thả tắt, billboard vẫn sạch và không có
+              header.
             </p>
+
+            <div class="form-group" style="margin-top: 18px">
+              <label class="form-label" for="render-mode-select">
+                Chế độ hiển thị
+              </label>
+              <select id="render-mode-select" class="form-control">
+                <option value="native-384-window">
+                  Cửa sổ 384 gốc (Khuyến nghị)
+                </option>
+                <option value="fullscreen-scaled">
+                  Toàn màn hình có scale (Dự phòng)
+                </option>
+              </select>
+              <p class="info-text" style="margin-top: 10px">
+                Cửa sổ 384 gốc giữ nguyên canvas 384x384. Toàn màn hình có
+                scale chỉ nên dùng khi địa điểm cần scale toàn bộ đầu vào HDMI.
+              </p>
+            </div>
 
             <div
               id="display-status-banner"
               class="display-status-banner idle"
             >
-              Drag mode is off. Billboard stays hidden while config is open.
+              Chế độ kéo thả đang tắt. Billboard sẽ ẩn trong khi màn hình cấu
+              hình đang mở.
             </div>
 
             <div class="display-summary-grid">
               <div class="display-summary-card">
-                <div class="display-summary-label">Startup mode</div>
+                <div class="display-summary-label">Chế độ khởi động</div>
                 <div class="display-summary-value" id="startup-mode-value">
-                  Loading...
+                  Đang tải...
                 </div>
               </div>
               <div class="display-summary-card">
-                <div class="display-summary-label">Current position</div>
+                <div class="display-summary-label">Vị trí hiện tại</div>
                 <div class="display-summary-value" id="current-position-value">
-                  Loading...
+                  Đang tải...
                 </div>
               </div>
               <div class="display-summary-card">
-                <div class="display-summary-label">Saved position</div>
+                <div class="display-summary-label">Vị trí đã lưu</div>
                 <div class="display-summary-value" id="saved-position-value">
-                  Loading...
+                  Đang tải...
                 </div>
               </div>
               <div class="display-summary-card">
-                <div class="display-summary-label">Preferred display</div>
+                <div class="display-summary-label">Màn hình ưu tiên</div>
                 <div class="display-summary-value" id="preferred-display-value">
-                  Loading...
+                  Đang tải...
+                </div>
+              </div>
+              <div class="display-summary-card">
+                <div class="display-summary-label">Chế độ hiển thị</div>
+                <div class="display-summary-value" id="render-mode-value">
+                  Đang tải...
+                </div>
+              </div>
+              <div class="display-summary-card">
+                <div class="display-summary-label">Độ phân giải đầu ra</div>
+                <div class="display-summary-value" id="output-resolution-value">
+                  Đang tải...
+                </div>
+              </div>
+              <div class="display-summary-card">
+                <div class="display-summary-label">Tỉ lệ scale Windows</div>
+                <div class="display-summary-value" id="windows-scale-value">
+                  Đang tải...
                 </div>
               </div>
             </div>
@@ -1778,33 +1854,40 @@
                 class="btn btn-primary"
                 type="button"
               >
-                Bat che do keo tha
+                Bật chế độ kéo thả
               </button>
               <button
                 id="cancel-reposition-btn"
                 class="btn btn-secondary hidden"
                 type="button"
               >
-                Huy keo tha
+                Hủy kéo thả
               </button>
               <button
                 id="refresh-display-info-btn"
                 class="btn btn-outline"
                 type="button"
               >
-                Lam moi danh sach man hinh
+                Làm mới thông tin màn hình
               </button>
             </div>
+
+            <div id="output-check-banner" class="output-check-banner idle">
+              Thông tin chẩn đoán đầu ra sẽ xuất hiện sau khi làm mới.
+            </div>
+            <ul id="output-check-list" class="diagnostic-list">
+              <li>Đang tải thông tin chẩn đoán đầu ra...</li>
+            </ul>
           </div>
 
           <div class="config-card">
             <h3 class="card-title">
-              <span class="card-icon">Monitors</span>
-              Detected displays
+              <span class="card-icon">Màn hình</span>
+              Danh sách màn hình đã nhận
             </h3>
             <div id="display-list" class="display-list">
               <div class="display-card">
-                <div class="display-card-title">Loading detected displays...</div>
+                <div class="display-card-title">Đang tải danh sách màn hình...</div>
               </div>
             </div>
           </div>

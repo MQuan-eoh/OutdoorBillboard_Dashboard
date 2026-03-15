@@ -2777,6 +2777,63 @@ function BillboardLayout() {
 // Main App Component
 function App() {
   const [isRepositionMode, setIsRepositionMode] = React.useState(false);
+  const [renderMode, setRenderMode] = React.useState("native-384-window");
+  const [viewportSize, setViewportSize] = React.useState({
+    width: typeof window !== "undefined" ? window.innerWidth : 384,
+    height: typeof window !== "undefined" ? window.innerHeight : 384,
+  });
+
+  React.useEffect(() => {
+    const updateViewportSize = () => {
+      setViewportSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    window.addEventListener("resize", updateViewportSize);
+
+    return () => {
+      window.removeEventListener("resize", updateViewportSize);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      window.electronAPI &&
+      window.electronAPI.getConfig
+    ) {
+      window.electronAPI
+        .getConfig()
+        .then((config) => {
+          setRenderMode(
+            config && config.renderMode === "fullscreen-scaled"
+              ? "fullscreen-scaled"
+              : "native-384-window"
+          );
+        })
+        .catch((error) => {
+          console.error("App: Failed to load render mode:", error);
+        });
+    }
+
+    if (
+      typeof window !== "undefined" &&
+      window.electronAPI &&
+      window.electronAPI.onConfigUpdated
+    ) {
+      const handleConfigUpdated = (event, newConfig) => {
+        setRenderMode(
+          newConfig && newConfig.renderMode === "fullscreen-scaled"
+            ? "fullscreen-scaled"
+            : "native-384-window"
+        );
+      };
+
+      window.electronAPI.onConfigUpdated(handleConfigUpdated);
+    }
+  }, []);
 
   React.useEffect(() => {
     if (
@@ -2800,18 +2857,39 @@ function App() {
     }
   }, []);
 
+  const isFullscreenScaled =
+    renderMode === "fullscreen-scaled" && !isRepositionMode;
+  const scale = isFullscreenScaled
+    ? Math.min(viewportSize.width / 384, viewportSize.height / 384)
+    : 1;
+
   return React.createElement("div", {
     style: {
-      width: "384px",
-      height: "384px",
+      width: "100%",
+      height: "100%",
       margin: 0,
       padding: 0,
       overflow: "hidden",
       fontFamily: "Arial, sans-serif",
       position: "relative",
+      backgroundColor: "#000",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
     }
   }, [
-    React.createElement(BillboardLayout, { key: "billboard-layout" }),
+    React.createElement("div", {
+      key: "billboard-stage",
+      style: {
+        width: "384px",
+        height: "384px",
+        position: "relative",
+        transform: isFullscreenScaled ? "scale(" + scale + ")" : "none",
+        transformOrigin: "center center",
+      }
+    }, [
+      React.createElement(BillboardLayout, { key: "billboard-layout" }),
+    ]),
     isRepositionMode
       ? React.createElement(
           "div",
