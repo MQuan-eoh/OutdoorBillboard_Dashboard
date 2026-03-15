@@ -11,7 +11,17 @@ class BillboardConfigManager {
         logo: { x: 0, y: 288, width: 384, height: 96 },
       },
       schedules: [],
+      billboardWindow: {
+        x: null,
+        y: null,
+        displayId: null,
+        hasSavedPosition: false,
+        preferExternalDisplay: true,
+      },
     };
+
+    this.displayInfo = null;
+    this.isBillboardRepositioning = false;
 
     // Initialize authentication service
     this.authService = null;
@@ -131,6 +141,7 @@ class BillboardConfigManager {
     this.setupLogoModeHandlers();
     this.setupLoginHandlers();
     this.setupEraConfigHandlers();
+    this.setupDisplaySettings();
     this.setupModalHandlers();
     this.loadConfiguration();
     this.setupDragAndDrop();
@@ -376,6 +387,310 @@ class BillboardConfigManager {
       loginBtn.disabled = false;
       btnText.style.display = "inline";
       btnLoader.style.display = "none";
+    }
+  }
+
+  getDefaultBillboardWindowConfig() {
+    return {
+      x: null,
+      y: null,
+      displayId: null,
+      hasSavedPosition: false,
+      preferExternalDisplay: true,
+    };
+  }
+
+  ensureBillboardWindowConfig() {
+    this.config.billboardWindow = {
+      ...this.getDefaultBillboardWindowConfig(),
+      ...(this.config.billboardWindow || {}),
+    };
+
+    if (!this.config.billboardWindow.hasSavedPosition) {
+      this.config.billboardWindow.x = null;
+      this.config.billboardWindow.y = null;
+      this.config.billboardWindow.displayId = null;
+    }
+  }
+
+  setupDisplaySettings() {
+    this.ensureBillboardWindowConfig();
+
+    const startBtn = document.getElementById("start-reposition-btn");
+    const cancelBtn = document.getElementById("cancel-reposition-btn");
+    const refreshBtn = document.getElementById("refresh-display-info-btn");
+
+    if (startBtn) {
+      startBtn.addEventListener("click", async () => {
+        await this.startBillboardReposition();
+      });
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", async () => {
+        await this.cancelBillboardReposition();
+      });
+    }
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", async () => {
+        await this.refreshDisplayInfo();
+      });
+    }
+
+    if (window.electronAPI?.onBillboardPositionUpdated) {
+      window.electronAPI.onBillboardPositionUpdated((event, payload) => {
+        this.handleBillboardPositionUpdated(payload);
+      });
+    }
+
+    if (window.electronAPI?.onBillboardRepositionModeChanged) {
+      window.electronAPI.onBillboardRepositionModeChanged((event, payload) => {
+        this.handleBillboardRepositionModeChanged(payload);
+      });
+    }
+  }
+
+  async startBillboardReposition() {
+    if (!window.electronAPI?.startBillboardReposition) {
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.startBillboardReposition();
+
+      if (!result?.success) {
+        throw new Error(result?.error || "Could not start drag mode.");
+      }
+
+      this.isBillboardRepositioning = true;
+      if (result.displayInfo) {
+        this.displayInfo = result.displayInfo;
+      }
+      if (result.billboardWindow) {
+        this.config.billboardWindow = {
+          ...this.config.billboardWindow,
+          ...result.billboardWindow,
+        };
+      }
+
+      this.renderDisplayInfo();
+      this.showNotification(
+        "Drag mode is active. Drag the billboard window to the LED screen, then click Save & Apply.",
+        "info"
+      );
+    } catch (error) {
+      console.error("DisplaySettings: Failed to start drag mode:", error);
+      this.showNotification(
+        "Could not start drag mode: " + error.message,
+        "error"
+      );
+    }
+  }
+
+  async cancelBillboardReposition() {
+    if (!window.electronAPI?.finishBillboardReposition) {
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.finishBillboardReposition({
+        save: false,
+      });
+
+      if (!result?.success) {
+        throw new Error(result?.error || "Could not cancel drag mode.");
+      }
+
+      this.isBillboardRepositioning = false;
+      if (result.displayInfo) {
+        this.displayInfo = result.displayInfo;
+      }
+
+      this.renderDisplayInfo();
+    } catch (error) {
+      console.error("DisplaySettings: Failed to cancel drag mode:", error);
+      this.showNotification(
+        "Could not cancel drag mode: " + error.message,
+        "error"
+      );
+    }
+  }
+
+  handleBillboardPositionUpdated(payload) {
+    if (!payload) {
+      return;
+    }
+
+    this.ensureBillboardWindowConfig();
+    this.config.billboardWindow = {
+      ...this.config.billboardWindow,
+      ...(payload.billboardWindow || {}),
+    };
+
+    if (this.displayInfo) {
+      this.displayInfo.currentBounds = payload.bounds;
+      this.displayInfo.currentDisplay = payload.display;
+      this.displayInfo.reposition = {
+        ...(this.displayInfo.reposition || {}),
+        pendingBounds: payload.bounds,
+      };
+    }
+
+    this.renderDisplayInfo();
+  }
+
+  handleBillboardRepositionModeChanged(payload) {
+    this.isBillboardRepositioning = Boolean(payload?.isRepositioning);
+
+    if (this.displayInfo) {
+      this.displayInfo.reposition = {
+        ...(this.displayInfo.reposition || {}),
+        isRepositioning: this.isBillboardRepositioning,
+        pendingBounds: payload?.bounds || this.displayInfo.reposition?.pendingBounds,
+      };
+    }
+
+    this.renderDisplayInfo();
+  }
+
+  formatBounds(bounds) {
+    if (!bounds || !Number.isFinite(bounds.x) || !Number.isFinite(bounds.y)) {
+      return "Not set";
+    }
+
+    return `${bounds.x}, ${bounds.y} (${bounds.width}x${bounds.height})`;
+  }
+
+  formatStartupMode(mode) {
+    if (mode === "saved-position") {
+      return "Saved position";
+    }
+    if (mode === "external-display") {
+      return "Auto to external display";
+    }
+    return "Primary display fallback";
+  }
+
+  escapeHtml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  renderDisplayInfo() {
+    const startupModeEl = document.getElementById("startup-mode-value");
+    const currentPositionEl = document.getElementById("current-position-value");
+    const savedPositionEl = document.getElementById("saved-position-value");
+    const preferredDisplayEl = document.getElementById("preferred-display-value");
+    const statusBannerEl = document.getElementById("display-status-banner");
+    const displayListEl = document.getElementById("display-list");
+    const startBtn = document.getElementById("start-reposition-btn");
+    const cancelBtn = document.getElementById("cancel-reposition-btn");
+
+    if (
+      !startupModeEl ||
+      !currentPositionEl ||
+      !savedPositionEl ||
+      !preferredDisplayEl ||
+      !statusBannerEl ||
+      !displayListEl
+    ) {
+      return;
+    }
+
+    const info = this.displayInfo;
+    const savedWindow = this.config.billboardWindow || this.getDefaultBillboardWindowConfig();
+    const savedBounds = savedWindow.hasSavedPosition
+      ? {
+          x: savedWindow.x,
+          y: savedWindow.y,
+          width: 384,
+          height: 384,
+        }
+      : null;
+
+    startupModeEl.textContent = info
+      ? this.formatStartupMode(info.startupMode)
+      : "Loading...";
+    currentPositionEl.textContent = info
+      ? this.formatBounds(info.currentBounds)
+      : "Loading...";
+    savedPositionEl.textContent = this.formatBounds(savedBounds);
+    preferredDisplayEl.textContent = info?.preferredDisplay?.label || "Loading...";
+
+    if (this.isBillboardRepositioning) {
+      statusBannerEl.className = "display-status-banner drag";
+      statusBannerEl.textContent =
+        "Drag mode is on. Move the billboard window now, then click Save & Apply to keep the new position.";
+      startBtn?.classList.add("hidden");
+      cancelBtn?.classList.remove("hidden");
+    } else {
+      statusBannerEl.className = "display-status-banner idle";
+      statusBannerEl.textContent =
+        "Drag mode is off. Billboard stays hidden while config is open.";
+      startBtn?.classList.remove("hidden");
+      cancelBtn?.classList.add("hidden");
+    }
+
+    if (!info?.displays?.length) {
+      displayListEl.innerHTML = `
+        <div class="display-card">
+          <div class="display-card-title">No displays detected</div>
+        </div>
+      `;
+      return;
+    }
+
+    displayListEl.innerHTML = info.displays
+      .map((display) => {
+        const pills = [];
+        if (display.isPrimary) {
+          pills.push('<span class="display-pill primary">Primary</span>');
+        }
+        if (info.currentDisplay?.id === display.id) {
+          pills.push('<span class="display-pill current">Current billboard</span>');
+        }
+
+        return `
+          <div class="display-card${
+            info.currentDisplay?.id === display.id ? " active" : ""
+          }">
+            <div class="display-card-header">
+              <div class="display-card-title">${this.escapeHtml(display.label)}</div>
+              <div>${pills.join(" ")}</div>
+            </div>
+            <div class="display-card-meta">
+              Bounds: ${display.bounds.x}, ${display.bounds.y} (${display.bounds.width}x${display.bounds.height})<br />
+              Work area: ${display.workArea.x}, ${display.workArea.y} (${display.workArea.width}x${display.workArea.height})<br />
+              Scale factor: ${display.scaleFactor}
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  async refreshDisplayInfo() {
+    if (!window.electronAPI?.getDisplayInfo) {
+      return;
+    }
+
+    try {
+      this.displayInfo = await window.electronAPI.getDisplayInfo();
+      this.isBillboardRepositioning = Boolean(
+        this.displayInfo?.reposition?.isRepositioning
+      );
+      this.renderDisplayInfo();
+    } catch (error) {
+      console.error("DisplaySettings: Failed to load display info:", error);
+      this.showNotification(
+        "Could not load display information: " + error.message,
+        "error"
+      );
     }
   }
 
@@ -1910,6 +2225,10 @@ class BillboardConfigManager {
         if (tabId === "era-config" && this.eraConfigService) {
           this.loadCachedEraConfigIfAvailable();
         }
+
+        if (tabId === "display-settings-panel") {
+          this.refreshDisplayInfo();
+        }
       });
     });
 
@@ -2035,6 +2354,7 @@ class BillboardConfigManager {
       if (window.electronAPI) {
         const savedConfig = await window.electronAPI.getConfig();
         this.config = { ...this.config, ...savedConfig };
+        this.ensureBillboardWindowConfig();
 
         console.log("ConfigManager: Loaded configuration from config.json:", {
           logoMode: this.config.logoMode,
@@ -2047,6 +2367,7 @@ class BillboardConfigManager {
         this.loadEraConfigFromSystem();
 
         this.updateUI();
+        await this.refreshDisplayInfo();
       }
     } catch (error) {
       console.error("Error loading configuration:", error);
@@ -2159,6 +2480,8 @@ class BillboardConfigManager {
   }
 
   updateUI() {
+    this.ensureBillboardWindowConfig();
+
     // Update logo mode radio buttons
     const modeRadio = document.querySelector(
       `input[value="${this.config.logoMode}"]`
@@ -2179,6 +2502,7 @@ class BillboardConfigManager {
 
     // Update logo grid
     this.renderLogoGrid();
+    this.renderDisplayInfo();
   }
 
   renderLogoGrid() {
@@ -2504,10 +2828,13 @@ class BillboardConfigManager {
 
   async saveConfiguration() {
     try {
+      this.ensureBillboardWindowConfig();
+
       if (window.electronAPI) {
         const result = await window.electronAPI.saveConfig(this.config);
         if (result.success) {
           this.showNotification("Configuration saved successfully!", "success");
+          await this.refreshDisplayInfo();
         } else {
           this.showNotification("Failed to save configuration", "error");
         }
@@ -2614,6 +2941,37 @@ async function saveAndApply() {
   console.log("Saving all configuration including sensor mapping...");
 
   try {
+    if (
+      configManager.isBillboardRepositioning &&
+      window.electronAPI?.finishBillboardReposition
+    ) {
+      console.log("SaveAndApply: Finalizing billboard drag mode...");
+      const repositionResult =
+        await window.electronAPI.finishBillboardReposition({
+          save: true,
+        });
+
+      if (!repositionResult?.success) {
+        throw new Error(
+          repositionResult?.error || "Could not finalize billboard position."
+        );
+      }
+
+      if (repositionResult.billboardWindow) {
+        configManager.config.billboardWindow = {
+          ...configManager.config.billboardWindow,
+          ...repositionResult.billboardWindow,
+        };
+      }
+
+      if (repositionResult.displayInfo) {
+        configManager.displayInfo = repositionResult.displayInfo;
+      }
+
+      configManager.isBillboardRepositioning = false;
+      configManager.renderDisplayInfo();
+    }
+
     // 1. SAVE E-RA SENSOR MAPPING & SCALE CONFIG (if available)
     if (
       configManager.eraConfigService &&
@@ -2645,6 +3003,9 @@ async function saveAndApply() {
 
     // Add details about what was saved
     const savedItems = [];
+    if (configManager.config.billboardWindow?.hasSavedPosition) {
+      savedItems.push("Billboard position");
+    }
     if (
       configManager.eraConfigService &&
       configManager.authService &&

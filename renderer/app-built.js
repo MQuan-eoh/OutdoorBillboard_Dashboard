@@ -2768,6 +2768,30 @@ function BillboardLayout() {
 
 // Main App Component
 function App() {
+  const [isRepositionMode, setIsRepositionMode] = React.useState(false);
+
+  React.useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      window.electronAPI &&
+      window.electronAPI.onBillboardRepositionModeChanged
+    ) {
+      const handleRepositionModeChanged = (event, payload) => {
+        setIsRepositionMode(Boolean(payload && payload.isRepositioning));
+      };
+
+      window.electronAPI.onBillboardRepositionModeChanged(
+        handleRepositionModeChanged
+      );
+
+      return () => {
+        if (window.electronAPI.removeBillboardRepositionModeListener) {
+          window.electronAPI.removeBillboardRepositionModeListener();
+        }
+      };
+    }
+  }, []);
+
   return React.createElement("div", {
     style: {
       width: "384px",
@@ -2776,8 +2800,51 @@ function App() {
       padding: 0,
       overflow: "hidden",
       fontFamily: "Arial, sans-serif",
+      position: "relative",
     }
-  }, React.createElement(BillboardLayout));
+  }, [
+    React.createElement(BillboardLayout, { key: "billboard-layout" }),
+    isRepositionMode
+      ? React.createElement(
+          "div",
+          {
+            key: "reposition-overlay",
+            style: {
+              position: "absolute",
+              inset: 0,
+              zIndex: 2147483647,
+              background: "rgba(0, 0, 0, 0.18)",
+              border: "4px dashed #ffe066",
+              boxSizing: "border-box",
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "center",
+              paddingTop: "14px",
+              cursor: "move",
+              WebkitAppRegion: "drag",
+            },
+          },
+          React.createElement(
+            "div",
+            {
+              style: {
+                WebkitAppRegion: "no-drag",
+                background: "rgba(20, 20, 20, 0.86)",
+                color: "#ffffff",
+                padding: "10px 14px",
+                borderRadius: "10px",
+                fontSize: "12px",
+                fontWeight: "bold",
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                boxShadow: "0 6px 20px rgba(0, 0, 0, 0.35)",
+              },
+            },
+            "Drag mode on. Move this billboard to the LED screen."
+          )
+        )
+      : null,
+  ]);
 }
 
 // Initialize React App

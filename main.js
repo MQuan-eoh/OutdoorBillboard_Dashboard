@@ -1,16 +1,24 @@
 // main.js - Electron Main Process
 // Manages main window and application lifecycle
 
-const { app, BrowserWindow, globalShortcut, ipcMain } = require("electron");
+const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require("electron");
 const path = require("path");
 const mqtt = require("mqtt");
 const axios = require("axios");
 const { autoUpdater } = require("electron-updater");
 
+const BILLBOARD_WIDTH = 384;
+const BILLBOARD_HEIGHT = 384;
+
 // Global variables
 let mainWindow;
 let configWindow;
 let isConfigMode = false;
+let billboardRepositionState = {
+  isRepositioning: false,
+  preRepositionBounds: null,
+  pendingBounds: null,
+};
 
 // Logo Manifest Service variables
 let logoManifestService = null;
@@ -625,12 +633,25 @@ class LogoManifestService {
  * Create main billboard display window
  * Fixed size: 384x384 pixels (corresponding to LED screen)
  */
-function createMainWindow() {
+async function createMainWindow() {
+  const currentConfig = await loadConfig();
+  const placement = resolveBillboardPlacement(currentConfig);
+
+  console.log("Creating main billboard window with placement:", {
+    strategy: placement.strategy,
+    displayId: placement.display?.id,
+    x: placement.bounds.x,
+    y: placement.bounds.y,
+  });
+
   mainWindow = new BrowserWindow({
-    width: 384,
-    height: 384,
+    width: BILLBOARD_WIDTH,
+    height: BILLBOARD_HEIGHT,
+    x: placement.bounds.x,
+    y: placement.bounds.y,
     frame: false,
     resizable: false,
+    movable: true,
     alwaysOnTop: true,
     show: false, // Don't show initially
     webPreferences: {
@@ -656,9 +677,7 @@ function createMainWindow() {
   }
 
   mainWindow.once("ready-to-show", () => {
-    if (!isConfigMode) {
-      mainWindow.show();
-    }
+    syncMainWindowVisibility();
 
     // Add a delay to ensure the window is fully loaded before accepting config updates
     setTimeout(() => {
@@ -667,8 +686,24 @@ function createMainWindow() {
     }, 1000);
   });
 
+  mainWindow.on("move", () => {
+    if (!billboardRepositionState.isRepositioning || !mainWindow) {
+      return;
+    }
+
+    billboardRepositionState.pendingBounds = normalizeBillboardBounds(
+      mainWindow.getBounds()
+    );
+    emitBillboardPositionUpdated("move");
+  });
+
   mainWindow.on("closed", () => {
     mainWindow = null;
+    billboardRepositionState = {
+      isRepositioning: false,
+      preRepositionBounds: null,
+      pendingBounds: null,
+    };
   });
 }
 
@@ -701,17 +736,17 @@ function createConfigWindow() {
 
   configWindow.once("ready-to-show", () => {
     configWindow.show();
-    if (mainWindow) {
-      mainWindow.hide();
-    }
+    syncMainWindowVisibility();
   });
 
-  configWindow.on("closed", () => {
+  configWindow.on("closed", async () => {
+    if (billboardRepositionState.isRepositioning) {
+      await finishBillboardReposition({ save: false });
+    }
+
     configWindow = null;
     isConfigMode = false;
-    if (mainWindow) {
-      mainWindow.show();
-    }
+    syncMainWindowVisibility();
   });
 }
 
@@ -767,17 +802,17 @@ async function initializeLogoManifestService() {
 /**
  * Load configuration from config.json
  */
-async function loadConfig() {
-  try {
-    if (fs.existsSync(configPath)) {
-      const configData = fs.readFileSync(configPath, "utf8");
-      return JSON.parse(configData);
-    }
-  } catch (error) {
-    console.error("Error loading config:", error);
-  }
+function getDefaultBillboardWindowConfig() {
+  return {
+    x: null,
+    y: null,
+    displayId: null,
+    hasSavedPosition: false,
+    preferExternalDisplay: true,
+  };
+}
 
-  // Return default configuration
+function getDefaultConfig() {
   return {
     logoMode: "fixed",
     logoImages: [],
@@ -788,6 +823,7 @@ async function loadConfig() {
       logo: { x: 0, y: 288, width: 384, height: 96 },
     },
     schedules: [],
+    billboardWindow: getDefaultBillboardWindowConfig(),
     logoManifest: {
       enabled: false,
       manifestUrl: "",
@@ -800,14 +836,406 @@ async function loadConfig() {
   };
 }
 
+function normalizeBillboardWindowConfig(billboardWindow = {}) {
+  const defaults = getDefaultBillboardWindowConfig();
+  const merged = {
+    ...defaults,
+    ...billboardWindow,
+  };
+
+  merged.hasSavedPosition =
+    Boolean(merged.hasSavedPosition) &&
+    Number.isFinite(merged.x) &&
+    Number.isFinite(merged.y);
+
+  if (!merged.hasSavedPosition) {
+    merged.x = null;
+    merged.y = null;
+    merged.displayId = null;
+  }
+
+  return merged;
+}
+
+function normalizeConfig(config = {}) {
+  const defaults = getDefaultConfig();
+
+  return {
+    ...defaults,
+    ...config,
+    logoImages: Array.isArray(config.logoImages) ? config.logoImages : [],
+    schedules: Array.isArray(config.schedules) ? config.schedules : [],
+    layoutPositions: {
+      weather: {
+        ...defaults.layoutPositions.weather,
+        ...(config.layoutPositions?.weather || {}),
+      },
+      iot: {
+        ...defaults.layoutPositions.iot,
+        ...(config.layoutPositions?.iot || {}),
+      },
+      logo: {
+        ...defaults.layoutPositions.logo,
+        ...(config.layoutPositions?.logo || {}),
+      },
+    },
+    logoManifest: {
+      ...defaults.logoManifest,
+      ...(config.logoManifest || {}),
+    },
+    billboardWindow: normalizeBillboardWindowConfig(config.billboardWindow),
+  };
+}
+
+function normalizeBillboardBounds(bounds) {
+  if (!bounds) {
+    return null;
+  }
+
+  return {
+    x: Math.round(bounds.x),
+    y: Math.round(bounds.y),
+    width: BILLBOARD_WIDTH,
+    height: BILLBOARD_HEIGHT,
+  };
+}
+
+function pointInBounds(point, bounds) {
+  return (
+    point.x >= bounds.x &&
+    point.x < bounds.x + bounds.width &&
+    point.y >= bounds.y &&
+    point.y < bounds.y + bounds.height
+  );
+}
+
+function rectFitsWithinBounds(rect, bounds) {
+  return (
+    rect.x >= bounds.x &&
+    rect.y >= bounds.y &&
+    rect.x + rect.width <= bounds.x + bounds.width &&
+    rect.y + rect.height <= bounds.y + bounds.height
+  );
+}
+
+function getPreferredExternalDisplay() {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  return (
+    screen
+      .getAllDisplays()
+      .find((display) => display.id !== primaryDisplay.id) || null
+  );
+}
+
+function getDisplayForBounds(bounds) {
+  if (!bounds) {
+    return null;
+  }
+
+  const centerPoint = {
+    x: Math.round(bounds.x + bounds.width / 2),
+    y: Math.round(bounds.y + bounds.height / 2),
+  };
+
+  return (
+    screen
+      .getAllDisplays()
+      .find((display) => pointInBounds(centerPoint, display.bounds)) ||
+    screen.getDisplayNearestPoint(centerPoint) ||
+    screen.getPrimaryDisplay()
+  );
+}
+
+function centerBoundsInDisplay(display) {
+  const workArea = display.workArea || display.bounds;
+  return {
+    x: Math.round(workArea.x + (workArea.width - BILLBOARD_WIDTH) / 2),
+    y: Math.round(workArea.y + (workArea.height - BILLBOARD_HEIGHT) / 2),
+    width: BILLBOARD_WIDTH,
+    height: BILLBOARD_HEIGHT,
+  };
+}
+
+function resolveBillboardPlacement(config) {
+  const normalizedConfig = normalizeConfig(config);
+  const savedWindow = normalizedConfig.billboardWindow;
+
+  if (savedWindow.hasSavedPosition) {
+    const savedBounds = {
+      x: savedWindow.x,
+      y: savedWindow.y,
+      width: BILLBOARD_WIDTH,
+      height: BILLBOARD_HEIGHT,
+    };
+    const savedDisplay = getDisplayForBounds(savedBounds);
+
+    if (savedDisplay && rectFitsWithinBounds(savedBounds, savedDisplay.bounds)) {
+      return {
+        strategy: "saved-position",
+        display: savedDisplay,
+        bounds: savedBounds,
+      };
+    }
+  }
+
+  if (savedWindow.preferExternalDisplay) {
+    const externalDisplay = getPreferredExternalDisplay();
+    if (externalDisplay) {
+      return {
+        strategy: "external-display",
+        display: externalDisplay,
+        bounds: centerBoundsInDisplay(externalDisplay),
+      };
+    }
+  }
+
+  const primaryDisplay = screen.getPrimaryDisplay();
+  return {
+    strategy: "primary-display",
+    display: primaryDisplay,
+    bounds: centerBoundsInDisplay(primaryDisplay),
+  };
+}
+
+function buildBillboardWindowConfig(bounds) {
+  const normalizedBounds = normalizeBillboardBounds(bounds);
+  const currentDisplay = getDisplayForBounds(normalizedBounds);
+
+  return normalizeBillboardWindowConfig({
+    x: normalizedBounds?.x ?? null,
+    y: normalizedBounds?.y ?? null,
+    displayId: currentDisplay?.id ?? null,
+    hasSavedPosition: Boolean(normalizedBounds),
+    preferExternalDisplay: true,
+  });
+}
+
+function serializeDisplay(display) {
+  if (!display) {
+    return null;
+  }
+
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const isPrimary = display.id === primaryDisplay.id;
+
+  return {
+    id: display.id,
+    label: isPrimary ? "Primary Display" : display.label || `Display ${display.id}`,
+    isPrimary,
+    bounds: display.bounds,
+    workArea: display.workArea,
+    scaleFactor: display.scaleFactor,
+  };
+}
+
+function sendToWindow(targetWindow, channel, payload) {
+  if (
+    targetWindow &&
+    !targetWindow.isDestroyed() &&
+    !targetWindow.webContents.isLoading()
+  ) {
+    targetWindow.webContents.send(channel, payload);
+  }
+}
+
+async function getDisplayInfoPayload(configOverride = null) {
+  const resolvedConfig = normalizeConfig(configOverride || (await loadConfig()));
+  const currentBounds =
+    normalizeBillboardBounds(mainWindow?.getBounds()) ||
+    resolveBillboardPlacement(resolvedConfig).bounds;
+  const currentDisplay = getDisplayForBounds(currentBounds);
+  const preferredDisplay =
+    (resolvedConfig.billboardWindow.hasSavedPosition &&
+      getDisplayForBounds({
+        x: resolvedConfig.billboardWindow.x,
+        y: resolvedConfig.billboardWindow.y,
+        width: BILLBOARD_WIDTH,
+        height: BILLBOARD_HEIGHT,
+      })) ||
+    getPreferredExternalDisplay() ||
+    screen.getPrimaryDisplay();
+
+  return {
+    displays: screen.getAllDisplays().map(serializeDisplay),
+    currentBounds,
+    currentDisplay: serializeDisplay(currentDisplay),
+    preferredDisplay: serializeDisplay(preferredDisplay),
+    startupMode: resolvedConfig.billboardWindow.hasSavedPosition
+      ? "saved-position"
+      : getPreferredExternalDisplay()
+      ? "external-display"
+      : "primary-display",
+    savedBillboardWindow: resolvedConfig.billboardWindow,
+    reposition: {
+      isRepositioning: billboardRepositionState.isRepositioning,
+      preRepositionBounds: billboardRepositionState.preRepositionBounds,
+      pendingBounds: billboardRepositionState.pendingBounds,
+    },
+  };
+}
+
+function syncMainWindowVisibility() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  mainWindow.setAlwaysOnTop(!billboardRepositionState.isRepositioning);
+
+  const shouldShow =
+    !isConfigMode || billboardRepositionState.isRepositioning;
+
+  if (shouldShow) {
+    if (!mainWindow.isVisible()) {
+      mainWindow.show();
+    }
+  } else if (mainWindow.isVisible()) {
+    mainWindow.hide();
+  }
+}
+
+function emitBillboardRepositionModeChanged() {
+  const payload = {
+    isRepositioning: billboardRepositionState.isRepositioning,
+    bounds:
+      billboardRepositionState.pendingBounds ||
+      normalizeBillboardBounds(mainWindow?.getBounds()),
+  };
+
+  sendToWindow(mainWindow, "billboard-reposition-mode-changed", payload);
+  sendToWindow(configWindow, "billboard-reposition-mode-changed", payload);
+}
+
+function emitBillboardPositionUpdated(source = "move") {
+  const bounds =
+    billboardRepositionState.pendingBounds ||
+    normalizeBillboardBounds(mainWindow?.getBounds());
+  const currentDisplay = getDisplayForBounds(bounds);
+  const payload = {
+    source,
+    bounds,
+    display: serializeDisplay(currentDisplay),
+    billboardWindow: buildBillboardWindowConfig(bounds),
+  };
+
+  sendToWindow(configWindow, "billboard-position-updated", payload);
+}
+
+async function startBillboardReposition() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return {
+      success: false,
+      error: "Main billboard window is not available.",
+    };
+  }
+
+  const currentBounds = normalizeBillboardBounds(mainWindow.getBounds());
+
+  billboardRepositionState = {
+    isRepositioning: true,
+    preRepositionBounds: currentBounds,
+    pendingBounds: currentBounds,
+  };
+
+  syncMainWindowVisibility();
+  mainWindow.focus();
+  emitBillboardRepositionModeChanged();
+  emitBillboardPositionUpdated("start");
+
+  return {
+    success: true,
+    bounds: currentBounds,
+    billboardWindow: buildBillboardWindowConfig(currentBounds),
+    displayInfo: await getDisplayInfoPayload(),
+  };
+}
+
+async function finishBillboardReposition({ save = false } = {}) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return {
+      success: false,
+      error: "Main billboard window is not available.",
+    };
+  }
+
+  let finalBounds =
+    billboardRepositionState.pendingBounds ||
+    normalizeBillboardBounds(mainWindow.getBounds());
+
+  if (!save && billboardRepositionState.preRepositionBounds) {
+    mainWindow.setBounds(billboardRepositionState.preRepositionBounds);
+    finalBounds = normalizeBillboardBounds(mainWindow.getBounds());
+  }
+
+  billboardRepositionState = {
+    isRepositioning: false,
+    preRepositionBounds: null,
+    pendingBounds: finalBounds,
+  };
+
+  syncMainWindowVisibility();
+  emitBillboardRepositionModeChanged();
+  emitBillboardPositionUpdated(save ? "save" : "cancel");
+
+  if (configWindow && !configWindow.isDestroyed()) {
+    configWindow.focus();
+  }
+
+  const updatedWindowConfig = buildBillboardWindowConfig(finalBounds);
+
+  return {
+    success: true,
+    bounds: finalBounds,
+    billboardWindow: save ? updatedWindowConfig : null,
+    displayInfo: await getDisplayInfoPayload(
+      save ? { ...(await loadConfig()), billboardWindow: updatedWindowConfig } : null
+    ),
+  };
+}
+
+function applyBillboardWindowFromConfig(config) {
+  if (
+    !mainWindow ||
+    mainWindow.isDestroyed() ||
+    billboardRepositionState.isRepositioning
+  ) {
+    return;
+  }
+
+  const placement = resolveBillboardPlacement(config);
+  const currentBounds = normalizeBillboardBounds(mainWindow.getBounds());
+
+  if (
+    !currentBounds ||
+    currentBounds.x !== placement.bounds.x ||
+    currentBounds.y !== placement.bounds.y
+  ) {
+    mainWindow.setBounds(placement.bounds);
+  }
+}
+
+async function loadConfig() {
+  try {
+    if (fs.existsSync(configPath)) {
+      const configData = fs.readFileSync(configPath, "utf8");
+      return normalizeConfig(JSON.parse(configData));
+    }
+  } catch (error) {
+    console.error("Error loading config:", error);
+  }
+
+  return getDefaultConfig();
+}
+
 /**
  * Save configuration to config.json
  */
 async function saveConfig(config) {
   try {
-    const configData = JSON.stringify(config, null, 2);
+    const normalizedConfig = normalizeConfig(config);
+    const configData = JSON.stringify(normalizedConfig, null, 2);
     fs.writeFileSync(configPath, configData, "utf8");
     console.log("Configuration saved successfully");
+    return normalizedConfig;
   } catch (error) {
     console.error("Error saving config:", error);
     throw error;
@@ -1845,7 +2273,7 @@ class MainProcessMqttService {
 }
 
 app.whenReady().then(async () => {
-  createMainWindow();
+  await createMainWindow();
 
   // Setup config file watcher for hot-reload
   setupConfigWatcher();
@@ -1933,7 +2361,7 @@ function setupConfigWatcher() {
 
         try {
           const configData = fs.readFileSync(configPath, "utf8");
-          const config = JSON.parse(configData);
+          const config = normalizeConfig(JSON.parse(configData));
 
           console.log("External config change detected:", {
             logoMode: config.logoMode,
@@ -1959,13 +2387,17 @@ function setupConfigWatcher() {
  * Broadcast configuration updates to all active windows
  */
 function broadcastConfigUpdate(config) {
+  const normalizedConfig = normalizeConfig(config);
+
   console.log("Broadcasting config update to all windows", {
-    logoMode: config.logoMode,
-    logoLoopDuration: config.logoLoopDuration,
-    logoImages: config.logoImages?.length,
-    hasEraIot: !!config.eraIot,
+    logoMode: normalizedConfig.logoMode,
+    logoLoopDuration: normalizedConfig.logoLoopDuration,
+    logoImages: normalizedConfig.logoImages?.length,
+    hasEraIot: !!normalizedConfig.eraIot,
     timestamp: new Date().toLocaleTimeString(),
   });
+
+  applyBillboardWindowFromConfig(normalizedConfig);
 
   // Send to main window with immediate effect
   if (
@@ -1976,22 +2408,22 @@ function broadcastConfigUpdate(config) {
     console.log("Sending IMMEDIATE config-updated to main window");
 
     // Send main config update
-    mainWindow.webContents.send("config-updated", config);
+    mainWindow.webContents.send("config-updated", normalizedConfig);
 
     // Send force refresh
-    mainWindow.webContents.send("force-refresh-services", config);
+    mainWindow.webContents.send("force-refresh-services", normalizedConfig);
 
     // Force reload for logo changes specifically - send multiple times to ensure delivery
-    if (config.logoMode && config.logoLoopDuration) {
+    if (normalizedConfig.logoMode && normalizedConfig.logoLoopDuration) {
       console.log(
-        `Forcing logo loop interval update: ${config.logoLoopDuration}s`
+        `Forcing logo loop interval update: ${normalizedConfig.logoLoopDuration}s`
       );
 
       // Send immediately
       mainWindow.webContents.send("logo-config-updated", {
-        logoMode: config.logoMode,
-        logoLoopDuration: config.logoLoopDuration,
-        logoImages: config.logoImages,
+        logoMode: normalizedConfig.logoMode,
+        logoLoopDuration: normalizedConfig.logoLoopDuration,
+        logoImages: normalizedConfig.logoImages,
       });
 
       // Debounced config updates to prevent flicker from rapid changes
@@ -2003,16 +2435,16 @@ function broadcastConfigUpdate(config) {
       broadcastConfigUpdate.debounceTimer = setTimeout(() => {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send("logo-config-updated", {
-            logoMode: config.logoMode,
-            logoLoopDuration: config.logoLoopDuration,
-            logoImages: config.logoImages,
+            logoMode: normalizedConfig.logoMode,
+            logoLoopDuration: normalizedConfig.logoLoopDuration,
+            logoImages: normalizedConfig.logoImages,
           });
           console.log("DEBOUNCED logo-config-updated event sent");
 
           // Final config update after logo-specific update
           setTimeout(() => {
             if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send("config-updated", config);
+              mainWindow.webContents.send("config-updated", normalizedConfig);
               console.log("FINAL config-updated event sent");
             }
           }, 50);
@@ -2029,13 +2461,16 @@ function broadcastConfigUpdate(config) {
   // Send to config window if open
   if (configWindow && !configWindow.isDestroyed()) {
     console.log("Sending config-updated to config window");
-    configWindow.webContents.send("config-updated", config);
+    configWindow.webContents.send("config-updated", normalizedConfig);
   }
 
   // Send specific E-Ra IoT updates if applicable
-  if (config.eraIot) {
+  if (normalizedConfig.eraIot) {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send("era-iot-config-updated", config.eraIot);
+      mainWindow.webContents.send(
+        "era-iot-config-updated",
+        normalizedConfig.eraIot
+      );
     }
 
     // Restart MQTT service with new config
@@ -2052,16 +2487,28 @@ ipcMain.handle("get-config", async () => {
 
 ipcMain.handle("save-config", async (event, config) => {
   try {
-    await saveConfig(config);
+    const savedConfig = await saveConfig(config);
 
     // Broadcast config update for hot-reload
-    broadcastConfigUpdate(config);
+    broadcastConfigUpdate(savedConfig);
 
     return { success: true };
   } catch (error) {
     console.error("Error saving config via IPC:", error);
     return { success: false, error: error.message };
   }
+});
+
+ipcMain.handle("get-display-info", async () => {
+  return await getDisplayInfoPayload();
+});
+
+ipcMain.handle("start-billboard-reposition", async () => {
+  return await startBillboardReposition();
+});
+
+ipcMain.handle("finish-billboard-reposition", async (event, options = {}) => {
+  return await finishBillboardReposition(options);
 });
 
 // Logo Manifest Service IPC Handlers

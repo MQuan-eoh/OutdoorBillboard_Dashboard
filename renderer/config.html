@@ -316,6 +316,119 @@
         align-items: center;
       }
 
+      .display-status-banner {
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin: 18px 0 22px;
+        font-size: 14px;
+        border: 1px solid transparent;
+      }
+
+      .display-status-banner.idle {
+        background: #eef6ff;
+        border-color: #cfe3ff;
+        color: #1f4b7a;
+      }
+
+      .display-status-banner.drag {
+        background: #fff6e8;
+        border-color: #ffd9a8;
+        color: #8a5300;
+      }
+
+      .display-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .display-summary-card {
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 16px;
+        background: #f8f9fa;
+      }
+
+      .display-summary-label {
+        color: #6c757d;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 8px;
+      }
+
+      .display-summary-value {
+        color: #212529;
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      .display-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .display-list {
+        display: grid;
+        gap: 14px;
+      }
+
+      .display-card {
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 18px;
+        background: #ffffff;
+      }
+
+      .display-card.active {
+        border-color: #ff6b35;
+        box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.12);
+      }
+
+      .display-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+
+      .display-card-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #212529;
+      }
+
+      .display-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        background: #eef6ff;
+        color: #24527a;
+      }
+
+      .display-pill.primary {
+        background: #eef6ff;
+        color: #24527a;
+      }
+
+      .display-pill.current {
+        background: #fff5f2;
+        color: #b54708;
+      }
+
+      .display-card-meta {
+        color: #6c757d;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
       /* Login Styles */
       .login-status {
         margin-bottom: 25px;
@@ -830,6 +943,11 @@
           <li class="nav-item">
             <a href="#" class="nav-link" data-tab="layout-config">
               Cấu Hình Bố Cục
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" data-tab="display-settings-panel">
+              Display Settings
             </a>
           </li>
         </ul>
@@ -1600,6 +1718,95 @@
           </div>
           <div class="config-card">
             <p>Cài đặt hiển thị sẽ được thực hiện ở đây..</p>
+          </div>
+        </div>
+
+        <div id="display-settings-panel" class="tab-content">
+          <div class="content-header">
+            <h2 class="content-title">Display Settings</h2>
+            <p class="content-subtitle">
+              Quan ly vi tri cua billboard window tren man hinh LED
+            </p>
+          </div>
+          <div class="config-card">
+            <h3 class="card-title">
+              <span class="card-icon">Display</span>
+              Billboard placement
+            </h3>
+            <p class="info-text">
+              Bat che do keo tha tam thoi de di chuyen billboard sang man hinh
+              LED. Khi drag mode tat, billboard van sach va khong co header.
+            </p>
+
+            <div
+              id="display-status-banner"
+              class="display-status-banner idle"
+            >
+              Drag mode is off. Billboard stays hidden while config is open.
+            </div>
+
+            <div class="display-summary-grid">
+              <div class="display-summary-card">
+                <div class="display-summary-label">Startup mode</div>
+                <div class="display-summary-value" id="startup-mode-value">
+                  Loading...
+                </div>
+              </div>
+              <div class="display-summary-card">
+                <div class="display-summary-label">Current position</div>
+                <div class="display-summary-value" id="current-position-value">
+                  Loading...
+                </div>
+              </div>
+              <div class="display-summary-card">
+                <div class="display-summary-label">Saved position</div>
+                <div class="display-summary-value" id="saved-position-value">
+                  Loading...
+                </div>
+              </div>
+              <div class="display-summary-card">
+                <div class="display-summary-label">Preferred display</div>
+                <div class="display-summary-value" id="preferred-display-value">
+                  Loading...
+                </div>
+              </div>
+            </div>
+
+            <div class="display-actions">
+              <button
+                id="start-reposition-btn"
+                class="btn btn-primary"
+                type="button"
+              >
+                Bat che do keo tha
+              </button>
+              <button
+                id="cancel-reposition-btn"
+                class="btn btn-secondary hidden"
+                type="button"
+              >
+                Huy keo tha
+              </button>
+              <button
+                id="refresh-display-info-btn"
+                class="btn btn-outline"
+                type="button"
+              >
+                Lam moi danh sach man hinh
+              </button>
+            </div>
+          </div>
+
+          <div class="config-card">
+            <h3 class="card-title">
+              <span class="card-icon">Monitors</span>
+              Detected displays
+            </h3>
+            <div id="display-list" class="display-list">
+              <div class="display-card">
+                <div class="display-card-title">Loading detected displays...</div>
+              </div>
+            </div>
           </div>
         </div>
 

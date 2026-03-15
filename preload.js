@@ -15,6 +15,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // App control
   minimize: () => ipcRenderer.invoke("minimize-app"),
   close: () => ipcRenderer.invoke("close-app"),
+  getAppPath: () => ipcRenderer.invoke("get-app-path"),
+
+  // Billboard window placement
+  getDisplayInfo: () => ipcRenderer.invoke("get-display-info"),
+  startBillboardReposition: () =>
+    ipcRenderer.invoke("start-billboard-reposition"),
+  finishBillboardReposition: (options) =>
+    ipcRenderer.invoke("finish-billboard-reposition", options),
 
   // Event listeners for config updates
   onConfigUpdated: (callback) => ipcRenderer.on("config-updated", callback),
@@ -73,4 +81,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Banner download operations
   downloadBanner: (url, filename) =>
     ipcRenderer.invoke("download-banner", url, filename),
+
+  // Billboard placement listeners
+  onBillboardPositionUpdated: (callback) =>
+    ipcRenderer.on("billboard-position-updated", callback),
+  removeBillboardPositionListener: () =>
+    ipcRenderer.removeAllListeners("billboard-position-updated"),
+  onBillboardRepositionModeChanged: (callback) =>
+    ipcRenderer.on("billboard-reposition-mode-changed", callback),
+  removeBillboardRepositionModeListener: () =>
+    ipcRenderer.removeAllListeners("billboard-reposition-mode-changed"),
 });
