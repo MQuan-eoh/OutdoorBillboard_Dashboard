@@ -406,7 +406,7 @@ class WeatherPanel extends React.Component {
     super(props);
     this.state = {
       weatherData: {
-        city: "MENAS ZONE VĨ DẠ",
+        city: "MENAS ZONE VỸ DẠ",
         temperature: "24,2",
         lowTemp: "-29,7",
         humidity: "95",

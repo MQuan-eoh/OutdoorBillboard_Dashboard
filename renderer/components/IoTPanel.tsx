@@ -247,7 +247,7 @@ const IoTPanel: React.FC<IoTPanelProps> = ({
     return (
       <div className={`iot-panel loading ${className}`}>
         <div className="iot-header">
-          <div className="iot-title"><div style={{ textAlign: "center", lineHeight: "1.2" }}><div>MENAS ZONE</div><div>VĨ DẠ</div></div></div>
+          <div className="iot-title"><div style={{ textAlign: "center", lineHeight: "1.2" }}><div>MENAS ZONE</div><div>VỸ DẠ</div></div></div>
         </div>
         <div className="iot-loading">
           <div className="loading-spinner"></div>
@@ -262,7 +262,7 @@ const IoTPanel: React.FC<IoTPanelProps> = ({
     return (
       <div className={`iot-panel error ${className}`}>
         <div className="iot-header">
-          <div className="iot-title"><div style={{ textAlign: "center", lineHeight: "1.2" }}><div>MENAS ZONE</div><div>VĨ DẠ</div></div></div>
+          <div className="iot-title"><div style={{ textAlign: "center", lineHeight: "1.2" }}><div>MENAS ZONE</div><div>VỸ DẠ</div></div></div>
         </div>
         <div className="iot-error">
           <div className="error-icon">!</div>
@@ -284,7 +284,7 @@ const IoTPanel: React.FC<IoTPanelProps> = ({
     return (
       <div className={`iot-panel offline ${className}`}>
         <div className="iot-header">
-          <div className="iot-title"><div style={{ textAlign: "center", lineHeight: "1.2" }}><div>MENAS ZONE</div><div>VĨ DẠ</div></div></div>
+          <div className="iot-title"><div style={{ textAlign: "center", lineHeight: "1.2" }}><div>MENAS ZONE</div><div>VỸ DẠ</div></div></div>
         </div>
         <div className="iot-offline">
           <div className="offline-icon">X</div>
@@ -304,7 +304,7 @@ const IoTPanel: React.FC<IoTPanelProps> = ({
     <div className={`iot-panel active ${connectionStatus} ${className}`}>
       {/* Header - Simple title */}
       <div className="iot-header">
-        <div className="iot-title"><div style={{ textAlign: "center", lineHeight: "1.2" }}><div>MENAS ZONE</div><div>VĨ DẠ</div></div></div>
+        <div className="iot-title"><div style={{ textAlign: "center", lineHeight: "1.2" }}><div>MENAS ZONE</div><div>VỸ DẠ</div></div></div>
         <div className={`connection-indicator ${connectionStatus}`}></div>
       </div>
 

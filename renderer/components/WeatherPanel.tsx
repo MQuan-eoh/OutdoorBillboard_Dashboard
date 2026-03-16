@@ -25,7 +25,7 @@ class GlobalWeatherServiceManager {
         location: {
           lat: 16.4637, // Huế coordinates
           lon: 107.5909,
-          city: "TP.THỪA THIÊN HUẾ",
+          city: "THÀNH PHỐ HUẾ",
         },
         updateInterval: 10, // Update every 10 minutes
         retryInterval: 3, // Retry every 3 minutes on failure
@@ -293,7 +293,7 @@ const WeatherPanel: React.FC<WeatherPanelProps> = ({
   if (isLoading && !weatherData) {
     return (
       <div className={`weather-panel loading ${className}`}>
-        <div className="weather-title">TP.THỪA THIÊN HUẾ</div>
+        <div className="weather-title">THÀNH PHỐ HUẾ</div>
         <div className="weather-loading">
           <div className="loading-spinner"></div>
           <div className="loading-text">Đang tải...</div>
@@ -306,7 +306,7 @@ const WeatherPanel: React.FC<WeatherPanelProps> = ({
   if (!weatherData && connectionStatus === "error") {
     return (
       <div className={`weather-panel error ${className}`}>
-        <div className="weather-title">TP.THỪA THIÊN HUẾ</div>
+        <div className="weather-title">THÀNH PHỐ HUẾ</div>
         <div className="weather-error">
           <div className="error-icon">⚠</div>
           <div className="error-text">Lỗi kết nối</div>
@@ -413,7 +413,7 @@ const WeatherPanel: React.FC<WeatherPanelProps> = ({
         <div className="device-title">
           <div style={{ textAlign: "center", lineHeight: "1.2" }}>
             <div>MENAS ZONE</div>
-            <div>VĨ DẠ</div>
+            <div>VỸ DẠ</div>
           </div>
         </div>
         <div className="device-readings">

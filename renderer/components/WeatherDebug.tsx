@@ -45,7 +45,7 @@ const WeatherDebug: React.FC = () => {
               if (displayedTemp && displayedHumidity) {
                 // Create debug data object matching what's displayed
                 const debugData: WeatherData = {
-                  cityName: "MENAS ZONE VĨ DẠ (from UI)",
+                  cityName: "MENAS ZONE VỸ DẠ (from UI)",
                   temperature: parseInt(displayedTemp),
                   feelsLike: parseInt(displayedTemp), // Approximation
                   humidity: parseInt(displayedHumidity),

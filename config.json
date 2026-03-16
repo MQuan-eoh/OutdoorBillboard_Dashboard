@@ -54,6 +54,45 @@
       "days": "daily"
     }
   ],
+  "renderMode": "fullscreen-scaled",
+  "billboardWindow": {
+    "x": 1394,
+    "y": 203,
+    "displayId": 2779098405,
+    "hasSavedPosition": true,
+    "preferExternalDisplay": true
+  },
+  "outputCheck": {
+    "displayResolution": {
+      "width": 1920,
+      "height": 1080
+    },
+    "scaleFactor": 1,
+    "windowBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 1920,
+      "height": 1080
+    },
+    "renderMode": "fullscreen-scaled",
+    "isScaleFactorSafe": true,
+    "isNative384Display": false,
+    "requiresControllerMapping": false,
+    "pixelPerfectLikely": false,
+    "warnings": [
+      "Chế độ toàn màn hình có scale sẽ lấp đầy màn hình nhưng có thể scale canvas 384x384 thay vì giữ 1:1 pixel."
+    ],
+    "checkedAt": "2026-03-16T04:02:58.909Z"
+  },
+  "logoManifest": {
+    "enabled": true,
+    "manifestUrl": "https://mquan-eoh.github.io/billboard-logos-cdn/manifest.json",
+    "pollInterval": 10,
+    "downloadPath": "./downloads",
+    "maxCacheSize": 50,
+    "retryAttempts": 3,
+    "retryDelay": 2000
+  },
   "eraIot": {
     "enabled": true,
     "authToken": "Token a159b7047b33aebfdb2e83f614c5049e5d760d6d",
@@ -92,15 +131,6 @@
     },
     "downloadPath": "./downloads",
     "maxCacheSize": 100
-  },
-  "logoManifest": {
-    "enabled": true,
-    "manifestUrl": "https://mquan-eoh.github.io/billboard-logos-cdn/manifest.json",
-    "pollInterval": 10,
-    "downloadPath": "./downloads",
-    "maxCacheSize": 50,
-    "retryAttempts": 3,
-    "retryDelay": 2000
   },
   "_manifestVersion": "1.0.1768981036529",
   "_manifestLastUpdated": "2026-01-21T07:37:16.529Z",

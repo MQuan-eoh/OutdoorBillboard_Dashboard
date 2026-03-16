@@ -695,7 +695,7 @@ class GlobalWeatherServiceManager {
         location: {
           lat: 16.4637,
           lon: 107.5909,
-          city: "TP.THỪA THIÊN HUẾ",
+          city: "THÀNH PHỐ HUẾ",
         },
         updateInterval: 2,
         retryInterval: 5,
@@ -976,7 +976,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
           zIndex: 2,
           textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)"
         } 
-      }, "TP.THỪA THIÊN HUẾ"),
+      }, "THÀNH PHỐ HUẾ"),
       React.createElement("div", { 
         key: "loading", 
         style: { 
@@ -1027,7 +1027,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
           zIndex: 2,
           textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)"
         } 
-      }, "TP.THỪA THIÊN HUẾ"),
+      }, "THÀNH PHỐ HUẾ"),
       React.createElement("div", { 
         key: "error", 
         style: { 
@@ -1404,7 +1404,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
               textTransform: "uppercase"
             },
             className: "device-title-aligned-fixed"
-          }, React.createElement("div", { style: { textAlign: "center", lineHeight: "1.2", width: "100%" } }, React.createElement("div", { style: { whiteSpace: "nowrap" } }, "MENAS ZONE"), React.createElement("div", null, "VĨ DẠ"))),
+          }, React.createElement("div", { style: { textAlign: "center", lineHeight: "1.2", width: "100%" } }, React.createElement("div", { style: { whiteSpace: "nowrap" } }, "MENAS ZONE"), React.createElement("div", null, "VỸ DẠ"))),
 
           React.createElement("div", { 
             key: "device-temp",
@@ -2195,7 +2195,7 @@ function IoTPanel({ eraIotService, className = "" }) {
         boxSizing: "border-box",
       }
     }, [
-      React.createElement("div", { key: "title", style: { fontSize: "14px", fontWeight: "bold", marginBottom: "6px" } }, React.createElement("div", { style: { textAlign: "center", lineHeight: "1.2", width: "100%" } }, React.createElement("div", { style: { whiteSpace: "nowrap" } }, "MENAS ZONE"), React.createElement("div", null, "VĨ DẠ"))),
+      React.createElement("div", { key: "title", style: { fontSize: "14px", fontWeight: "bold", marginBottom: "6px" } }, React.createElement("div", { style: { textAlign: "center", lineHeight: "1.2", width: "100%" } }, React.createElement("div", { style: { whiteSpace: "nowrap" } }, "MENAS ZONE"), React.createElement("div", null, "VỸ DẠ"))),
       React.createElement("div", { key: "loading", style: { fontSize: "8px", color: "#888" } }, "Đang kết nối...")
     ]);
   }
@@ -2217,7 +2217,7 @@ function IoTPanel({ eraIotService, className = "" }) {
         boxSizing: "border-box",
       }
     }, [
-      React.createElement("div", { key: "title", style: { fontSize: "14px", fontWeight: "bold", marginBottom: "6px" } }, React.createElement("div", { style: { textAlign: "center", lineHeight: "1.2", width: "100%" } }, React.createElement("div", { style: { whiteSpace: "nowrap" } }, "MENAS ZONE"), React.createElement("div", null, "VĨ DẠ"))),
+      React.createElement("div", { key: "title", style: { fontSize: "14px", fontWeight: "bold", marginBottom: "6px" } }, React.createElement("div", { style: { textAlign: "center", lineHeight: "1.2", width: "100%" } }, React.createElement("div", { style: { whiteSpace: "nowrap" } }, "MENAS ZONE"), React.createElement("div", null, "VỸ DẠ"))),
       React.createElement("div", { key: "error", style: { fontSize: "8px", color: "#ff4444" } }, !eraIotService ? "Chưa cấu hình" : "Lỗi kết nối")
     ]);
   }
@@ -2239,7 +2239,7 @@ function IoTPanel({ eraIotService, className = "" }) {
         boxSizing: "border-box",
       }
     }, [
-      React.createElement("div", { key: "title", style: { fontSize: "11px", fontWeight: "bold", marginBottom: "6px" } }, React.createElement("div", { style: { textAlign: "center", lineHeight: "1.2", width: "100%" } }, React.createElement("div", { style: { whiteSpace: "nowrap" } }, "MENAS ZONE"), React.createElement("div", null, "VĨ DẠ"))),
+      React.createElement("div", { key: "title", style: { fontSize: "11px", fontWeight: "bold", marginBottom: "6px" } }, React.createElement("div", { style: { textAlign: "center", lineHeight: "1.2", width: "100%" } }, React.createElement("div", { style: { whiteSpace: "nowrap" } }, "MENAS ZONE"), React.createElement("div", null, "VỸ DẠ"))),
       React.createElement("div", { key: "offline", style: { fontSize: "8px", color: "#888" } }, "Không có dữ liệu")
     ]);
   }
@@ -2344,7 +2344,7 @@ function IoTPanel({ eraIotService, className = "" }) {
           textAlign: "left", // Changed from center to left to align with city name
           marginBottom: "2px"
         } 
-      }, React.createElement("div", { style: { textAlign: "center", lineHeight: "1.2", width: "100%" } }, React.createElement("div", { style: { whiteSpace: "nowrap" } }, "MENAS ZONE"), React.createElement("div", null, "VĨ DẠ"))),
+      }, React.createElement("div", { style: { textAlign: "center", lineHeight: "1.2", width: "100%" } }, React.createElement("div", { style: { whiteSpace: "nowrap" } }, "MENAS ZONE"), React.createElement("div", null, "VỸ DẠ"))),
       React.createElement("div", {
         key: "status",
         style: {
@@ -2851,9 +2851,8 @@ function App() {
 
   const isFullscreenScaled =
     renderMode === "fullscreen-scaled" && !isRepositionMode;
-  const scale = isFullscreenScaled
-    ? Math.min(viewportSize.width / 384, viewportSize.height / 384)
-    : 1;
+  const scaleX = isFullscreenScaled ? viewportSize.width / 384 : 1;
+  const scaleY = isFullscreenScaled ? viewportSize.height / 384 : 1;
 
   return React.createElement("div", {
     style: {
@@ -2876,7 +2875,7 @@ function App() {
         width: "384px",
         height: "384px",
         position: "relative",
-        transform: isFullscreenScaled ? "scale(" + scale + ")" : "none",
+        transform: isFullscreenScaled ? "scale(" + scaleX + ", " + scaleY + ")" : "none",
         transformOrigin: "center center",
       }
     }, [

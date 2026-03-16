@@ -131,7 +131,7 @@ class BillboardApp {
         `;
 
     weatherPanel.innerHTML = `
-            <h3 style="font-size: 14px; margin-bottom: 8px; margin-top: 0;">MENAS ZONE VĨ DẠ</h3>
+            <h3 style="font-size: 14px; margin-bottom: 8px; margin-top: 0;">MENAS ZONE VỸ DẠ</h3>
             <div style="font-size: 12px;">UV Thấp</div>
             <div style="font-size: 12px;">Mưa 97% | Gió 1,6 km/h</div>
             <div style="font-size: 12px;">Tầm nhìn 10 km</div>
@@ -398,7 +398,7 @@ class BillboardApp {
       const humidity = (70 + Math.random() * 30).toFixed(0);
 
       weatherPanel.innerHTML = `
-                <h3 style="font-size: 14px; margin-bottom: 8px; margin-top: 0;margin-left: 70px;">MENAS ZONE VĨ DẠ</h3>
+                <h3 style="font-size: 14px; margin-bottom: 8px; margin-top: 0;margin-left: 70px;">MENAS ZONE VỸ DẠ</h3>
                 <div style="font-size: 14px;">UV Thấp</div>
                 <div style="font-size: 12px;">Mưa ${Math.floor(
                   Math.random() * 100

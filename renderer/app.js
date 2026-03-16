@@ -695,7 +695,7 @@ class GlobalWeatherServiceManager {
         location: {
           lat: 16.4637,
           lon: 107.5909,
-          city: "MENAS ZONE VĨ DẠ",
+          city: "MENAS ZONE VỸ DẠ",
         },
         updateInterval: 2,
         retryInterval: 5,
@@ -976,7 +976,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
           zIndex: 2,
           textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)"
         } 
-      }, "MENAS ZONE VĨ DẠ"),
+      }, "MENAS ZONE VỸ DẠ"),
       React.createElement("div", { 
         key: "loading", 
         style: { 
@@ -1027,7 +1027,7 @@ function WeatherPanel({ className = "", eraIotService = null, airQualityService 
           zIndex: 2,
           textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)"
         } 
-      }, "MENAS ZONE VĨ DẠ"),
+      }, "MENAS ZONE VỸ DẠ"),
       React.createElement("div", { 
         key: "error", 
         style: { 

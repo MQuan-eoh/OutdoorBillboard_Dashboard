@@ -1,8 +1,8 @@
-version: 1.0.7
+version: 1.0.8
 files:
-  - url: https://github.com/MQuan-eoh/OutdoorBillboard_Dashboard/releases/download/v1.0.7/ITS-Billboard-Setup-1.0.7.exe
+  - url: https://github.com/MQuan-eoh/OutdoorBillboard_Dashboard/releases/download/v1.0.8/ITS-Billboard-Setup-1.0.8.exe
     sha512: ''
     size: 0
-path: ITS-Billboard-Setup-1.0.7.exe
+path: ITS-Billboard-Setup-1.0.8.exe
 sha512: ''
-releaseDate: 2026-03-15T07:02:20.524Z
+releaseDate: 2026-03-16T04:20:25.112Z
